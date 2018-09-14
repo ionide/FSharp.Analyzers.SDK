@@ -1,0 +1,9 @@
+symbolCache.db
+bin
+obj
+packages
+paket-files
+.fake
+out
+AssemblyInfo.fs
+.DS_Store
