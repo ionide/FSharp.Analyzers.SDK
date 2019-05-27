@@ -1,3 +1,7 @@
+### 0.0.5 - 27.05.2019
+
+* Update FCS version to 29.0
+
 ### 0.0.4 - 29.03.2019
 
 * Update FCS version
