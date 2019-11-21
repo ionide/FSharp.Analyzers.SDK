@@ -3,6 +3,19 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>FSharp.Analyzers.SDK</PackageId>
+    <IsPackable>true</IsPackable>
+    <Authors>Krzysztof Cieslak</Authors>
+    <PackageDescription>SDK for building custom analyzers for FSAC / F# editors</PackageDescription>
+    <Copyright>Copyright 2019 Lambda Factory</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
+    <RepositoryUrl>https://github.com/ionide/FSharp.Analyzers.SDK</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryBranch>master</RepositoryBranch>
+    <IncludeSymbols>true</IncludeSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
