@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
+    <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
