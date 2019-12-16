@@ -1,3 +1,7 @@
+### 0.0.10 - 21.11.2019
+
+* Add client module
+
 ### 0.0.9 - 21.11.2019
 
 * Update FCS version to 33.0.0

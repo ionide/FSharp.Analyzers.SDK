@@ -7,3 +7,4 @@ paket-files
 out
 AssemblyInfo.fs
 .DS_Store
+release.cmd

@@ -19,7 +19,7 @@ open Fake.Api
 // Information about the project to be used at NuGet and in AssemblyInfo files
 // --------------------------------------------------------------------------------------
 
-let project = "Saturn"
+let project = "FSharp.Analyzers.SDK"
 let summary = "SDK for building custom analyzers for FSAC / F# editors"
 let gitOwner = "Krzysztof-Cieslak"
 let gitName = "FSharp.Analyzers.SDK"
