@@ -1,7 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
+    <PackAsTool>true</PackAsTool>
+    <PackageId>fsharp-analyzers</PackageId>
+    <ToolCommandName>fsharp-analyzers</ToolCommandName>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj">
@@ -11,4 +15,5 @@
   <ItemGroup>
     <Compile Include="Program.fs" />
   </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

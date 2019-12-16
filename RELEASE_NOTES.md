@@ -1,3 +1,7 @@
+### 0.1.0 - 16.12.2019
+
+* Initial tool release
+
 ### 0.0.10 - 21.11.2019
 
 * Add client module
