@@ -1,17 +1,17 @@
-﻿// Learn more about F# at http://fsharp.org
-
-open System
+﻿open System
 open System.IO
 open FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Text
 open ProjectSystem
 open Argu
 open FSharp.Analyzers.SDK
+open GlobExpressions
 
 type Arguments =
     | Project of string
     | Analyzer of string
     | Fail_On_Warnings of string list
+    | Ignore_Files of string list
     | Verbose
 with
     interface IArgParserTemplate with
@@ -29,12 +29,23 @@ let checker =
 let projectSystem = ProjectController(checker)
 let parser = ArgumentParser.Create<Arguments>()
 
-let printInfo text arg =
+let rec mkKn (ty: System.Type) =
+    if Reflection.FSharpType.IsFunction(ty) then
+        let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
+        let f = mkKn ran
+        Reflection.FSharpValue.MakeFunction(ty, fun _ -> f)
+    else
+        box ()
+
+
+let printInfo (fmt: Printf.TextWriterFormat<'a>) : 'a =
     if verbose then
         Console.ForegroundColor <- ConsoleColor.DarkGray
         printf "Info : "
         Console.ForegroundColor <- ConsoleColor.White
-        printfn text arg
+        printfn fmt
+    else
+        unbox (mkKn typeof<'a>)
 
 let printError text arg =
     Console.ForegroundColor <- ConsoleColor.Red
@@ -91,13 +102,19 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
         Some context
     | _ -> None
 
-let runProject proj analyzers  =
+let runProject proj (globs: Glob list) analyzers  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
 
     let files =
         loadProject path
+        |> List.filter (fun (f,_) ->
+            match globs |> List.tryFind (fun g -> g.IsMatch f) with
+            | None -> true
+            | Some g ->
+                printInfo "Ignoring file %s for pattern %s" f g.Pattern
+                false)
         |> List.choose typeCheckFile
         |> List.choose createContext
 
@@ -140,20 +157,22 @@ let main argv =
     verbose <- results.Contains <@ Verbose @>
     printInfo "Running in verbose mode%s" ""
 
-    let projOpt = results.TryGetResult <@ Project @>
     let failOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
-
     printInfo "Fail On Warnings: %A" failOnWarnings
+
+    let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
+    printInfo "Ignore Files: %A" ignoreFiles
+    let ignoreFiles = ignoreFiles |> List.map Glob
 
     let analyzersPath =
         Path.Combine(Environment.CurrentDirectory, results.GetResult (<@ Analyzer @>, "analyzers"))
         |> Path.GetFullPath
-
     printInfo "Loading analyzers from %s" analyzersPath
 
     let analyzers = Client.loadAnalyzers analyzersPath
     printInfo "Registed %d analyzers" analyzers.Length
 
+    let projOpt = results.TryGetResult <@ Project @>
     let results =
         match projOpt with
         | None ->
@@ -161,7 +180,7 @@ let main argv =
             []
         | Some proj ->
             analyzers
-            |> runProject proj
+            |> runProject proj ignoreFiles
             |> printMessages failOnWarnings
 
     calculateExitCode failOnWarnings results
