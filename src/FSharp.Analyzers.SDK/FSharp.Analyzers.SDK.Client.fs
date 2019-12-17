@@ -72,3 +72,5 @@ module Client =
       |> Seq.toList
     else
       []
+
+  let test = (Some 1).Value

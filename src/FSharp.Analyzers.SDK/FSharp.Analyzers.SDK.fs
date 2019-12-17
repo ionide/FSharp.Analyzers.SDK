@@ -35,3 +35,6 @@ type Message =
       Fixes: Fix list }
 
 type Analyzer = Context -> Message list
+
+module X =
+  let test = (Some 1).Value
