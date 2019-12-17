@@ -9,7 +9,7 @@ open GlobExpressions
 
 type Arguments =
     | Project of string
-    | Analyzer of string
+    | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Verbose
@@ -65,12 +65,13 @@ let loadProject file =
                     projectSystem.GetProjectOptions file
                     |> Option.map (fun opts -> file, opts)
                 )
+                |> Some
             | ProjectResponse.ProjectError(errorDetails) ->
-                printError "Project loading faield: %A" errorDetails
-                []
+                printError "Project loading failed: %A" errorDetails
+                None
             | ProjectResponse.ProjectLoading(_)
             | ProjectResponse.WorkspaceLoad(_) ->
-                []
+                None
 
         return filesToCheck
     } |> Async.RunSynchronously
@@ -107,24 +108,29 @@ let runProject proj (globs: Glob list) analyzers  =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
 
-    let files =
-        loadProject path
-        |> List.filter (fun (f,_) ->
-            match globs |> List.tryFind (fun g -> g.IsMatch f) with
-            | None -> true
-            | Some g ->
-                printInfo "Ignoring file %s for pattern %s" f g.Pattern
-                false)
-        |> List.choose typeCheckFile
-        |> List.choose createContext
+    match loadProject path with
+    | None -> None
+    | Some files ->
+
+        let files =
+            files
+            |> List.filter (fun (f,_) ->
+                match globs |> List.tryFind (fun g -> g.IsMatch f) with
+                | None -> true
+                | Some g ->
+                    printInfo "Ignoring file %s for pattern %s" f g.Pattern
+                    false)
+            |> List.choose typeCheckFile
+            |> List.choose createContext
 
 
-    files
-    |> Seq.collect (fun ctx ->
-        printInfo "Running analyzers for %s" ctx.FileName
-        analyzers |> Seq.collect (fun analyzer -> analyzer ctx)
-    )
-    |> Seq.toList
+        files
+        |> Seq.collect (fun ctx ->
+            printInfo "Running analyzers for %s" ctx.FileName
+            analyzers |> Seq.collect (fun analyzer -> analyzer ctx)
+        )
+        |> Seq.toList
+        |> Some
 
 let printMessages failOnWarnings (msgs: Message list) =
     if verbose then printfn ""
@@ -144,28 +150,31 @@ let printMessages failOnWarnings (msgs: Message list) =
     )
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list): int =
-    let check =
-        msgs
-        |> List.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
+let calculateExitCode failOnWarnings (msgs: Message list option): int =
+    match msgs with
+    | None -> -1
+    | Some msgs ->
+        let check =
+            msgs
+            |> List.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
 
-    if check then -12345 else 0
+        if check then -2 else 0
 
 [<EntryPoint>]
 let main argv =
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
-    printInfo "Running in verbose mode%s" ""
+    printInfo "Running in verbose mode"
 
     let failOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
-    printInfo "Fail On Warnings: %A" failOnWarnings
+    printInfo "Fail On Warnings: [%s]" (failOnWarnings |> String.concat ", ")
 
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
-    printInfo "Ignore Files: %A" ignoreFiles
+    printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
 
     let analyzersPath =
-        Path.Combine(Environment.CurrentDirectory, results.GetResult (<@ Analyzer @>, "analyzers"))
+        Path.Combine(Environment.CurrentDirectory, results.GetResult (<@ Analyzers_Path @>, "packages/Analyzers"))
         |> Path.GetFullPath
     printInfo "Loading analyzers from %s" analyzersPath
 
@@ -177,10 +186,11 @@ let main argv =
         match projOpt with
         | None ->
             printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
-            []
+            None
         | Some proj ->
             analyzers
             |> runProject proj ignoreFiles
-            |> printMessages failOnWarnings
+            |> Option.map (printMessages failOnWarnings)
+
 
     calculateExitCode failOnWarnings results
