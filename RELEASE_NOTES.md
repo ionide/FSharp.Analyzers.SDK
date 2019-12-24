@@ -1,3 +1,7 @@
+### 0.2.0 - 18.12.2019
+
+* Add `GetAllEntities` to context - function that returns all known entities in the workspace (from local projects and references)
+
 ### 0.1.0 - 16.12.2019
 
 * Initial tool release
