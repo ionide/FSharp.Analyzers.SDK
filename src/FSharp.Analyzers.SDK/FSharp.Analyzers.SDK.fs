@@ -14,7 +14,8 @@ type Context =
       Content: string[]
       ParseTree: ParsedInput
       TypedTree: FSharpImplementationFileContents
-      Symbols: FSharpEntity list }
+      Symbols: FSharpEntity list
+      GetAllEntities: bool -> AssemblySymbol list}
 
 type Fix =
     { FromRange : Range.range

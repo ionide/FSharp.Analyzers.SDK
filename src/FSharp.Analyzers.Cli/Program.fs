@@ -90,6 +90,30 @@ let typeCheckFile (file,opts) =
     | FSharpCheckFileAnswer.Succeeded(c) ->
         Some (file, text, parseRes, c)
 
+let entityCache = EntityCache()
+
+let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
+    try
+        let res = [
+          yield! AssemblyContentProvider.getAssemblySignatureContent AssemblyContentType.Full checkResults.PartialAssemblySignature
+          let ctx = checkResults.ProjectContext
+          let assembliesByFileName =
+            ctx.GetReferencedAssemblies()
+            |> Seq.groupBy (fun asm -> asm.FileName)
+            |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
+            |> Seq.toList
+            |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
+                        // get Content.Entities from it.
+
+          for fileName, signatures in assembliesByFileName do
+            let contentType = if publicOnly then Public else Full
+            let content = AssemblyContentProvider.getAssemblyContent entityCache.Locking contentType fileName signatures
+            yield! content
+        ]
+        res
+    with
+    | _ -> []
+
 let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckFileResults) =
     match p.ParseTree, c.ImplementationFile with
     | Some pt, Some tast ->
@@ -99,6 +123,7 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
             ParseTree = pt
             TypedTree = tast
             Symbols = c.PartialAssemblySignature.Entities |> Seq.toList
+            GetAllEntities = getAllEntities c
         }
         Some context
     | _ -> None
