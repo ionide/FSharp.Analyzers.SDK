@@ -5,8 +5,8 @@ nuget FSharp.Compiler.Service 33.0.0
 nuget Argu
 nuget Glob
 
-git https://github.com/fsharp/FsAutoComplete.git project_system build:"build.cmd ReleaseArchive", Packages: /bin/pkgs/, OS: windows
-git https://github.com/fsharp/FsAutoComplete.git project_system build:"build.sh ReleaseArchive", Packages: /bin/pkgs/, OS: mono
+git https://github.com/fsharp/FsAutoComplete.git master build:"build.cmd", Packages: /bin/pkgs/, OS: windows
+git https://github.com/fsharp/FsAutoComplete.git master build:"build.sh", Packages: /bin/pkgs/, OS: mono
 
 nuget ProjectSystem
 
