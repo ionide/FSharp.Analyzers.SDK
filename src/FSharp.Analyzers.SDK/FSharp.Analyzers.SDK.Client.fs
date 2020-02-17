@@ -1,11 +1,12 @@
 namespace FSharp.Analyzers.SDK
 
 open System
-open System.Reflection
 open System.IO
+open System.Reflection
+open System.Runtime.Loader
+open McMaster.NETCore.Plugins
 
 module Client =
-
 
   let internal attributeName = "AnalyzerAttribute"
 
@@ -59,16 +60,19 @@ module Client =
   ///Loads any analyzers defined in any assembly matching `*Analyzer*.dll` in given directory (and any subdirectories)
   let loadAnalyzers (dir: string): Analyzer list =
     if Directory.Exists dir then
-      let dlls =
+      let analyzerAssemblies =
           Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
-          |> Array.choose (fun n ->
+          |> Array.choose (fun analyzerDll ->
             try
-              Some (Assembly.LoadFile n)
+              // loads an assembly and all of it's dependencies
+              let analyzerLoader = PluginLoader.CreateFromAssemblyFile(analyzerDll)
+              Some (analyzerLoader.LoadDefaultAssembly())
             with
             | _ -> None)
-      dlls
-      |> Array.collect (fun a -> a.GetExportedTypes())
-      |> Seq.collect (analyzersFromType)
+
+      analyzerAssemblies
+      |> Array.collect (fun assembly -> assembly.GetExportedTypes())
+      |> Seq.collect analyzersFromType
       |> Seq.toList
     else
       []

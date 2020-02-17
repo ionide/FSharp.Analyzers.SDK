@@ -11,6 +11,7 @@ git https://github.com/fsharp/FsAutoComplete.git master build:"build.sh", Packag
 
 nuget ProjectSystem
 
+nuget McMaster.NETCore.Plugins
 // [ FAKE GROUP ]
 group Build
     storage none
