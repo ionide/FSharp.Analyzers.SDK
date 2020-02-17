@@ -624,11 +624,15 @@ GIT
      (f0d66f347abbad4b91744ccfefa55dd4393d3e38)
       build: build.cmd
       path: /bin/pkgs/
-      os: windows
+      os: win
      (f0d66f347abbad4b91744ccfefa55dd4393d3e38)
       build: build.sh
       path: /bin/pkgs/
-      os: mono
+      os: osx
+     (f0d66f347abbad4b91744ccfefa55dd4393d3e38)
+      build: build.sh
+      path: /bin/pkgs/
+      os: linux
 GROUP Build
 STORAGE: NONE
 NUGET
