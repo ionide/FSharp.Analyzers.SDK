@@ -1,3 +1,8 @@
+### 0.3.0 - 17.02.2020
+
+* Support third-party dependency resolution for analyzers
+* Manage analyzers state internally
+
 ### 0.2.0 - 18.12.2019
 
 * Add `GetAllEntities` to context - function that returns all known entities in the workspace (from local projects and references)
