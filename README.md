@@ -8,6 +8,9 @@ Library used for building custom analyzers for FSAC / F# editors.
 2. `dotnet tool restore`
 2. `dotnet fake build`
 
+## How to run sample
+1. `dotnet fake build -t RunSample`
+
 ## How to contribute
 
 *Imposter syndrome disclaimer*: I want your help. No really, I do.

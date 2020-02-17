@@ -153,6 +153,13 @@ Target.create "Push" (fun _ ->
         | _ -> UserInput.getUserPassword "NuGet Key: "
     Paket.push (fun p -> { p with WorkingDir = buildDir; ApiKey = key }))
 
+Target.create "RunSample" (fun _ ->
+    let args = @"-p src\FSharp.Analyzers.Cli -- --project .\samples\OptionAnalyzer\OptionAnalyzer.fsproj --analyzers-path .\samples\OptionAnalyzer\bin\Debug --verbose"
+
+    DotNet.exec id "run" args
+    |> ignore
+)
+
 // --------------------------------------------------------------------------------------
 // Build order
 // --------------------------------------------------------------------------------------
@@ -171,5 +178,9 @@ Target.create "Release" DoNothing
   ==> "ReleaseGitHub"
   ==> "Push"
   ==> "Release"
+
+"Build"
+  ==> "RunSample"
+
 
 Target.runOrDefault "Default"
