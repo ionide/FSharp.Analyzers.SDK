@@ -40,5 +40,5 @@ jobs:
       useGlobalJson: true
   - script: dotnet tool restore
     displayName: Install Tools
-  - script: dotnet fake build --target All
+  - script: dotnet fake build --target Pack
     displayName: Build All

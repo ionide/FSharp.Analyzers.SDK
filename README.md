@@ -4,8 +4,9 @@ Library used for building custom analyzers for FSAC / F# editors.
 
 ## How to build
 
-1. Install requirements - .Net SDK 2.1, and FAKE 5.X
-2. `fake build`
+1. Install requirements - .Net SDK 3.1
+2. `dotnet tool restore`
+2. `dotnet fake build`
 
 ## How to contribute
 
