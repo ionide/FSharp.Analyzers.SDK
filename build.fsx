@@ -154,7 +154,7 @@ Target.create "Push" (fun _ ->
     Paket.push (fun p -> { p with WorkingDir = buildDir; ApiKey = key }))
 
 Target.create "RunSample" (fun _ ->
-    let args = @"-p src\FSharp.Analyzers.Cli -- --project .\samples\OptionAnalyzer\OptionAnalyzer.fsproj --analyzers-path .\samples\OptionAnalyzer\bin\Debug --verbose"
+    let args = @"-p src\FSharp.Analyzers.Cli -- --project .\samples\OptionAnalyzer\OptionAnalyzer.fsproj --analyzers-path .\samples\OptionAnalyzer\bin\Release --verbose"
 
     DotNet.exec id "run" args
     |> ignore

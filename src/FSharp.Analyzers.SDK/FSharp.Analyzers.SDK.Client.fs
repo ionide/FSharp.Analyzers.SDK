@@ -33,7 +33,10 @@ module Client =
               try
                 m.Invoke(null, [|ctx|]) |> unbox
               with
-              | ex -> []
+              | ex ->
+                printfn "Error while executing Analyzer from %s.%s" m.DeclaringType.Name m.Name
+                printfn "%A" ex
+                []
             Some x
           with
           | ex -> None
@@ -65,7 +68,7 @@ module Client =
           |> Array.choose (fun analyzerDll ->
             try
               // loads an assembly and all of it's dependencies
-              let analyzerLoader = PluginLoader.CreateFromAssemblyFile(analyzerDll)
+              let analyzerLoader = PluginLoader.CreateFromAssemblyFile(analyzerDll, fun config -> config.DefaultContext <- AssemblyLoadContext.Default; config.PreferSharedTypes <- true)
               Some (analyzerLoader.LoadDefaultAssembly())
             with
             | _ -> None)
