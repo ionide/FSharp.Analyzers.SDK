@@ -1,0 +1,44 @@
+name: $(Rev:r)
+jobs:
+- job: Windows
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core Sdk from global.json'
+    inputs:
+      useGlobalJson: true
+  - script: dotnet tool restore
+    displayName: Install Tools
+  - script: dotnet fake build --target Pack
+    displayName: Build Pack
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: 'out'
+      artifactName: 'pkgs'
+
+- job: Linux
+  pool:
+    vmImage: 'ubuntu-16.04'
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core Sdk from global.json'
+    inputs:
+      useGlobalJson: true
+  - script: dotnet tool restore
+    displayName: Install Tools
+  - script: dotnet fake build --target Pack
+    displayName: Build Pack
+
+- job: MacOS
+  pool:
+    vmImage: 'macOS-10.13'
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Use .NET Core Sdk from global.json'
+    inputs:
+      useGlobalJson: true
+  - script: dotnet tool restore
+    displayName: Install Tools
+  - script: dotnet fake build --target All
+    displayName: Build All
