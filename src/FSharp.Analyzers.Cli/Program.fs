@@ -128,7 +128,7 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
         Some context
     | _ -> None
 
-let runProject proj (globs: Glob list) analyzers  =
+let runProject proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
@@ -149,11 +149,10 @@ let runProject proj (globs: Glob list) analyzers  =
             |> List.choose createContext
 
         files
-        |> Seq.collect (fun ctx ->
+        |> List.collect (fun ctx ->
             printInfo "Running analyzers for %s" ctx.FileName
-            analyzers |> Seq.collect (fun analyzer -> analyzer ctx)
+            Client.runAnalyzers ctx
         )
-        |> Seq.toList
         |> Some
 
 let printMessages failOnWarnings (msgs: Message list) =
@@ -206,8 +205,8 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let analyzers = Client.loadAnalyzers analyzersPath
-    printInfo "Registered %d analyzers" analyzers.Length
+    let (dlls, analyzers) = Client.loadAnalyzers analyzersPath
+    printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
     let results =
@@ -221,8 +220,7 @@ let main argv =
                 then proj
                 else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
-            analyzers
-            |> runProject project ignoreFiles
+            runProject project ignoreFiles
             |> Option.map (printMessages failOnWarnings)
 
     calculateExitCode failOnWarnings results

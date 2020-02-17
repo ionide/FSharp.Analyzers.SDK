@@ -5,6 +5,7 @@ open System.IO
 open System.Reflection
 open System.Runtime.Loader
 open McMaster.NETCore.Plugins
+open System.Collections.Concurrent
 
 module Client =
 
@@ -60,8 +61,12 @@ module Client =
     |> Seq.choose analyzerFromMember
     |> Seq.toList
 
-  ///Loads any analyzers defined in any assembly matching `*Analyzer*.dll` in given directory (and any subdirectories)
-  let loadAnalyzers (dir: string): Analyzer list =
+  let registeredAnalyzers: ConcurrentDictionary<string, Analyzer list> = ConcurrentDictionary()
+
+  ///Loads into private state any analyzers defined in any assembly
+  ///matching `*Analyzer*.dll` in given directory (and any subdirectories)
+  ///Returns number of found dlls matching `*Analyzer*.dll` and number of registered analyzers
+  let loadAnalyzers (dir: string): (int*int) =
     if Directory.Exists dir then
       let analyzerAssemblies =
           Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
@@ -69,13 +74,32 @@ module Client =
             try
               // loads an assembly and all of it's dependencies
               let analyzerLoader = PluginLoader.CreateFromAssemblyFile(analyzerDll, fun config -> config.DefaultContext <- AssemblyLoadContext.Default; config.PreferSharedTypes <- true)
-              Some (analyzerLoader.LoadDefaultAssembly())
+              Some (analyzerDll, analyzerLoader.LoadDefaultAssembly())
             with
             | _ -> None)
 
-      analyzerAssemblies
-      |> Array.collect (fun assembly -> assembly.GetExportedTypes())
-      |> Seq.collect analyzersFromType
-      |> Seq.toList
+      let analyzers =
+        analyzerAssemblies
+        |> Array.map (fun (path,assembly) ->
+          let analyzers = assembly.GetExportedTypes() |> Seq.collect (analyzersFromType)
+          path, analyzers)
+
+      analyzers
+      |> Seq.iter (fun (path, analyzers) ->
+        let analyzers = Seq.toList analyzers
+        registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
+        |> ignore
+      )
+
+      Seq.length analyzers,
+      analyzers |> Seq.collect (snd) |> Seq.length
     else
-      []
+      0,0
+
+  ///Runs all registered analyzers for given context (file).
+  ///Returns list of messages
+  let runAnalyzers (ctx: Context) : Message list =
+    let analyzers = registeredAnalyzers.Values |> Seq.collect id
+    analyzers
+    |> Seq.collect (fun analyzer -> analyzer ctx)
+    |> Seq.toList
