@@ -148,7 +148,6 @@ let runProject proj (globs: Glob list) analyzers  =
             |> List.choose typeCheckFile
             |> List.choose createContext
 
-
         files
         |> Seq.collect (fun ctx ->
             printInfo "Running analyzers for %s" ctx.FileName
@@ -159,6 +158,7 @@ let runProject proj (globs: Glob list) analyzers  =
 
 let printMessages failOnWarnings (msgs: Message list) =
     if verbose then printfn ""
+    if verbose && List.isEmpty msgs then printfn "No messages found from the analyzer(s)"
 
     msgs
     |> Seq.iter(fun m ->
@@ -199,12 +199,15 @@ let main argv =
     let ignoreFiles = ignoreFiles |> List.map Glob
 
     let analyzersPath =
-        Path.Combine(Environment.CurrentDirectory, results.GetResult (<@ Analyzers_Path @>, "packages/Analyzers"))
-        |> Path.GetFullPath
+        let path = results.GetResult (<@ Analyzers_Path @>, "packages/Analyzers")
+        if System.IO.Path.IsPathRooted path
+        then path
+        else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
+
     printInfo "Loading analyzers from %s" analyzersPath
 
     let analyzers = Client.loadAnalyzers analyzersPath
-    printInfo "Registed %d analyzers" analyzers.Length
+    printInfo "Registered %d analyzers" analyzers.Length
 
     let projOpt = results.TryGetResult <@ Project @>
     let results =
@@ -213,9 +216,13 @@ let main argv =
             printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
             None
         | Some proj ->
-            analyzers
-            |> runProject proj ignoreFiles
-            |> Option.map (printMessages failOnWarnings)
+            let project =
+                if System.IO.Path.IsPathRooted proj
+                then proj
+                else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
+            analyzers
+            |> runProject project ignoreFiles
+            |> Option.map (printMessages failOnWarnings)
 
     calculateExitCode failOnWarnings results

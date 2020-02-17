@@ -112,6 +112,10 @@ let rec visitDeclaration f d =
     | FSharpImplementationFileDeclaration.InitAction(e) ->
         visitExpr f e
 
+let notUsed() =
+    let option : Option<int> = None
+    option.Value
+
 [<Analyzer>]
 let optionValueAnalyzer : Analyzer =
     fun ctx ->
