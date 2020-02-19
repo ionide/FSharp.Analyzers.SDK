@@ -1,5 +1,11 @@
 {
     "workbench.colorCustomizations": {
         "tab.unfocusedActiveBorder": "#fff0"
-    }
+    },
+    "FSharp.analyzersPath": [
+        "packages/Analyzers",
+        "analyzers",
+        "./samples/OptionAnalyzer/bin/Release"
+    ],
+    "FSharp.enableAnalyzers": true,
 }
