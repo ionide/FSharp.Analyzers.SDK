@@ -11,7 +11,7 @@ Library used for building custom analyzers for FSAC / F# editors.
 ## How to run sample
 1. `dotnet fake build -t RunSample`
 
-### Writing Analyzers
+## Writing Analyzers
 
 Analyzers that are consumed by this SDK and from Ionide are simply .NET core class libraries. These class libraries expose a *value* of type `Analyzer` which is effectively a function that has input of type `Context` and returns a list of `Message` records:
 ```fsharp
