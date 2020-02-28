@@ -1,3 +1,7 @@
+### 0.3.1 - 28.02.2020
+
+* Update FCS version to 34.1.0
+
 ### 0.3.0 - 17.02.2020
 
 * Support third-party dependency resolution for analyzers
