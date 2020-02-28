@@ -2,6 +2,8 @@
 
 Library used for building custom analyzers for FSAC / F# editors.
 
+F# analyzers are live, real-time, project based plugins that enables to diagnose source code and surface custom errors, warnings and code fixes into editor. Read more about analyzers here - https://medium.com/lambda-factory/introducing-f-analyzers-772487889429
+
 ## How to build
 
 1. Install requirements - .Net SDK 3.1
