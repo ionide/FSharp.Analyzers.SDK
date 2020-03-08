@@ -4,10 +4,14 @@ open System
 open FSharp.Compiler
 open FSharp.Compiler.Ast
 open FSharp.Compiler.SourceCodeServices
+open System.Runtime.InteropServices
 
 /// Marks an analyzer for scanning
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type AnalyzerAttribute() = inherit Attribute()
+type AnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
+  inherit Attribute()
+
+  member _.Name = name
 
 type Context =
     { FileName: string
