@@ -1,3 +1,8 @@
+### 0.4.0 - 08.03.2020
+
+* Allow for optional named analyzers via the attribute `[<Analyzer("AnalyzerName")>]`
+* Add ability to get exact errors from running each individial analyzer
+
 ### 0.3.1 - 28.02.2020
 
 * Update FCS version to 34.1.0
