@@ -3,7 +3,7 @@ NUGET
     Argu (6.0)
       FSharp.Core (>= 4.3.2) - restriction: >= netstandard2.0
       System.Configuration.ConfigurationManager (>= 4.4) - restriction: >= netstandard2.0
-    FSharp.Compiler.Service (34.1)
+    FSharp.Compiler.Service (34.1.1)
       FSharp.Core (>= 4.6.2) - restriction: || (>= net461) (>= netstandard2.0)
       System.Buffers (>= 4.5) - restriction: || (>= net461) (>= netstandard2.0)
       System.Collections.Immutable (>= 1.5) - restriction: || (>= net461) (>= netstandard2.0)
@@ -632,24 +632,24 @@ NUGET
       FSharp.Core (>= 4.6.2) - restriction: || (>= net461) (>= netstandard2.0)
       Microsoft.NETFramework.ReferenceAssemblies (>= 1.0) - restriction: || (>= net461) (>= netstandard2.0)
   remote: paket-files/github.com/fsharp/FsAutoComplete/bin/pkgs
-    ProjectSystem (0.40.0)
+    ProjectSystem (0.40.1)
       Dotnet.ProjInfo (>= 0.38) - restriction: || (>= net461) (>= netstandard2.0)
       Dotnet.ProjInfo.Workspace.FCS (>= 0.38) - restriction: || (>= net461) (>= netstandard2.0)
-      FSharp.Compiler.Service (>= 34.1) - restriction: || (>= net461) (>= netstandard2.0)
+      FSharp.Compiler.Service (>= 34.1.1) - restriction: || (>= net461) (>= netstandard2.0)
       Microsoft.NETFramework.ReferenceAssemblies (>= 1.0) - restriction: || (>= net461) (>= netstandard2.0)
       Newtonsoft.Json (>= 12.0.3) - restriction: || (>= net461) (>= netstandard2.0)
       Sln (>= 0.3) - restriction: || (>= net461) (>= netstandard2.0)
 GIT
   remote: https://github.com/fsharp/FsAutoComplete.git
-     (d849d7200382f5da2c0179c5a555783644cb7c0b)
+     (8fb00089e5af75bbdf1280e6cbfe2d0e25caea5c)
       build: build.cmd
       path: /bin/pkgs/
       os: win
-     (d849d7200382f5da2c0179c5a555783644cb7c0b)
+     (8fb00089e5af75bbdf1280e6cbfe2d0e25caea5c)
       build: build.sh
       path: /bin/pkgs/
       os: osx
-     (d849d7200382f5da2c0179c5a555783644cb7c0b)
+     (8fb00089e5af75bbdf1280e6cbfe2d0e25caea5c)
       build: build.sh
       path: /bin/pkgs/
       os: linux
