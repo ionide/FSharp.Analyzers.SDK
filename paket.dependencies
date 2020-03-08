@@ -2,7 +2,7 @@ source https://api.nuget.org/v3/index.json
 source ./lib
 
 nuget FSharp.Core ~> 4.5
-nuget FSharp.Compiler.Service 34.1.0
+nuget FSharp.Compiler.Service 34.1.1
 nuget Argu
 nuget Glob
 
