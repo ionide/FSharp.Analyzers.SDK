@@ -87,7 +87,13 @@ Target.create "Restore" (fun _ ->
 )
 
 Target.create "Build" (fun _ ->
-    DotNet.build id ""
+    DotNet.build (fun p ->
+        { p with
+            Configuration = DotNet.BuildConfiguration.Release;
+            MSBuildParams = { MSBuild.CliArguments.Create() with
+                                Properties = ["Version", release.NugetVersion] }
+        }
+    ) ""
 )
 
 
