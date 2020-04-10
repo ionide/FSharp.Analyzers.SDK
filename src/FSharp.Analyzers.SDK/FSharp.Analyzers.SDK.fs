@@ -2,7 +2,7 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open FSharp.Compiler
-open FSharp.Compiler.Ast
+open FSharp.Compiler.SyntaxTree
 open FSharp.Compiler.SourceCodeServices
 open System.Runtime.InteropServices
 
