@@ -1,3 +1,6 @@
+### 0.4.1 - 11.04.2020
+* Update FCS version to 35.0.0
+
 ### 0.4.0 - 08.03.2020
 
 * Allow for optional named analyzers via the attribute `[<Analyzer("AnalyzerName")>]`
