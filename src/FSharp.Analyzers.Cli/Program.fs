@@ -169,7 +169,7 @@ let printMessages failOnWarnings (msgs: Message list) =
             | Info -> ConsoleColor.Blue
 
         Console.ForegroundColor <- color
-        printfn "%s(%d,%d): %s %s - %s" m.Range.FileName m.Range.StartColumn m.Range.StartLine (m.Severity.ToString()) m.Code m.Message
+        printfn "%s(%d,%d): %s %s - %s" m.Range.FileName m.Range.StartLine m.Range.StartColumn (m.Severity.ToString()) m.Code m.Message
         Console.ForegroundColor <- ConsoleColor.White
     )
     msgs
