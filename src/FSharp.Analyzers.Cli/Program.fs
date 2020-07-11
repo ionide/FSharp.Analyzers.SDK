@@ -55,7 +55,7 @@ let printError text arg =
 
 let loadProject file =
     async {
-        let! projLoading = projectSystem.LoadProject file ignore FSIRefs.TFM.NetCore (fun _ _ _ -> ())
+        let! projLoading = projectSystem.LoadProject file (fun _ -> ()) FSIRefs.TFM.NetCore (fun _ _ _ -> ())
         let filesToCheck =
             match projLoading with
             | ProjectResponse.Project proj ->

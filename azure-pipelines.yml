@@ -2,7 +2,7 @@ name: $(Rev:r)
 jobs:
 - job: Windows
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - task: UseDotNet@2
     displayName: 'Use .NET Core Sdk from global.json'
@@ -19,7 +19,7 @@ jobs:
 
 - job: Linux
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
   steps:
   - task: UseDotNet@2
     displayName: 'Use .NET Core Sdk from global.json'
@@ -32,7 +32,7 @@ jobs:
 
 - job: MacOS
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-10.15'
   steps:
   - task: UseDotNet@2
     displayName: 'Use .NET Core Sdk from global.json'
