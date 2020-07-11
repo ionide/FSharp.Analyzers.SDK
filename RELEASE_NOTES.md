@@ -1,3 +1,6 @@
+### 0.5.0 - 11.04.2020
+* Update FCS version to 36.0.3
+
 ### 0.4.1 - 11.04.2020
 * Update FCS version to 35.0.0
 
