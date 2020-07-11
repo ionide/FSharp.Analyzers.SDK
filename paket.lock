@@ -616,15 +616,15 @@ NUGET
       Sln (>= 0.3) - restriction: || (>= net461) (>= netstandard2.0)
 GIT
   remote: https://github.com/fsharp/FsAutoComplete.git
-     (7b99f9c88b8d7b055c178d571ef4528291fb2e13)
+     (f958a902d30cfc283b515868f5b592fbee59542c)
       build: build.cmd
       path: /bin/pkgs/
       os: win
-     (7b99f9c88b8d7b055c178d571ef4528291fb2e13)
+     (f958a902d30cfc283b515868f5b592fbee59542c)
       build: build.sh
       path: /bin/pkgs/
       os: osx
-     (7b99f9c88b8d7b055c178d571ef4528291fb2e13)
+     (f958a902d30cfc283b515868f5b592fbee59542c)
       build: build.sh
       path: /bin/pkgs/
       os: linux
