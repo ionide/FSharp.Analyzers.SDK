@@ -160,7 +160,11 @@ Target.create "Push" (fun _ ->
     Paket.push (fun p -> { p with WorkingDir = buildDir; ApiKey = key }))
 
 Target.create "RunSample" (fun _ ->
-    let args = @"-p src\FSharp.Analyzers.Cli -- --project .\samples\OptionAnalyzer\OptionAnalyzer.fsproj --analyzers-path .\samples\OptionAnalyzer\bin\Release --verbose"
+    let projectPath = Path.combine "src" "FSharp.Analyzers.Cli"
+    let optionAnalyzerDir = Path.combine (Path.combine __SOURCE_DIRECTORY__ "samples") "OptionAnalyzer"
+    let optionAnalyzerProjPath = Path.combine optionAnalyzerDir "OptionAnalyzer.fsproj"
+    let analyzersPath = Path.combine (Path.combine optionAnalyzerDir "bin") "Release"
+    let args = sprintf "-p %s -- --project %s --analyzers-path %s --verbose" projectPath optionAnalyzerProjPath analyzersPath
 
     DotNet.exec id "run" args
     |> ignore
