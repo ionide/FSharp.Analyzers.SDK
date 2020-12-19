@@ -2,31 +2,31 @@
 open System.IO
 open FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Text
-open ProjectSystem
 open Argu
 open FSharp.Analyzers.SDK
-open GlobExpressions
+open GlobExpressions   
+open Dotnet.ProjInfo
 
 type Arguments =
-    | Project of string
+    | Project of string   
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Verbose
 with
     interface IArgParserTemplate with
-        member s.Usage = ""
+        member s.Usage = ""  
 
 let mutable verbose = false
 
-let checker =
-    FSharpChecker.Create(
-        projectCacheSize = 200,
-        keepAllBackgroundResolutions = true,
-        keepAssemblyContents = true,
-        ImplicitlyStartBackgroundWork = true)
+let toolsPath = Init.init ()
+let createFCS () =
+    let checker = FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
+    checker.ImplicitlyStartBackgroundWork <- true
+    checker
+let fcs = createFCS ()
 
-let projectSystem = ProjectController(checker)
+let controller = ProjectSystem.ProjectController(toolsPath)
 let parser = ArgumentParser.Create<Arguments>()
 
 let rec mkKn (ty: System.Type) =
@@ -52,31 +52,20 @@ let printError text arg =
     printf "Error : "
     printfn text arg
     Console.ForegroundColor <- ConsoleColor.White
-
+     
 let loadProject file =
-    async {
-        let! projLoading = projectSystem.LoadProject file (fun _ -> ()) FSIRefs.TFM.NetCore (fun _ _ _ -> ())
+    async {  
+        controller.LoadProject(file)
+        let parsed = controller.ProjectOptions |> Seq.toList |> List.map (snd)
         let filesToCheck =
-            match projLoading with
-            | ProjectResponse.Project proj ->
-                printInfo "Project %s loaded" file
-                proj.projectFiles
-                |> List.choose (fun file ->
-                    projectSystem.GetProjectOptions file
-                    |> Option.map (fun opts -> file, opts)
-                )
-                |> Some
-            | ProjectResponse.ProjectError(errorDetails) ->
-                printError "Project loading failed: %A" errorDetails
-                None
-            | ProjectResponse.ProjectLoading(_)
-            | ProjectResponse.WorkspaceLoad(_) ->
-                None
+            match parsed |> List.tryHead with
+            | Some f -> Some (f.SourceFiles |> Array.toList)
+            | None -> None
 
         return filesToCheck
     } |> Async.RunSynchronously
 
-let typeCheckFile (file,opts) =
+let typeCheckFile (file) =
     let text = File.ReadAllText file
     let st = SourceText.ofString text
     let (parseRes, checkAnswer) =
@@ -139,7 +128,7 @@ let runProject proj (globs: Glob list)  =
 
         let files =
             files
-            |> List.filter (fun (f,_) ->
+            |> List.filter (fun f ->
                 match globs |> List.tryFind (fun g -> g.IsMatch f) with
                 | None -> true
                 | Some g ->

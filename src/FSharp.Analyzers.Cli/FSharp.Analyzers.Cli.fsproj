@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
     <PackAsTool>true</PackAsTool>
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
@@ -10,6 +10,9 @@
   <ItemGroup>
     <ProjectReference Include="..\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj">
       <Name>FSharp.Analyzers.SDK.fsproj</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\paket-files\github.com\ionide\dotnet-proj-info\src\Dotnet.ProjInfo.ProjectSystem\Dotnet.ProjInfo.ProjectSystem.fsproj">
+      <Name>Dotnet.ProjInfo.ProjectSystem</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
