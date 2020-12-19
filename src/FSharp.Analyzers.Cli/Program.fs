@@ -111,16 +111,15 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
         Some context
     | _ -> None
 
+
+///ToDo: Add globs filter
 let runProject proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
     let opts = loadProject path
-    let files = opts.SourceFiles
-    let context =  
-        files 
-        |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
-    context
+    opts.SourceFiles 
+    |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
     |> Array.collect (fun ctx ->
         match ctx with
         | Some c -> 
