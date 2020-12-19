@@ -5,7 +5,7 @@ open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
 open GlobExpressions   
-open Dotnet.ProjInfo
+open Ionide.ProjInfo
 
 type Arguments =
     | Project of string   
@@ -29,7 +29,7 @@ let fcs = createFCS ()
 let controller = ProjectSystem.ProjectController(toolsPath)
 let parser = ArgumentParser.Create<Arguments>()
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: System.Type) =   
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -53,31 +53,25 @@ let printError text arg =
     printfn text arg
     Console.ForegroundColor <- ConsoleColor.White
      
-let loadProject file =
+let loadProject projPath =
     async {  
-        controller.LoadProject(file)
-        let parsed = controller.ProjectOptions |> Seq.toList |> List.map (snd)
-        let filesToCheck =
-            match parsed |> List.tryHead with
-            | Some f -> Some (f.SourceFiles |> Array.toList)
-            | None -> None
+        let loader = WorkspaceLoader.Create(toolsPath)
+        let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
+        let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
 
-        return filesToCheck
+        return fcsPo
     } |> Async.RunSynchronously
 
-let typeCheckFile (file) =
+let typeCheckFile (file,opts) =
     let text = File.ReadAllText file
     let st = SourceText.ofString text
-    let (parseRes, checkAnswer) =
-        checker.ParseAndCheckFileInProject(file, 1, st, opts)
-        |> Async.RunSynchronously
-
+    let (parseRes, checkAnswer) = fcs.ParseAndCheckFileInProject(file,0,st,opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
     match checkAnswer with
     | FSharpCheckFileAnswer.Aborted ->
         printError "Checking of file %s aborted" file
         None
-    | FSharpCheckFileAnswer.Succeeded(c) ->
-        Some (file, text, parseRes, c)
+    | FSharpCheckFileAnswer.Succeeded result ->
+        Some (file, text, parseRes, result)
 
 let entityCache = EntityCache()
 
@@ -121,32 +115,24 @@ let runProject proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
+    let opts = loadProject path
+    let files = opts.SourceFiles
+    let context =  
+        files 
+        |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
+    context
+    |> Array.collect (fun ctx ->
+        match ctx with
+        | Some c -> 
+            printInfo "Running analyzers for %s" c.FileName
+            Client.runAnalyzers c
+        | None -> failwithf "could not get context for file %s" path
+            )
+        |> Some    
 
-    match loadProject path with
-    | None -> None
-    | Some files ->
-
-        let files =
-            files
-            |> List.filter (fun f ->
-                match globs |> List.tryFind (fun g -> g.IsMatch f) with
-                | None -> true
-                | Some g ->
-                    printInfo "Ignoring file %s for pattern %s" f g.Pattern
-                    false)
-            |> List.choose typeCheckFile
-            |> List.choose createContext
-
-        files
-        |> List.collect (fun ctx ->
-            printInfo "Running analyzers for %s" ctx.FileName
-            Client.runAnalyzers ctx
-        )
-        |> Some
-
-let printMessages failOnWarnings (msgs: Message list) =
+let printMessages failOnWarnings (msgs: Message array) =
     if verbose then printfn ""
-    if verbose && List.isEmpty msgs then printfn "No messages found from the analyzer(s)"
+    if verbose && Array.isEmpty msgs then printfn "No messages found from the analyzer(s)"
 
     msgs
     |> Seq.iter(fun m ->
@@ -163,13 +149,13 @@ let printMessages failOnWarnings (msgs: Message list) =
     )
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list option): int =
+let calculateExitCode failOnWarnings (msgs: Message array option): int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> List.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
+            |> Array.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
 
         if check then -2 else 0
 

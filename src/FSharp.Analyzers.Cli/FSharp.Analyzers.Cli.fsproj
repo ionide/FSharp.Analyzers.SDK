@@ -11,9 +11,6 @@
     <ProjectReference Include="..\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj">
       <Name>FSharp.Analyzers.SDK.fsproj</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\paket-files\github.com\ionide\dotnet-proj-info\src\Dotnet.ProjInfo.ProjectSystem\Dotnet.ProjInfo.ProjectSystem.fsproj">
-      <Name>Dotnet.ProjInfo.ProjectSystem</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.fs" />

@@ -4,13 +4,9 @@ nuget FSharp.Core
 nuget FSharp.Compiler.Service
 nuget Argu
 nuget Glob
-
-git https://github.com/ionide/dotnet-proj-info.git rewrite
-// build: "dotnet fake build", Packages: /bin/pkgs/, OS: windows
-nuget Microsoft.Build
-nuget Microsoft.Build.Locator
+nuget Ionide.ProjInfo.ProjectSystem
 nuget McMaster.NETCore.Plugins
-nuget Newtonsoft.Json
+
 // [ FAKE GROUP ]
 group Build
     storage none

@@ -2,3 +2,4 @@ FSharp.Core
 FSharp.Compiler.Service
 Argu
 Glob
+Ionide.ProjInfo.ProjectSystem
