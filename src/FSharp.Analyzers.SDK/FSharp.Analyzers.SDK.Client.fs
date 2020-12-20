@@ -103,11 +103,11 @@ module Client =
 
   ///Runs all registered analyzers for given context (file).
   ///Returns list of messages. Ignores errors from the analyzers
-  let runAnalyzers (ctx: Context) : Message list =
+  let runAnalyzers (ctx: Context) : Message [] =
     let analyzers = registeredAnalyzers.Values |> Seq.collect id
     analyzers
     |> Seq.collect (fun (analyzerName, analyzer) -> try analyzer ctx with error -> [ ])
-    |> Seq.toList
+    |> Seq.toArray
 
   /// Runs all registered analyzers for given context (file).
   /// Returns list of results per analyzer which can ei

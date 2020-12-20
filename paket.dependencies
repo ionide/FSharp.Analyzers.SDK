@@ -1,17 +1,14 @@
 source https://api.nuget.org/v3/index.json
 
-nuget FSharp.Core ~> 4.5
-nuget FSharp.Compiler.Service ~> 36.0
+nuget FSharp.Core
+nuget FSharp.Compiler.Service
 nuget Argu
 nuget Glob
-
-git https://github.com/fsharp/FsAutoComplete.git master build:"build.cmd", Packages: /bin/pkgs/, OS: win
-git https://github.com/fsharp/FsAutoComplete.git master build:"build.sh", Packages: /bin/pkgs/, OS: osx
-git https://github.com/fsharp/FsAutoComplete.git master build:"build.sh", Packages: /bin/pkgs/, OS: linux
-
-nuget ProjectSystem
-
+nuget Ionide.ProjInfo.ProjectSystem
+nuget Microsoft.Build copy_local: false
+nuget Microsoft.Build.Locator copy_local: false
 nuget McMaster.NETCore.Plugins
+
 // [ FAKE GROUP ]
 group Build
     storage none

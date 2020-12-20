@@ -129,7 +129,7 @@ let optionValueAnalyzer : Analyzer =
         |> Seq.map (fun r ->
             { Type = "Option.Value analyzer"
               Message = "Option.Value shouldn't be used"
-              Code = "OV001"
+              Code = "OV001"   
               Severity = Warning
               Range = r
               Fixes = []}

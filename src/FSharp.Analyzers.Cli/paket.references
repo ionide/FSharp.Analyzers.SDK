@@ -1,5 +1,7 @@
 FSharp.Core
 FSharp.Compiler.Service
-ProjectSystem
 Argu
 Glob
+Ionide.ProjInfo.ProjectSystem
+Microsoft.Build copy_local: false
+Microsoft.Build.Locator copy_local: false

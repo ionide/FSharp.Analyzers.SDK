@@ -2,34 +2,34 @@
 open System.IO
 open FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Text
-open ProjectSystem
 open Argu
 open FSharp.Analyzers.SDK
-open GlobExpressions
+open GlobExpressions   
+open Ionide.ProjInfo
 
 type Arguments =
-    | Project of string
+    | Project of string   
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Verbose
 with
     interface IArgParserTemplate with
-        member s.Usage = ""
+        member s.Usage = ""  
 
 let mutable verbose = false
 
-let checker =
-    FSharpChecker.Create(
-        projectCacheSize = 200,
-        keepAllBackgroundResolutions = true,
-        keepAssemblyContents = true,
-        ImplicitlyStartBackgroundWork = true)
+let toolsPath = Init.init ()
+let createFCS () =
+    let checker = FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
+    checker.ImplicitlyStartBackgroundWork <- true
+    checker
+let fcs = createFCS ()
 
-let projectSystem = ProjectController(checker)
+let controller = ProjectSystem.ProjectController(toolsPath)
 let parser = ArgumentParser.Create<Arguments>()
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: System.Type) =   
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -52,43 +52,26 @@ let printError text arg =
     printf "Error : "
     printfn text arg
     Console.ForegroundColor <- ConsoleColor.White
+     
+let loadProject projPath =
+    async {  
+        let loader = WorkspaceLoader.Create(toolsPath)
+        let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
+        let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
 
-let loadProject file =
-    async {
-        let! projLoading = projectSystem.LoadProject file (fun _ -> ()) FSIRefs.TFM.NetCore (fun _ _ _ -> ())
-        let filesToCheck =
-            match projLoading with
-            | ProjectResponse.Project proj ->
-                printInfo "Project %s loaded" file
-                proj.projectFiles
-                |> List.choose (fun file ->
-                    projectSystem.GetProjectOptions file
-                    |> Option.map (fun opts -> file, opts)
-                )
-                |> Some
-            | ProjectResponse.ProjectError(errorDetails) ->
-                printError "Project loading failed: %A" errorDetails
-                None
-            | ProjectResponse.ProjectLoading(_)
-            | ProjectResponse.WorkspaceLoad(_) ->
-                None
-
-        return filesToCheck
+        return fcsPo
     } |> Async.RunSynchronously
 
 let typeCheckFile (file,opts) =
     let text = File.ReadAllText file
     let st = SourceText.ofString text
-    let (parseRes, checkAnswer) =
-        checker.ParseAndCheckFileInProject(file, 1, st, opts)
-        |> Async.RunSynchronously
-
+    let (parseRes, checkAnswer) = fcs.ParseAndCheckFileInProject(file,0,st,opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
     match checkAnswer with
     | FSharpCheckFileAnswer.Aborted ->
         printError "Checking of file %s aborted" file
         None
-    | FSharpCheckFileAnswer.Succeeded(c) ->
-        Some (file, text, parseRes, c)
+    | FSharpCheckFileAnswer.Succeeded result ->
+        Some (file, text, parseRes, result)
 
 let entityCache = EntityCache()
 
@@ -128,36 +111,33 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
         Some context
     | _ -> None
 
+
 let runProject proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
+    let opts = loadProject path
+    opts.SourceFiles
+    |> Array.filter (fun file ->
+        match globs |> List.tryFind (fun g -> g.IsMatch file) with
+        | Some g ->
+            printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+            false
+        | None -> true
+    )
+    |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
+    |> Array.collect (fun ctx ->
+        match ctx with
+        | Some c -> 
+            printInfo "Running analyzers for %s" c.FileName
+            Client.runAnalyzers c
+        | None -> failwithf "could not get context for file %s" path
+            )
+        |> Some    
 
-    match loadProject path with
-    | None -> None
-    | Some files ->
-
-        let files =
-            files
-            |> List.filter (fun (f,_) ->
-                match globs |> List.tryFind (fun g -> g.IsMatch f) with
-                | None -> true
-                | Some g ->
-                    printInfo "Ignoring file %s for pattern %s" f g.Pattern
-                    false)
-            |> List.choose typeCheckFile
-            |> List.choose createContext
-
-        files
-        |> List.collect (fun ctx ->
-            printInfo "Running analyzers for %s" ctx.FileName
-            Client.runAnalyzers ctx
-        )
-        |> Some
-
-let printMessages failOnWarnings (msgs: Message list) =
+let printMessages failOnWarnings (msgs: Message array) =
     if verbose then printfn ""
-    if verbose && List.isEmpty msgs then printfn "No messages found from the analyzer(s)"
+    if verbose && Array.isEmpty msgs then printfn "No messages found from the analyzer(s)"
 
     msgs
     |> Seq.iter(fun m ->
@@ -174,13 +154,13 @@ let printMessages failOnWarnings (msgs: Message list) =
     )
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list option): int =
+let calculateExitCode failOnWarnings (msgs: Message array option): int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> List.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
+            |> Array.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
 
         if check then -2 else 0
 
