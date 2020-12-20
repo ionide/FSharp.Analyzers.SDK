@@ -5,6 +5,8 @@ nuget FSharp.Compiler.Service
 nuget Argu
 nuget Glob
 nuget Ionide.ProjInfo.ProjectSystem
+nuget Microsoft.Build copy_local: false
+nuget Microsoft.Build.Locator copy_local: false
 nuget McMaster.NETCore.Plugins
 
 // [ FAKE GROUP ]
