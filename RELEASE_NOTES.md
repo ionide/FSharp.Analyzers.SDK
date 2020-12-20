@@ -1,4 +1,9 @@
-### 0.5.0 - 11.04.2020
+### 0.6.0 - 20.12.2020
+
+* Update FCS version to 38.0
+* Use Ionide.ProjInfo isntead of Dotnet.ProjInfo
+
+### 0.5.0 - 11.07.2020
 * Update FCS version to 36.0.3
 
 ### 0.4.1 - 11.04.2020

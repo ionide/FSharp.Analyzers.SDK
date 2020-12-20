@@ -129,17 +129,12 @@ Target.create "ReleaseGitHub" (fun _ ->
     Git.Branches.pushTag "" remote release.NugetVersion
 
     let client =
-        let user =
-            match getBuildParam "github-user" with
+        let token =
+            match getBuildParam "github-token" with
             | s when not (isNullOrWhiteSpace s) -> s
-            | _ -> UserInput.getUserInput "Username: "
-        let pw =
-            match getBuildParam "github-pw" with
-            | s when not (isNullOrWhiteSpace s) -> s
-            | _ -> UserInput.getUserPassword "Password: "
+            | _ -> UserInput.getUserInput "github API token: "
 
-        // Git.createClient user pw
-        GitHub.createClient user pw
+        GitHub.createClientWithToken token
     let files = !! (buildDir </> "*.nupkg")
 
     // release on github
