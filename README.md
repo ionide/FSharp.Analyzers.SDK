@@ -6,7 +6,7 @@ F# analyzers are live, real-time, project based plugins that enables to diagnose
 
 ## How to build
 
-1. Install requirements - .Net SDK 3.1
+1. Install requirements - .Net 5.0 SDK
 2. `dotnet tool restore`
 2. `dotnet fake build`
 
@@ -40,7 +40,7 @@ let badCodeAnalyzer : Analyzer =
 ### Analyzer Requirements
 
 Analyzers are .NET core class libraries and they are distributed as such. However, since the SDK relies on dynamically loading the analyzers during runtime, there are some requirements to get them to work properly:
- - The analyzer class library has to target the `netcoreapp2.0` framework
+ - The analyzer class library has to target the `net5.0` framework
  - The analyzer has to reference the latest `FSharp.Analyzers.SDK` (at least the version used by FsAutoComplete which is subsequently used by Ionide)
 
 ### Packaging and Distribution
@@ -53,9 +53,9 @@ dotnet nuget push {NugetPackageFullPath} -s nuget.org -k {NugetApiKey}
 
 However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies has be there *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/netcoreapp2.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
 ```
-dotnet publish --configuration Release --framework netcoreapp2.0
+dotnet publish --configuration Release --framework net5.0
 ```
-against the analyzer project and put every file from that output into the `./lib/netcoreapp2.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
+against the analyzer project and put every file from that output into the `./lib/net5.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
 ```fs
 // make ZipFile available
 #r "System.IO.Compression.FileSystem.dll"
