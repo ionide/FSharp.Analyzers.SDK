@@ -4,32 +4,31 @@ open FSharp.Compiler.SourceCodeServices
 open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
-open GlobExpressions   
+open GlobExpressions
 open Ionide.ProjInfo
 
 type Arguments =
-    | Project of string   
+    | Project of string
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Verbose
 with
     interface IArgParserTemplate with
-        member s.Usage = ""  
+        member s.Usage = ""
 
 let mutable verbose = false
 
-let toolsPath = Init.init ()
+
 let createFCS () =
     let checker = FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
     checker.ImplicitlyStartBackgroundWork <- true
     checker
 let fcs = createFCS ()
 
-let controller = ProjectSystem.ProjectController(toolsPath)
 let parser = ArgumentParser.Create<Arguments>()
 
-let rec mkKn (ty: System.Type) =   
+let rec mkKn (ty: System.Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -52,9 +51,9 @@ let printError text arg =
     printf "Error : "
     printfn text arg
     Console.ForegroundColor <- ConsoleColor.White
-     
-let loadProject projPath =
-    async {  
+
+let loadProject toolsPath projPath =
+    async {
         let loader = WorkspaceLoader.Create(toolsPath)
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
         let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
@@ -112,11 +111,11 @@ let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckF
     | _ -> None
 
 
-let runProject proj (globs: Glob list)  =
+let runProject toolsPath proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
-    let opts = loadProject path
+    let opts = loadProject toolsPath path
     opts.SourceFiles
     |> Array.filter (fun file ->
         match globs |> List.tryFind (fun g -> g.IsMatch file) with
@@ -128,12 +127,12 @@ let runProject proj (globs: Glob list)  =
     |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
     |> Array.collect (fun ctx ->
         match ctx with
-        | Some c -> 
+        | Some c ->
             printInfo "Running analyzers for %s" c.FileName
             Client.runAnalyzers c
         | None -> failwithf "could not get context for file %s" path
             )
-        |> Some    
+        |> Some
 
 let printMessages failOnWarnings (msgs: Message array) =
     if verbose then printfn ""
@@ -166,6 +165,8 @@ let calculateExitCode failOnWarnings (msgs: Message array option): int =
 
 [<EntryPoint>]
 let main argv =
+    let toolsPath = Init.init ()
+
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
     printInfo "Running in verbose mode"
@@ -200,7 +201,7 @@ let main argv =
                 then proj
                 else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
-            runProject project ignoreFiles
+            runProject toolsPath project ignoreFiles
             |> Option.map (printMessages failOnWarnings)
 
     calculateExitCode failOnWarnings results
