@@ -116,28 +116,47 @@ let runProject toolsPath proj (globs: Glob list)  =
         Path.Combine(Environment.CurrentDirectory, proj)
         |> Path.GetFullPath
     let opts = loadProject toolsPath path
-    opts.SourceFiles
-    |> Array.filter (fun file ->
-        match globs |> List.tryFind (fun g -> g.IsMatch file) with
-        | Some g ->
-            printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
-            false
-        | None -> true
-    )
-    |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
-    |> Array.collect (fun ctx ->
-        match ctx with
-        | Some c ->
-            printInfo "Running analyzers for %s" c.FileName
-            Client.runAnalyzers c
-        | None -> failwithf "could not get context for file %s" path
-            )
-        |> Some
+    let results =
+        opts.SourceFiles
+        |> Array.filter (fun file ->
+            match globs |> List.tryFind (fun g -> g.IsMatch file) with
+            | Some g ->
+                printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+                false
+            | None -> true
+        )
+        |> Array.choose (fun f -> typeCheckFile (f,opts) |> Option.map createContext)
+        |> Array.collect (fun ctx ->
+            match ctx with
+            | Some c ->
+                printInfo "Running analyzers for %s" c.FileName
+                let results = Client.runAnalyzers c |> List.toArray
+                results
+            | _ -> [||]
+        )
+        |> Array.toList
 
-let printMessages failOnWarnings (msgs: Message array) =
+    let messages =
+        results
+        |> List.collect (fun n ->
+            match n.Output with
+            | Ok res -> res.Messages
+            | _ -> [])
+
+    let tooltips =
+        results
+        |> List.collect (fun n ->
+            match n.Output with
+            | Ok res -> res.Tooltips
+            | _ -> [])
+
+    messages, tooltips
+
+let printMessages failOnWarnings (msgs: Message list, tools: Tooltip list) =
     if verbose then printfn ""
-    if verbose && Array.isEmpty msgs then printfn "No messages found from the analyzer(s)"
+    if verbose && List.isEmpty msgs then printfn "No messages found from the analyzer(s)"
 
+    printfn "## Messages:"
     msgs
     |> Seq.iter(fun m ->
         let color =
@@ -151,15 +170,29 @@ let printMessages failOnWarnings (msgs: Message array) =
         printfn "%s(%d,%d): %s %s - %s" m.Range.FileName m.Range.StartLine m.Range.StartColumn (m.Severity.ToString()) m.Code m.Message
         Console.ForegroundColor <- ConsoleColor.White
     )
-    msgs
 
-let calculateExitCode failOnWarnings (msgs: Message array option): int =
-    match msgs with
+
+    if verbose then printfn ""
+    if verbose && List.isEmpty msgs then printfn "No tooltips found from the analyzer(s)"
+
+    printfn "## Tooltips:"
+    tools
+    |> Seq.iter(fun m ->
+        let color = ConsoleColor.Cyan
+
+        Console.ForegroundColor <- color
+        printfn "%s(%d,%d): %s - %s" m.Range.FileName m.Range.StartLine m.Range.StartColumn m.Code m.Message
+        Console.ForegroundColor <- ConsoleColor.White
+    )
+    msgs, tools
+
+let calculateExitCode failOnWarnings (res: (Message list * Tooltip list) option): int =
+    match res with
     | None -> -1
-    | Some msgs ->
+    | Some (msgs, _) ->
         let check =
             msgs
-            |> Array.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
+            |> List.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
 
         if check then -2 else 0
 
@@ -202,6 +235,7 @@ let main argv =
                 else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
             runProject toolsPath project ignoreFiles
-            |> Option.map (printMessages failOnWarnings)
+            |> printMessages failOnWarnings
+            |> Some
 
     calculateExitCode failOnWarnings results

@@ -9,7 +9,7 @@ open System.Collections.Concurrent
 
 type AnalysisResult = {
   AnalyzerName : string
-  Output : Result<Message list, exn>
+  Output : Result<AnalyzerOutput, exn>
 }
 
 module Client =
@@ -101,17 +101,9 @@ module Client =
     else
       0,0
 
-  ///Runs all registered analyzers for given context (file).
-  ///Returns list of messages. Ignores errors from the analyzers
-  let runAnalyzers (ctx: Context) : Message [] =
-    let analyzers = registeredAnalyzers.Values |> Seq.collect id
-    analyzers
-    |> Seq.collect (fun (analyzerName, analyzer) -> try analyzer ctx with error -> [ ])
-    |> Seq.toArray
-
   /// Runs all registered analyzers for given context (file).
   /// Returns list of results per analyzer which can ei
-  let runAnalyzersSafely (ctx: Context) : AnalysisResult list =
+  let runAnalyzers (ctx: Context) : AnalysisResult list =
     let analyzers = registeredAnalyzers.Values |> Seq.collect id
     analyzers
     |> Seq.map (fun (analyzerName, analyzer) ->

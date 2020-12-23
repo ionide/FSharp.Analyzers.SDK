@@ -125,13 +125,24 @@ let optionValueAnalyzer : Analyzer =
             if name = "Microsoft.FSharp.Core.FSharpOption`1.Value" then
                 state.Add range
         ctx.TypedTree.Declarations |> List.iter (visitDeclaration handler)
-        state
-        |> Seq.map (fun r ->
-            { Type = "Option.Value analyzer"
-              Message = "Option.Value shouldn't be used"
-              Code = "OV001"   
-              Severity = Warning
-              Range = r
-              Fixes = []}
-        )
-        |> Seq.toList
+        let messages =
+            state
+            |> Seq.map (fun r ->
+                { Type = "Option.Value analyzer"
+                  Message = "Option.Value shouldn't be used"
+                  Code = "OV001"
+                  Severity = Warning
+                  Range = r
+                  Fixes = []}
+            )
+            |> Seq.toList
+
+        let tooltips =
+            state
+            |> Seq.map (fun r ->
+                { Message = "Some custom tooltip that could be put wherever but for simplicity of demo we put it in same range as warning"
+                  Code = "TOV001"
+                  Range = r}
+            )
+            |> Seq.toList
+        {Messages = messages; Tooltips = tooltips}

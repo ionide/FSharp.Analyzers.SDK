@@ -39,4 +39,15 @@ type Message =
       Range: Range.range
       Fixes: Fix list }
 
-type Analyzer = Context -> Message list
+type Tooltip =
+    { Message: string
+      Code: string
+      Range: Range.range
+    }
+
+type AnalyzerOutput = {
+  Messages: Message list
+  Tooltips: Tooltip list
+}
+
+type Analyzer = Context -> AnalyzerOutput
