@@ -1,3 +1,8 @@
+### 0.7.0 - 19.01.2021
+
+* Update FCS version to 38.0.2
+* Include MsBuild.Locator dependency
+
 ### 0.6.0 - 20.12.2020
 
 * Update FCS version to 38.0

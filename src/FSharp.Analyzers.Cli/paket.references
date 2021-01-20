@@ -4,4 +4,6 @@ Argu
 Glob
 Ionide.ProjInfo.ProjectSystem
 Microsoft.Build copy_local: false
+Microsoft.Build.Utilities.Core copy_local: false
+Microsoft.Build.Tasks.Core copy_local: false
 Microsoft.Build.Locator
