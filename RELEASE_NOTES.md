@@ -1,3 +1,7 @@
+### 0.8.0 - 10.02.2021
+
+* Update FCS version to 39.0.0
+* Update Ionide Project System version as well
 ### 0.7.0 - 19.01.2021
 
 * Update FCS version to 38.0.2
