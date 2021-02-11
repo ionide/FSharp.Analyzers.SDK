@@ -3,7 +3,7 @@
 open System
 open FSharp.Analyzers.SDK
 open FSharp.Compiler.SourceCodeServices
-open FSharp.Compiler.Range
+open FSharp.Compiler.Text
 
 let rec visitExpr memberCallHandler (e:FSharpExpr) =
     match e with

@@ -22,7 +22,7 @@ type Context =
       GetAllEntities: bool -> AssemblySymbol list}
 
 type Fix =
-    { FromRange : Range.range
+    { FromRange : Text.Range
       FromText : string
       ToText : string }
 
@@ -36,7 +36,7 @@ type Message =
       Message: string
       Code: string
       Severity: Severity
-      Range: Range.range
+      Range: Text.Range
       Fixes: Fix list }
 
 type Analyzer = Context -> Message list
