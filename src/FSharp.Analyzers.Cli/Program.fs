@@ -118,6 +118,13 @@ let runProject toolsPath proj (globs: Glob list)  =
     let opts = loadProject toolsPath path
     opts.SourceFiles
     |> Array.filter (fun file ->
+        match Path.GetExtension(file).ToLowerInvariant() with
+        | ".fsi" ->
+            printInfo $"Ignoring signature file %s{file}"
+            false
+        | _ -> true
+    )
+    |> Array.filter (fun file ->
         match globs |> List.tryFind (fun g -> g.IsMatch file) with
         | Some g ->
             printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
