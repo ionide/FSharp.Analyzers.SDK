@@ -28,3 +28,4 @@ group Build
     nuget Fake.IO.FileSystem
     nuget Fake.DotNet.MsBuild
     nuget Fake.Api.GitHub
+    nuget Octokit < 0.50 # 50 has api compat issues with Fake's Github module
