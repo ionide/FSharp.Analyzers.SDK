@@ -2,8 +2,9 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open FSharp.Compiler
-open FSharp.Compiler.SyntaxTree
-open FSharp.Compiler.SourceCodeServices
+open FSharp.Compiler.Syntax
+open FSharp.Compiler.Symbols
+open FSharp.Compiler.EditorServices
 open System.Runtime.InteropServices
 
 /// Marks an analyzer for scanning

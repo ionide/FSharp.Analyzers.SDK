@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
-open FSharp.Compiler.SourceCodeServices
+open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
@@ -77,7 +78,7 @@ let entityCache = EntityCache()
 let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
     try
         let res = [
-          yield! AssemblyContentProvider.getAssemblySignatureContent AssemblyContentType.Full checkResults.PartialAssemblySignature
+          yield! AssemblyContent.GetAssemblySignatureContent AssemblyContentType.Full checkResults.PartialAssemblySignature
           let ctx = checkResults.ProjectContext
           let assembliesByFileName =
             ctx.GetReferencedAssemblies()
@@ -88,8 +89,8 @@ let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : A
                         // get Content.Entities from it.
 
           for fileName, signatures in assembliesByFileName do
-            let contentType = if publicOnly then Public else Full
-            let content = AssemblyContentProvider.getAssemblyContent entityCache.Locking contentType fileName signatures
+            let contentType = if publicOnly then AssemblyContentType.Public else AssemblyContentType.Full
+            let content = AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
             yield! content
         ]
         res
@@ -97,12 +98,12 @@ let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : A
     | _ -> []
 
 let createContext (file, text: string, p: FSharpParseFileResults,c: FSharpCheckFileResults) =
-    match p.ParseTree, c.ImplementationFile with
-    | Some pt, Some tast ->
+    match c.ImplementationFile with
+    | Some tast ->
         let context : Context = {
             FileName = file
             Content = text.Split([|'\n'|])
-            ParseTree = pt
+            ParseTree = p.ParseTree
             TypedTree = tast
             Symbols = c.PartialAssemblySignature.Entities |> Seq.toList
             GetAllEntities = getAllEntities c
