@@ -1,3 +1,8 @@
+### 0.10.0 - 22.06.2021
+
+* Update Ionide.ProjInfo to 0.53
+* Update FCS to 40.0.0
+
 ### 0.9.0 - 27.05.2021
 
 * Exclude signature files from analysis in CLI
