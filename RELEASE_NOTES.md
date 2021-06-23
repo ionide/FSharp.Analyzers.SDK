@@ -1,3 +1,7 @@
+### 0.10.1 - 23.06.2021
+
+* Don't expose sourcelink as a nuget package dependency
+
 ### 0.10.0 - 22.06.2021
 
 * Update Ionide.ProjInfo to 0.53

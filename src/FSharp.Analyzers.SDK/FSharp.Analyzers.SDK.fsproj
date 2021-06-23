@@ -14,7 +14,7 @@
     <RepositoryUrl>https://github.com/ionide/FSharp.Analyzers.SDK</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryBranch>master</RepositoryBranch>
-    <IncludeSymbols>true</IncludeSymbols>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />

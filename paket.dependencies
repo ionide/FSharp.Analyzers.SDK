@@ -5,11 +5,16 @@ nuget FSharp.Compiler.Service
 nuget Argu
 nuget Glob
 nuget Ionide.ProjInfo.ProjectSystem
+nuget Microsoft.Build.Locator
+nuget McMaster.NETCore.Plugins
+
+# don't expose as a package reference
+nuget Microsoft.SourceLink.GitHub copy_local: true
+
+# don't include runtime assets
 nuget Microsoft.Build.Tasks.Core copy_local: false
 nuget Microsoft.Build.Utilities.Core copy_local: false
 nuget Microsoft.Build copy_local: false
-nuget Microsoft.Build.Locator
-nuget McMaster.NETCore.Plugins
 
 // [ FAKE GROUP ]
 group Build
