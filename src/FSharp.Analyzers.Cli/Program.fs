@@ -23,7 +23,7 @@ let mutable verbose = false
 
 let createFCS () =
     let checker = FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
-    checker.ImplicitlyStartBackgroundWork <- true
+    // checker.ImplicitlyStartBackgroundWork <- true
     checker
 let fcs = createFCS ()
 
