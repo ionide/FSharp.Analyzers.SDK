@@ -1,3 +1,8 @@
+### 0.11.0 - 12.01.2022
+
+* Update to FCS 41 - thanks @theangrybyrd!
+* Pack the .NET Tool with RollForward set to enable running on .NET 6 runtimes.
+
 ### 0.10.1 - 23.06.2021
 
 * Don't expose sourcelink as a nuget package dependency

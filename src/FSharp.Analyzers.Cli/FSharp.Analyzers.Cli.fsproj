@@ -6,6 +6,7 @@
     <PackAsTool>true</PackAsTool>
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
+    <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj">
