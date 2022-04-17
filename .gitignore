@@ -9,4 +9,3 @@ AssemblyInfo.fs
 .DS_Store
 release.cmd
 analyzers
-.ionide
