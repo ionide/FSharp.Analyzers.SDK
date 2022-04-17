@@ -1,7 +1,7 @@
 source https://api.nuget.org/v3/index.json
 
 nuget FSharp.Core
-nuget FSharp.Compiler.Service 41.0.1
+nuget FSharp.Compiler.Service 41.0.3
 nuget Argu
 nuget Glob
 nuget Ionide.ProjInfo.ProjectSystem

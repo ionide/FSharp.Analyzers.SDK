@@ -173,7 +173,7 @@ let calculateExitCode failOnWarnings (msgs: Message array option): int =
 
 [<EntryPoint>]
 let main argv =
-    let toolsPath = Init.init ()
+    let toolsPath = Init.init (IO.DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
