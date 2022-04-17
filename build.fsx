@@ -63,7 +63,7 @@ Target.create "AssemblyInfo" (fun _ ->
           AssemblyInfo.Version release.AssemblyVersion
           AssemblyInfo.FileVersion release.AssemblyVersion ]
 
-    let getProjectDetails projectPath =
+    let getProjectDetails (projectPath: string) =
         let projectName = System.IO.Path.GetFileNameWithoutExtension(projectPath)
         ( projectPath,
           projectName,
@@ -155,7 +155,7 @@ Target.create "Push" (fun _ ->
     Paket.push (fun p -> { p with WorkingDir = buildDir; ApiKey = key }))
 
 Target.create "RunSample" (fun _ ->
-    let args = @"-p src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose"
+    let args = @"--project src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose"
 
     DotNet.exec id "run" args
     |> ignore

@@ -19,7 +19,7 @@ let rec visitExpr memberCallHandler (e:FSharpExpr) =
         visitObjArg memberCallHandler objExprOpt; visitExprs memberCallHandler argExprs
     | Coerce(targetType, inpExpr) ->
         visitExpr memberCallHandler inpExpr
-    | FastIntegerForLoop(startExpr, limitExpr, consumeExpr, isUp) ->
+    | FastIntegerForLoop(startExpr, limitExpr, consumeExpr, isUp, debugPointAtFor, debugPointAtInOrTo) ->
         visitExpr memberCallHandler startExpr; visitExpr memberCallHandler limitExpr; visitExpr memberCallHandler consumeExpr
     | ILAsm(asmCode, typeArgs, argExprs) ->
         visitExprs memberCallHandler argExprs
@@ -31,10 +31,11 @@ let rec visitExpr memberCallHandler (e:FSharpExpr) =
         visitExpr memberCallHandler guardExpr; visitExpr memberCallHandler thenExpr; visitExpr memberCallHandler elseExpr
     | Lambda(lambdaVar, bodyExpr) ->
         visitExpr memberCallHandler bodyExpr
-    | Let((bindingVar, bindingExpr), bodyExpr) ->
+    | Let((bindingVar, bindingExpr, debugPointAtBinding), bodyExpr) ->
         visitExpr memberCallHandler bindingExpr; visitExpr memberCallHandler bodyExpr
     | LetRec(recursiveBindings, bodyExpr) ->
-        List.iter (snd >> visitExpr memberCallHandler) recursiveBindings; visitExpr memberCallHandler bodyExpr
+        let recursiveBindings' = recursiveBindings |> List.map (fun (mfv, expr, dp) -> (mfv, expr))
+        List.iter (snd >> visitExpr memberCallHandler) recursiveBindings'; visitExpr memberCallHandler bodyExpr
     | NewArray(arrayType, argExprs) ->
         visitExprs memberCallHandler argExprs
     | NewDelegate(delegateType, delegateBodyExpr) ->
@@ -55,9 +56,9 @@ let rec visitExpr memberCallHandler (e:FSharpExpr) =
         visitObjArg memberCallHandler objExprOpt; visitExpr memberCallHandler argExpr
     | Sequential(firstExpr, secondExpr) ->
         visitExpr memberCallHandler firstExpr; visitExpr memberCallHandler secondExpr
-    | TryFinally(bodyExpr, finalizeExpr) ->
+    | TryFinally(bodyExpr, finalizeExpr, debugPointAtTry, debugPointAtFinally) ->
         visitExpr memberCallHandler bodyExpr; visitExpr memberCallHandler finalizeExpr
-    | TryWith(bodyExpr, _, _, catchVar, catchExpr) ->
+    | TryWith(bodyExpr, _, _, catchVar, catchExpr, debugPointAtTry, debugPointAtWith) ->
         visitExpr memberCallHandler bodyExpr; visitExpr memberCallHandler catchExpr
     | TupleGet(tupleType, tupleElemIndex, tupleExpr) ->
         visitExpr memberCallHandler tupleExpr
@@ -85,7 +86,7 @@ let rec visitExpr memberCallHandler (e:FSharpExpr) =
         visitExprs memberCallHandler argExprs
     | ValueSet(valToSet, valueExpr) ->
         visitExpr memberCallHandler valueExpr
-    | WhileLoop(guardExpr, bodyExpr) ->
+    | WhileLoop(guardExpr, bodyExpr, debugPointAtWhile) ->
         visitExpr memberCallHandler guardExpr; visitExpr memberCallHandler bodyExpr
     | BaseValue baseType -> ()
     | DefaultValue defaultType -> ()
@@ -130,7 +131,7 @@ let optionValueAnalyzer : Analyzer =
         |> Seq.map (fun r ->
             { Type = "Option.Value analyzer"
               Message = "Option.Value shouldn't be used"
-              Code = "OV001"   
+              Code = "OV001"
               Severity = Warning
               Range = r
               Fixes = []}

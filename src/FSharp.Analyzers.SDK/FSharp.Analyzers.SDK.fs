@@ -20,7 +20,7 @@ type Context =
       ParseTree: ParsedInput
       TypedTree: FSharpImplementationFileContents
       Symbols: FSharpEntity list
-      GetAllEntities: bool -> AssemblySymbol list}
+      GetAllEntities: bool -> AssemblySymbol list }
 
 type Fix =
     { FromRange : Text.Range
