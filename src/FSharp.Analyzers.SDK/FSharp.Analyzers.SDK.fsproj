@@ -9,7 +9,7 @@
     <Authors>Krzysztof Cieslak</Authors>
     <PackageDescription>SDK for building custom analyzers for FSAC / F# editors</PackageDescription>
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>license.md</PackageLicenseFile>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
     <RepositoryUrl>https://github.com/ionide/FSharp.Analyzers.SDK</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -20,6 +20,9 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\license.md" Pack="true" PackagePath=""/>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
