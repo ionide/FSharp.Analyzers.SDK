@@ -10,7 +10,6 @@
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
-    <PackageReleaseNotes>https://github.com/ionide/FSharp.Analyzers.SDK/blob/master/RELEASE_NOTES.md</PackageReleaseNotes>
   </PropertyGroup>
   
   <ItemGroup>
