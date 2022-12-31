@@ -21,6 +21,7 @@
 
 * Update FCS version to 39.0.0
 * Update Ionide Project System version as well
+
 ### 0.7.0 - 19.01.2021
 
 * Update FCS version to 38.0.2
@@ -32,9 +33,11 @@
 * Use Ionide.ProjInfo isntead of Dotnet.ProjInfo
 
 ### 0.5.0 - 11.07.2020
+
 * Update FCS version to 36.0.3
 
 ### 0.4.1 - 11.04.2020
+
 * Update FCS version to 35.0.0
 
 ### 0.4.0 - 08.03.2020
@@ -53,7 +56,8 @@
 
 ### 0.2.0 - 18.12.2019
 
-* Add `GetAllEntities` to context - function that returns all known entities in the workspace (from local projects and references)
+* Add `GetAllEntities` to context - function that returns all known entities in the workspace (from local projects and
+  references)
 
 ### 0.1.0 - 16.12.2019
 
