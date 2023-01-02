@@ -20,7 +20,7 @@
     <PackageReference Include="Argu" Version="6.1.1" />
     <PackageReference Include="Glob" Version="1.1.9" />
     <PackageReference Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
-    <PackageReference Include="Ionide.ProjInfo.ProjectSystem" Version="0.59.1" />
+    <PackageReference Include="Ionide.ProjInfo.ProjectSystem" Version="0.61.1" />
     <PackageReference Include="Microsoft.Build" Version="17.1.0" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Framework" Version="17.1.0" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Locator" Version="1.4.1" />
