@@ -3,6 +3,7 @@ open System.IO
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
+open FSharp.Reflection
 open Argu
 open FSharp.Analyzers.SDK
 open GlobExpressions
@@ -32,10 +33,10 @@ let fcs = createFCS ()
 let parser = ArgumentParser.Create<Arguments>()
 
 let rec mkKn (ty: Type) =
-    if Reflection.FSharpType.IsFunction(ty) then
-        let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
+    if FSharpType.IsFunction(ty) then
+        let _, ran = FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
-        Reflection.FSharpValue.MakeFunction(ty, (fun _ -> f))
+        FSharpValue.MakeFunction(ty, (fun _ -> f))
     else
         box ()
 
