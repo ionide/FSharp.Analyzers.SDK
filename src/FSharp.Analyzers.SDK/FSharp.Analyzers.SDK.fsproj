@@ -1,25 +1,27 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PackageId>FSharp.Analyzers.SDK</PackageId>
-    <IsPackable>true</IsPackable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>0.11.0</Version>
     <Authors>Krzysztof Cieslak</Authors>
-    <PackageDescription>SDK for building custom analyzers for FSAC / F# editors</PackageDescription>
+    <Description>SDK for building custom analyzers for FSAC / F# editors</Description>
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
-    <RepositoryUrl>https://github.com/ionide/FSharp.Analyzers.SDK</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryBranch>master</RepositoryBranch>
-    <DebugType>embedded</DebugType>
   </PropertyGroup>
+  
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
   </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+  
+  <ItemGroup>
+    <PackageReference Include="FSharp.Compiler.Service" Version="41.0.3" />
+    <PackageReference Update="FSharp.Core" Version="6.0.3" />
+    <PackageReference Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
+    <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+  </ItemGroup>
+  
 </Project>

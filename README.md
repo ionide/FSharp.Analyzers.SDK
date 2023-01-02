@@ -6,12 +6,14 @@ F# analyzers are live, real-time, project based plugins that enables to diagnose
 
 ## How to build
 
-1. Install requirements - .NET 6.0 SDK
+1. Install the .NET SDK version specified in `global.json`
 2. `dotnet tool restore`
-2. `dotnet fake build`
+2. Open and build in your favorite IDE, or use `dotnet build`
 
 ## How to run sample
-1. `dotnet fake build -t RunSample`
+1. `dotnet run --project src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose`
+
+You can also set up a run configuration of FSharp.Analyzers.Cli in your favorite IDE using similar arguments. This also allows you to debug FSharp.Analyzers.Cli.
 
 ## Writing Analyzers
 

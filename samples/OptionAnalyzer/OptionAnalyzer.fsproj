@@ -1,15 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <IsPackable>false</IsPackable>
-  </PropertyGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj">
-      <Name>FSharp.Analyzers.SDK.fsproj</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Library.fs" />
-  </ItemGroup>
-  <Import Project="..\..\.paket\Paket.Restore.targets" />
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <Compile Include="Library.fs" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <PackageReference Update="FSharp.Core" Version="6.0.3" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
+    </ItemGroup>
+    
 </Project>

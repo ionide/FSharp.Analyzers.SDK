@@ -13,6 +13,27 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{0FE8
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "OptionAnalyzer", "samples\OptionAnalyzer\OptionAnalyzer.fsproj", "{E4FAFA1A-4E26-4553-81F2-844C94B85349}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{937D2F4A-7EF4-469F-8DDA-3D75F3D32C69}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
+		global.json = global.json
+		README.md = README.md
+		CHANGELOG.md = CHANGELOG.md
+		resetTool.cmd = resetTool.cmd
+		nuget.config = nuget.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{7A9A1C69-ADF2-421C-90F8-AB3304D6E197}"
+	ProjectSection(SolutionItems) = preProject
+		.github\dependabot.yml = .github\dependabot.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{452A16E1-35C3-4392-B969-548E701748D5}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\ci.yml = .github\workflows\ci.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,5 +88,7 @@ Global
 		{C1D38B7A-0193-46AA-B033-ADBBF642AAA0} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
 		{96582FA1-CF16-455B-AF80-D825C1A40DB2} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
 		{E4FAFA1A-4E26-4553-81F2-844C94B85349} = {0FE81935-26A8-45E1-A62E-5148C73BA6A2}
+		{7A9A1C69-ADF2-421C-90F8-AB3304D6E197} = {937D2F4A-7EF4-469F-8DDA-3D75F3D32C69}
+		{452A16E1-35C3-4392-B969-548E701748D5} = {7A9A1C69-ADF2-421C-90F8-AB3304D6E197}
 	EndGlobalSection
 EndGlobal
