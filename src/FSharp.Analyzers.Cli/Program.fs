@@ -31,7 +31,7 @@ let fcs = createFCS ()
 
 let parser = ArgumentParser.Create<Arguments>()
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -200,7 +200,7 @@ let calculateExitCode failOnWarnings (msgs: Message array option) : int =
 
 [<EntryPoint>]
 let main argv =
-    let toolsPath = Init.init (IO.DirectoryInfo Environment.CurrentDirectory) None
+    let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
@@ -216,7 +216,7 @@ let main argv =
     let analyzersPath =
         let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
 
-        if System.IO.Path.IsPathRooted path then
+        if Path.IsPathRooted path then
             path
         else
             Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
@@ -235,7 +235,7 @@ let main argv =
             None
         | Some proj ->
             let project =
-                if System.IO.Path.IsPathRooted proj then
+                if Path.IsPathRooted proj then
                     proj
                 else
                     Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
