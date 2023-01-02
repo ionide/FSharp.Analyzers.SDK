@@ -6,6 +6,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DisableImplicitLibraryPacksFolder>true</DisableImplicitLibraryPacksFolder>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarnOn>FS1182;$(WarnOn)</WarnOn>
   </PropertyGroup>
 
   <ItemGroup>
