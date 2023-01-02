@@ -87,7 +87,7 @@ let rec visitExpr memberCallHandler (e: FSharpExpr) =
     | DefaultValue _ -> ()
     | ThisValue _ -> ()
     | Const(_, _) -> ()
-    | Value(_) -> ()
+    | Value _ -> ()
     | _ -> ()
 
 and visitExprs f exprs = List.iter (visitExpr f) exprs
