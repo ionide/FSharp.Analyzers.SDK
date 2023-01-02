@@ -16,6 +16,9 @@ jobs:
       - name: Restore tools
         run: dotnet tool restore
 
+      - name: Check code format
+        run: dotnet fantomas --check --recurse .
+
       - name: Restore dependencies
         run: dotnet restore --locked-mode
 
