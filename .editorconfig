@@ -1,0 +1,20 @@
+root = true
+
+[*]
+charset = utf-8
+max_line_length = 120
+indent_style = space
+indent_size = 2
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[{nuget.config,*.*proj,*.props,*.xml}]
+end_tag_newline = true
+self_closing_tag_style = space
+
+[*.fs]
+indent_size = 4
+fsharp_multiline_block_brackets_on_same_column = true
+fsharp_experimental_stroustrup_style = true
+fsharp_keep_max_number_of_blank_lines = 2
