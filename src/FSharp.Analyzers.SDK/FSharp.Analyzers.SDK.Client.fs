@@ -122,7 +122,7 @@ module Client =
         let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
         analyzers
-        |> Seq.collect (fun (analyzerName, analyzer) ->
+        |> Seq.collect (fun (_, analyzer) ->
             try
                 analyzer ctx
             with error -> [])

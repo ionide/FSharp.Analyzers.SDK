@@ -12,83 +12,82 @@ let rec visitExpr memberCallHandler (e: FSharpExpr) =
     | AddressSet(lvalueExpr, rvalueExpr) ->
         visitExpr memberCallHandler lvalueExpr
         visitExpr memberCallHandler rvalueExpr
-    | Application(funcExpr, typeArgs, argExprs) ->
+    | Application(funcExpr, _, argExprs) ->
         visitExpr memberCallHandler funcExpr
         visitExprs memberCallHandler argExprs
-    | Call(objExprOpt, memberOrFunc, typeArgs1, typeArgs2, argExprs) ->
+    | Call(objExprOpt, memberOrFunc, _, _, argExprs) ->
         memberCallHandler e.Range memberOrFunc
         visitObjArg memberCallHandler objExprOpt
         visitExprs memberCallHandler argExprs
-    | Coerce(targetType, inpExpr) -> visitExpr memberCallHandler inpExpr
-    | FastIntegerForLoop(startExpr, limitExpr, consumeExpr, isUp, debugPointAtFor, debugPointAtInOrTo) ->
+    | Coerce(_, inpExpr) -> visitExpr memberCallHandler inpExpr
+    | FastIntegerForLoop(startExpr, limitExpr, consumeExpr, _, _, _) ->
         visitExpr memberCallHandler startExpr
         visitExpr memberCallHandler limitExpr
         visitExpr memberCallHandler consumeExpr
-    | ILAsm(asmCode, typeArgs, argExprs) -> visitExprs memberCallHandler argExprs
-    | ILFieldGet(objExprOpt, fieldType, fieldName) -> visitObjArg memberCallHandler objExprOpt
-    | ILFieldSet(objExprOpt, fieldType, fieldName, valueExpr) -> visitObjArg memberCallHandler objExprOpt
+    | ILAsm(_, _, argExprs) -> visitExprs memberCallHandler argExprs
+    | ILFieldGet(objExprOpt, _, _) -> visitObjArg memberCallHandler objExprOpt
+    | ILFieldSet(objExprOpt, _, _, _) -> visitObjArg memberCallHandler objExprOpt
     | IfThenElse(guardExpr, thenExpr, elseExpr) ->
         visitExpr memberCallHandler guardExpr
         visitExpr memberCallHandler thenExpr
         visitExpr memberCallHandler elseExpr
-    | Lambda(lambdaVar, bodyExpr) -> visitExpr memberCallHandler bodyExpr
-    | Let((bindingVar, bindingExpr, debugPointAtBinding), bodyExpr) ->
+    | Lambda(_, bodyExpr) -> visitExpr memberCallHandler bodyExpr
+    | Let((_, bindingExpr, _), bodyExpr) ->
         visitExpr memberCallHandler bindingExpr
         visitExpr memberCallHandler bodyExpr
     | LetRec(recursiveBindings, bodyExpr) ->
         let recursiveBindings' =
-            recursiveBindings |> List.map (fun (mfv, expr, dp) -> (mfv, expr))
+            recursiveBindings |> List.map (fun (mfv, expr, _) -> (mfv, expr))
 
         List.iter (snd >> visitExpr memberCallHandler) recursiveBindings'
         visitExpr memberCallHandler bodyExpr
-    | NewArray(arrayType, argExprs) -> visitExprs memberCallHandler argExprs
-    | NewDelegate(delegateType, delegateBodyExpr) -> visitExpr memberCallHandler delegateBodyExpr
-    | NewObject(objType, typeArgs, argExprs) -> visitExprs memberCallHandler argExprs
-    | NewRecord(recordType, argExprs) -> visitExprs memberCallHandler argExprs
-    | NewTuple(tupleType, argExprs) -> visitExprs memberCallHandler argExprs
-    | NewUnionCase(unionType, unionCase, argExprs) -> visitExprs memberCallHandler argExprs
+    | NewArray(_, argExprs) -> visitExprs memberCallHandler argExprs
+    | NewDelegate(_, delegateBodyExpr) -> visitExpr memberCallHandler delegateBodyExpr
+    | NewObject(_, _, argExprs) -> visitExprs memberCallHandler argExprs
+    | NewRecord(_, argExprs) -> visitExprs memberCallHandler argExprs
+    | NewTuple(_, argExprs) -> visitExprs memberCallHandler argExprs
+    | NewUnionCase(_, _, argExprs) -> visitExprs memberCallHandler argExprs
     | Quote(quotedExpr) -> visitExpr memberCallHandler quotedExpr
-    | FSharpFieldGet(objExprOpt, recordOrClassType, fieldInfo) -> visitObjArg memberCallHandler objExprOpt
-    | FSharpFieldSet(objExprOpt, recordOrClassType, fieldInfo, argExpr) ->
+    | FSharpFieldGet(objExprOpt, _, _) -> visitObjArg memberCallHandler objExprOpt
+    | FSharpFieldSet(objExprOpt, _, _, argExpr) ->
         visitObjArg memberCallHandler objExprOpt
         visitExpr memberCallHandler argExpr
     | Sequential(firstExpr, secondExpr) ->
         visitExpr memberCallHandler firstExpr
         visitExpr memberCallHandler secondExpr
-    | TryFinally(bodyExpr, finalizeExpr, debugPointAtTry, debugPointAtFinally) ->
+    | TryFinally(bodyExpr, finalizeExpr, _, _) ->
         visitExpr memberCallHandler bodyExpr
         visitExpr memberCallHandler finalizeExpr
-    | TryWith(bodyExpr, _, _, catchVar, catchExpr, debugPointAtTry, debugPointAtWith) ->
+    | TryWith(bodyExpr, _, _, _, catchExpr, _, _) ->
         visitExpr memberCallHandler bodyExpr
         visitExpr memberCallHandler catchExpr
-    | TupleGet(tupleType, tupleElemIndex, tupleExpr) -> visitExpr memberCallHandler tupleExpr
+    | TupleGet(_, _, tupleExpr) -> visitExpr memberCallHandler tupleExpr
     | DecisionTree(decisionExpr, decisionTargets) ->
         visitExpr memberCallHandler decisionExpr
         List.iter (snd >> visitExpr memberCallHandler) decisionTargets
-    | DecisionTreeSuccess(decisionTargetIdx, decisionTargetExprs) -> visitExprs memberCallHandler decisionTargetExprs
-    | TypeLambda(genericParam, bodyExpr) -> visitExpr memberCallHandler bodyExpr
-    | TypeTest(ty, inpExpr) -> visitExpr memberCallHandler inpExpr
-    | UnionCaseSet(unionExpr, unionType, unionCase, unionCaseField, valueExpr) ->
+    | DecisionTreeSuccess(_, decisionTargetExprs) -> visitExprs memberCallHandler decisionTargetExprs
+    | TypeLambda(_, bodyExpr) -> visitExpr memberCallHandler bodyExpr
+    | TypeTest(_, inpExpr) -> visitExpr memberCallHandler inpExpr
+    | UnionCaseSet(unionExpr, _, _, _, valueExpr) ->
         visitExpr memberCallHandler unionExpr
         visitExpr memberCallHandler valueExpr
-    | UnionCaseGet(unionExpr, unionType, unionCase, unionCaseField) -> visitExpr memberCallHandler unionExpr
-    | UnionCaseTest(unionExpr, unionType, unionCase) -> visitExpr memberCallHandler unionExpr
-    | UnionCaseTag(unionExpr, unionType) -> visitExpr memberCallHandler unionExpr
-    | ObjectExpr(objType, baseCallExpr, overrides, interfaceImplementations) ->
+    | UnionCaseGet(unionExpr, _, _, _) -> visitExpr memberCallHandler unionExpr
+    | UnionCaseTest(unionExpr, _, _) -> visitExpr memberCallHandler unionExpr
+    | UnionCaseTag(unionExpr, _) -> visitExpr memberCallHandler unionExpr
+    | ObjectExpr(_, baseCallExpr, overrides, interfaceImplementations) ->
         visitExpr memberCallHandler baseCallExpr
         List.iter (visitObjMember memberCallHandler) overrides
         List.iter (snd >> List.iter (visitObjMember memberCallHandler)) interfaceImplementations
-    | TraitCall(sourceTypes, traitName, typeArgs, typeInstantiation, argTypes, argExprs) ->
-        visitExprs memberCallHandler argExprs
-    | ValueSet(valToSet, valueExpr) -> visitExpr memberCallHandler valueExpr
-    | WhileLoop(guardExpr, bodyExpr, debugPointAtWhile) ->
+    | TraitCall(_, _, _, _, _, argExprs) -> visitExprs memberCallHandler argExprs
+    | ValueSet(_, valueExpr) -> visitExpr memberCallHandler valueExpr
+    | WhileLoop(guardExpr, bodyExpr, _) ->
         visitExpr memberCallHandler guardExpr
         visitExpr memberCallHandler bodyExpr
-    | BaseValue baseType -> ()
-    | DefaultValue defaultType -> ()
-    | ThisValue thisType -> ()
-    | Const(constValueObj, constType) -> ()
-    | Value(valueToGet) -> ()
+    | BaseValue _ -> ()
+    | DefaultValue _ -> ()
+    | ThisValue _ -> ()
+    | Const(_, _) -> ()
+    | Value(_) -> ()
     | _ -> ()
 
 and visitExprs f exprs = List.iter (visitExpr f) exprs
@@ -99,10 +98,10 @@ and visitObjMember f memb = visitExpr f memb.Body
 
 let rec visitDeclaration f d =
     match d with
-    | FSharpImplementationFileDeclaration.Entity(e, subDecls) ->
+    | FSharpImplementationFileDeclaration.Entity(_, subDecls) ->
         for subDecl in subDecls do
             visitDeclaration f subDecl
-    | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(v, vs, e) -> visitExpr f e
+    | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, e) -> visitExpr f e
     | FSharpImplementationFileDeclaration.InitAction(e) -> visitExpr f e
 
 let notUsed () =
