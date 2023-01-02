@@ -69,7 +69,7 @@ let typeCheckFile (file, opts) =
     let text = File.ReadAllText file
     let st = SourceText.ofString text
 
-    let (parseRes, checkAnswer) =
+    let parseRes, checkAnswer =
         fcs.ParseAndCheckFileInProject(file, 0, st, opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
 
     match checkAnswer with
@@ -223,7 +223,7 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let (dlls, analyzers) = Client.loadAnalyzers analyzersPath
+    let dlls, analyzers = Client.loadAnalyzers analyzersPath
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
