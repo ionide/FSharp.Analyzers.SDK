@@ -26,15 +26,13 @@ expose a *value* of type `Analyzer` which is effectively a function that has inp
 of `Message` records:
 
 ```fsharp
-module BadCodeAnalyzer
-
 open FSharp.Analyzers.SDK
 
 [<Analyzer>]
-let badCodeAnalyzer : Analyzer =
-  fun (context: Context) ->
-    // inspect context to determine the error/warning messages
-    [   ]
+let badCodeAnalyzer: Analyzer =
+    fun (context: Context) ->
+        // inspect context to determine the error/warning messages
+        []
 ```
 
 Notice how we expose the function `BadCodeAnalyzer.badCodeAnalyzer` with an attribute `[<Analyzer>]` that allows the SDK
@@ -47,10 +45,11 @@ Analyzers can also be named which allows for better logging if something went wr
 
 ```fs
 [<Analyzer "BadCodeAnalyzer">]
-let badCodeAnalyzer : Analyzer =
-  fun (context: Context) ->
-    // inspect context to determine the error/warning messages
-    [   ]
+let badCodeAnalyzer: Analyzer =
+    fun (context: Context) ->
+        // inspect context to determine the error/warning messages
+        []
+
 ```
 
 ### Analyzer Requirements
@@ -95,17 +94,18 @@ let releaseNotes = ReleaseNotes.load "RELEASE_NOTES.md"
 
 Target.create "PackAnalyzer" (fun _ ->
     let analyzerProject = "src" </> "BadCodeAnalyzer"
-    let args =
-        [
-            "pack"
-            "--configuration Release"
-            sprintf "/p:PackageVersion=%s" releaseNotes.NugetVersion
-            sprintf "/p:PackageReleaseNotes=\"%s\"" (String.concat "\n" releaseNotes.Notes)
-            sprintf "--output %s" (__SOURCE_DIRECTORY__ </> "dist")
-        ]
+
+    let args = [
+        "pack"
+        "--configuration Release"
+        sprintf "/p:PackageVersion=%s" releaseNotes.NugetVersion
+        sprintf "/p:PackageReleaseNotes=\"%s\"" (String.concat "\n" releaseNotes.Notes)
+        sprintf "--output %s" (__SOURCE_DIRECTORY__ </> "dist")
+    ]
 
     // create initial nuget package
     let exitCode = Shell.Exec("dotnet", String.concat " " args, analyzerProject)
+
     if exitCode <> 0 then
         failwith "dotnet pack failed"
     else
@@ -131,10 +131,8 @@ Target.create "PackAnalyzer" (fun _ ->
             // re-create the nuget package
             ZipFile.CreateFromDirectory(nugetParent </> nugetFileName, nupkg)
             // delete intermediate directory
-            Shell.deleteDir(nugetParent </> nugetFileName)
-        | _ ->
-            failwith "dotnet publish failed"
-)
+            Shell.deleteDir (nugetParent </> nugetFileName)
+        | _ -> failwith "dotnet publish failed")
 ```
 
 ## How to contribute
