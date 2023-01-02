@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
+
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -11,17 +11,17 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <Compile Include="FSharp.Analyzers.SDK.fs" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="FSharp.Compiler.Service" Version="41.0.3" />
     <PackageReference Update="FSharp.Core" Version="6.0.3" />
     <PackageReference Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
   </ItemGroup>
-  
+
 </Project>
