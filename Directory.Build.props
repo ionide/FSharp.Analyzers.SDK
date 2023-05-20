@@ -5,10 +5,13 @@
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DisableImplicitLibraryPacksFolder>true</DisableImplicitLibraryPacksFolder>
+    <ChangelogFile>$(MSBuildThisFileDirectory)CHANGELOG.md</ChangelogFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    <Content Include="$(MSBuildThisFileDirectory)README.md" PackagePath="README.md" />
   </ItemGroup>
 
 </Project>

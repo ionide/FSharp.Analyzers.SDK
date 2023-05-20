@@ -8,7 +8,6 @@
     <PackAsTool>true</PackAsTool>
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
-    <Version>0.11.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

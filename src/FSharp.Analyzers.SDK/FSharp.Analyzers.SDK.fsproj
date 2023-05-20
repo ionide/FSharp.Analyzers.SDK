@@ -4,7 +4,6 @@
     <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>0.11.0</Version>
     <Authors>Krzysztof Cieslak</Authors>
     <Description>SDK for building custom analyzers for FSAC / F# editors</Description>
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
