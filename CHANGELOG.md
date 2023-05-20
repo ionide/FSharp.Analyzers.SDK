@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.12.0 - 2023-05-10
+
+### Changed
+
+* Updated the tool to .NET 7 (thanks @cmeeren!)
+* Updated to FSharp.Core 7 and FCS 43.7.200 (aka what's in the 7.0.200 .NET SDK) (thanks @DamianReeves!)
+
 ## 0.11.0 - 2022-01-12
 
 ### Changed
