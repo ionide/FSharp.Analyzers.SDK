@@ -37,12 +37,13 @@ let rec mkKn (ty: System.Type) =
     else
         box ()
 
+let origForegroundColor = Console.ForegroundColor
 
 let printInfo (fmt: Printf.TextWriterFormat<'a>) : 'a =
     if verbose then
         Console.ForegroundColor <- ConsoleColor.DarkGray
         printf "Info : "
-        Console.ForegroundColor <- ConsoleColor.White
+        Console.ForegroundColor <- origForegroundColor
         printfn fmt
     else
         unbox (mkKn typeof<'a>)
@@ -51,7 +52,7 @@ let printError text arg =
     Console.ForegroundColor <- ConsoleColor.Red
     printf "Error : "
     printfn text arg
-    Console.ForegroundColor <- ConsoleColor.White
+    Console.ForegroundColor <- origForegroundColor
 
 let loadProject toolsPath projPath =
     async {
@@ -157,7 +158,7 @@ let printMessages failOnWarnings (msgs: Message array) =
 
         Console.ForegroundColor <- color
         printfn "%s(%d,%d): %s %s - %s" m.Range.FileName m.Range.StartLine m.Range.StartColumn (m.Severity.ToString()) m.Code m.Message
-        Console.ForegroundColor <- ConsoleColor.White
+        Console.ForegroundColor <- origForegroundColor
     )
     msgs
 
