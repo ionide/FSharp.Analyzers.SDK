@@ -27,7 +27,7 @@ let createFCS () =
     checker
 let fcs = createFCS ()
 
-let parser = ArgumentParser.Create<Arguments>()
+let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter ())
 
 let rec mkKn (ty: System.Type) =
     if Reflection.FSharpType.IsFunction(ty) then
