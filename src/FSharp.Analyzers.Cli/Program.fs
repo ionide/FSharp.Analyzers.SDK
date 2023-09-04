@@ -195,7 +195,7 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let (dlls, analyzers) = Client.loadAnalyzers analyzersPath
+    let dlls, analyzers = Client.loadAnalyzers (printError "%s") analyzersPath
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>

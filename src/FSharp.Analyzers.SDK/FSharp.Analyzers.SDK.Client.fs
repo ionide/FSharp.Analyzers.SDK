@@ -71,7 +71,7 @@ module Client =
   ///Loads into private state any analyzers defined in any assembly
   ///matching `*Analyzer*.dll` in given directory (and any subdirectories)
   ///Returns number of found dlls matching `*Analyzer*.dll` and number of registered analyzers
-  let loadAnalyzers (dir: string): (int*int) =
+  let loadAnalyzers (printError: string -> unit) (dir: string): (int*int) =
     if Directory.Exists dir then
       let analyzerAssemblies =
           Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
@@ -83,8 +83,25 @@ module Client =
             with
             | _ -> None)
 
+      let currentFSharpAnalyzersSDKVersion = Assembly.GetExecutingAssembly().GetName().Version
+
+      let findFSharpAnalyzerSDKVersion (assembly: Assembly) =
+        let references = assembly.GetReferencedAssemblies()
+        let fas =
+          references
+          |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
+        fas.Version
+
       let analyzers =
         analyzerAssemblies
+        |> Array.filter (fun (name, analyzerAssembly) ->
+          let version = findFSharpAnalyzerSDKVersion analyzerAssembly
+          if version = currentFSharpAnalyzersSDKVersion then
+            true
+          else 
+            printError $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
+            false
+        )
         |> Array.map (fun (path,assembly) ->
           let analyzers = assembly.GetExportedTypes() |> Seq.collect (analyzersFromType)
           path, analyzers)
