@@ -2,6 +2,7 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open FSharp.Compiler
+open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Syntax
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
@@ -20,7 +21,9 @@ type Context =
       ParseTree: ParsedInput
       TypedTree: FSharpImplementationFileContents
       Symbols: FSharpEntity list
-      GetAllEntities: bool -> AssemblySymbol list }
+      GetAllEntities: bool -> AssemblySymbol list
+      AllSymbolUses: FSharpSymbolUse array
+      SymbolUsesOfFile: FSharpSymbolUse array }
 
 type Fix =
     { FromRange : Text.Range
