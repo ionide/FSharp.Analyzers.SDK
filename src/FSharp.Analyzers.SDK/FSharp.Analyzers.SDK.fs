@@ -16,11 +16,12 @@ type AnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: stri
   member _.Name = name
 
 type Context =
-    { FileName: string
+    { ParseFileResults: FSharpParseFileResults
+      CheckFileResults: FSharpCheckFileResults
+      CheckProjectResults: FSharpCheckProjectResults
+      FileName: string
       Content: string[]
-      ParseTree: ParsedInput
       TypedTree: FSharpImplementationFileContents
-      Symbols: FSharpEntity list
       GetAllEntities: bool -> AssemblySymbol list
       AllSymbolUses: FSharpSymbolUse array
       SymbolUsesOfFile: FSharpSymbolUse array }

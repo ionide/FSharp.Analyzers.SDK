@@ -98,15 +98,18 @@ let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : A
     with
     | _ -> []
 
-let createContext (allSymbolUses: FSharpSymbolUse array) (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults) =
+let createContext
+    (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
+    (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults) =
     match c.ImplementationFile with
     | Some tast ->
         let context : Context = {
+            ParseFileResults = p
+            CheckFileResults = c
+            CheckProjectResults = checkProjectResults 
             FileName = file
             Content = text.Split([|'\n'|])
-            ParseTree = p.ParseTree
             TypedTree = tast
-            Symbols = c.PartialAssemblySignature.Entities |> Seq.toList
             GetAllEntities = getAllEntities c
             AllSymbolUses = allSymbolUses
             SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file) 
@@ -139,7 +142,7 @@ let runProject toolsPath proj (globs: Glob list)  =
             false
         | None -> true
     )
-    |> Array.choose (fun f -> typeCheckFile (f, opts) |> Option.map (createContext allSymbolUses))
+    |> Array.choose (fun f -> typeCheckFile (f, opts) |> Option.map (createContext (checkProjectResults, allSymbolUses)))
     |> Array.collect (fun ctx ->
         match ctx with
         | Some c ->
