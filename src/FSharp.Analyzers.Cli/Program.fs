@@ -27,7 +27,7 @@ let createFCS () =
     checker
 let fcs = createFCS ()
 
-let parser = ArgumentParser.Create<Arguments>()
+let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter ())
 
 let rec mkKn (ty: System.Type) =
     if Reflection.FSharpType.IsFunction(ty) then
@@ -195,7 +195,7 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let (dlls, analyzers) = Client.loadAnalyzers analyzersPath
+    let dlls, analyzers = Client.loadAnalyzers (printError "%s") analyzersPath
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
