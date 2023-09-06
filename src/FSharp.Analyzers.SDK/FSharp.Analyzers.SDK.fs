@@ -2,6 +2,7 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open FSharp.Compiler
+open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Syntax
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
@@ -15,12 +16,15 @@ type AnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: stri
   member _.Name = name
 
 type Context =
-    { FileName: string
+    { ParseFileResults: FSharpParseFileResults
+      CheckFileResults: FSharpCheckFileResults
+      CheckProjectResults: FSharpCheckProjectResults
+      FileName: string
       Content: string[]
-      ParseTree: ParsedInput
       TypedTree: FSharpImplementationFileContents
-      Symbols: FSharpEntity list
-      GetAllEntities: bool -> AssemblySymbol list }
+      GetAllEntities: bool -> AssemblySymbol list
+      AllSymbolUses: FSharpSymbolUse array
+      SymbolUsesOfFile: FSharpSymbolUse array }
 
 type Fix =
     { FromRange : Text.Range
