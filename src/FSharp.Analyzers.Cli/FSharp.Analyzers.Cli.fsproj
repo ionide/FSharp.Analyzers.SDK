@@ -15,16 +15,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="7.0.200" />
-    <PackageReference Include="Argu" Version="6.1.1" />
-    <PackageReference Include="Glob" Version="1.1.9" />
-    <PackageReference Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
-    <PackageReference Include="Ionide.ProjInfo.ProjectSystem" Version="0.61.3" />
-    <PackageReference Include="Microsoft.Build" Version="17.2.0" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Framework" Version="17.2.0" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Locator" Version="1.4.1" />
-    <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.2.0" ExcludeAssets="runtime" />
-    <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.2.0" ExcludeAssets="runtime" />
+    <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="Argu" />
+    <PackageReference Include="Glob" />
+    <PackageReference Include="Ionide.KeepAChangelog.Tasks"  PrivateAssets="all" />
+    <PackageReference Include="Ionide.ProjInfo.ProjectSystem"/>
+    <PackageReference Include="Microsoft.Build"  ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Framework"  ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Locator"  />
+    <PackageReference Include="Microsoft.Build.Tasks.Core"  ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
