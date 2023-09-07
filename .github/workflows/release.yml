@@ -21,7 +21,7 @@ jobs:
         run: dotnet tool restore
 
       - name: Run Build
-        run: dotnet build -c Release --no-restore -maxCpuCount
+        run: dotnet build -c Release -maxCpuCount
 
       - name: Get Changelog Entry
         id: changelog_reader
