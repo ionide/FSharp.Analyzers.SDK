@@ -38,10 +38,10 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: bin/*.nupkg
+          artifacts: **/*.nupkg
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.changelog_reader.outputs.log_entry }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
 
       - name: Push packages
-        run: dotnet nuget push "bin/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k  ${{ secrets.NUGET_KEY }} --skip-duplicate
+        run: dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k  ${{ secrets.NUGET_KEY }} --skip-duplicate
