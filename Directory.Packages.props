@@ -1,0 +1,22 @@
+<Project>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageVersion Include="FSharp.Core" Version="7.0.400" />
+        <PackageVersion Include="FSharp.Compiler.Service" Version="43.7.400" />
+        <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
+        <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+        <PackageVersion Include="Argu" Version="6.1.1" />
+        <PackageVersion Include="Glob" Version="1.1.9" />
+        <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.61.3" />
+        <PackageVersion Include="Microsoft.Build" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+        <PackageVersion Include="Microsoft.Build.Framework" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+        <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+        <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+        <PackageVersion Include="Microsoft.Build.Locator" Version="1.4.1" />
+        <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
+        <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    </ItemGroup>
+</Project>
