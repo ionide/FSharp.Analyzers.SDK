@@ -10,6 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get version from tag
+        id: tag_name
+        run: |
+          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+        shell: bash
+
       - uses: actions/checkout@v3
 
       - name: Setup .NET
@@ -23,9 +29,10 @@ jobs:
 
       - name: Get Changelog Entry
         id: changelog_reader
-        uses: mindsers/changelog-reader-action@v1.1.0
+        uses: mindsers/changelog-reader-action@v2
         with:
-          version: ${{ github.ref }}
+          validation_level: warn
+          version: ${{ steps.tag_name.outputs.current_version }}
           path: ./CHANGELOG.md
 
       - name: Create Release
@@ -34,6 +41,7 @@ jobs:
           artifacts: bin/*.nupkg
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.changelog_reader.outputs.log_entry }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
 
       - name: Push packages
         run: dotnet nuget push "bin/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k  ${{ secrets.NUGET_KEY }} --skip-duplicate
