@@ -75,6 +75,7 @@ module Client =
     if Directory.Exists dir then
       let analyzerAssemblies =
           Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
+          |> Array.filter(fun a -> not (a.EndsWith("FSharp.Analyzers.SDK.dll")))
           |> Array.choose (fun analyzerDll ->
             try
               // loads an assembly and all of it's dependencies
