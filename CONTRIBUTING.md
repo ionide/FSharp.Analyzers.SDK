@@ -160,4 +160,4 @@ in order to craft an excellent pull request:
 3. Make a new version tag (for example, `v0.45.0`)
     1. `git tag v0.45.0`
 4. Push changes to the repo.
-    1. `git push --atomic [insert-remote-branch] main v0.45.0`
+    1. `git push --atomic [insert-remote-branch] master v0.45.0`
