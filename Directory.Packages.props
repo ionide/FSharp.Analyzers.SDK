@@ -10,7 +10,7 @@
         <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
         <PackageVersion Include="Argu" Version="6.1.1" />
         <PackageVersion Include="Glob" Version="1.1.9" />
-        <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.61.3" />
+        <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.62.0" />
         <PackageVersion Include="Microsoft.Build" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
         <PackageVersion Include="Microsoft.Build.Framework" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
         <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
