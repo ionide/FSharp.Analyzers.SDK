@@ -41,6 +41,7 @@ jobs:
           artifacts: "**/*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.changelog_reader.outputs.log_entry }}
+          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
 
       - name: Push packages
         run: dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k  ${{ secrets.NUGET_API_KEY }} --skip-duplicate
