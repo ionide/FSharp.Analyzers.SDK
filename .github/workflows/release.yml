@@ -38,7 +38,7 @@ jobs:
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: **/*.nupkg
+          artifacts: "**/*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
           body: ${{ steps.changelog_reader.outputs.log_entry }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
