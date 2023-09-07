@@ -30,3 +30,6 @@ jobs:
 
       - name: Test
         run: dotnet test -c Release --no-build
+
+      - name: RunSample
+        run: dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose
