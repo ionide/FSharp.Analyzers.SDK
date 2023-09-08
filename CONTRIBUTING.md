@@ -119,11 +119,13 @@ in order to craft an excellent pull request:
    [interactive rebase](https://help.github.com/articles/about-git-rebase/)
    feature to tidy up your commits before making them public.
 
-5. Make sure all the tests are still passing.
+5. Ensure the code is formatted and the sample still works.
 
    ```bash
    dotnet tool restore
-   dotnet fake build
+   dotnet fantomas .
+   dotnet build -c Release
+   dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose
    ```
 
 6. Push your topic branch up to your fork:
