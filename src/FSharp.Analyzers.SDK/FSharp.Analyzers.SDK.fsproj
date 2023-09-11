@@ -14,6 +14,7 @@
   <ItemGroup>
     <Compile Include="FSharp.Analyzers.SDK.fs" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
+    <Compile Include="FSharp.Analyzers.SDK.TestHelpers.fs" />
   </ItemGroup>
 
   <ItemGroup>

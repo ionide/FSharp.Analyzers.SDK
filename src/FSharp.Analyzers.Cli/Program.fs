@@ -20,12 +20,7 @@ with
 
 let mutable verbose = false
 
-
-let createFCS () =
-    let checker = FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
-    // checker.ImplicitlyStartBackgroundWork <- true
-    checker
-let fcs = createFCS ()
+let fcs = Utils.createFCS None
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter ())
 
@@ -63,61 +58,6 @@ let loadProject toolsPath projPath =
         return fcsPo
     } |> Async.RunSynchronously
 
-let typeCheckFile (file,opts) =
-    let text = File.ReadAllText file
-    let st = SourceText.ofString text
-    let (parseRes, checkAnswer) = fcs.ParseAndCheckFileInProject(file,0,st,opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
-    match checkAnswer with
-    | FSharpCheckFileAnswer.Aborted ->
-        printError "Checking of file %s aborted" file
-        None
-    | FSharpCheckFileAnswer.Succeeded result ->
-        Some (file, text, parseRes, result)
-
-let entityCache = EntityCache()
-
-let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
-    try
-        let res = [
-          yield! AssemblyContent.GetAssemblySignatureContent AssemblyContentType.Full checkResults.PartialAssemblySignature
-          let ctx = checkResults.ProjectContext
-          let assembliesByFileName =
-            ctx.GetReferencedAssemblies()
-            |> Seq.groupBy (fun asm -> asm.FileName)
-            |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
-            |> Seq.toList
-            |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
-                        // get Content.Entities from it.
-
-          for fileName, signatures in assembliesByFileName do
-            let contentType = if publicOnly then AssemblyContentType.Public else AssemblyContentType.Full
-            let content = AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
-            yield! content
-        ]
-        res
-    with
-    | _ -> []
-
-let createContext
-    (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
-    (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults) =
-    match c.ImplementationFile with
-    | Some tast ->
-        let context : Context = {
-            ParseFileResults = p
-            CheckFileResults = c
-            CheckProjectResults = checkProjectResults 
-            FileName = file
-            Content = text.Split([|'\n'|])
-            TypedTree = tast
-            GetAllEntities = getAllEntities c
-            AllSymbolUses = allSymbolUses
-            SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file) 
-        }
-        Some context
-    | _ -> None
-
-
 let runProject toolsPath proj (globs: Glob list)  =
     let path =
         Path.Combine(Environment.CurrentDirectory, proj)
@@ -142,7 +82,7 @@ let runProject toolsPath proj (globs: Glob list)  =
             false
         | None -> true
     )
-    |> Array.choose (fun f -> typeCheckFile (f, opts) |> Option.map (createContext (checkProjectResults, allSymbolUses)))
+    |> Array.choose (fun f -> Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f,  f, opts) |> Option.map (Utils.createContext (checkProjectResults, allSymbolUses)))
     |> Array.collect (fun ctx ->
         match ctx with
         | Some c ->
