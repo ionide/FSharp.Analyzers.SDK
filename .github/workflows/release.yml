@@ -21,11 +21,8 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
 
-      - name: Restore tools
-        run: dotnet tool restore
-
-      - name: Run Build
-        run: dotnet build -c Release -maxCpuCount
+      - name: Run Release Build
+        run: dotnet fsi build.fsx -p ReleaseBuild
 
       - name: Get Changelog Entry
         id: changelog_reader

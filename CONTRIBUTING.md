@@ -119,11 +119,10 @@ in order to craft an excellent pull request:
    [interactive rebase](https://help.github.com/articles/about-git-rebase/)
    feature to tidy up your commits before making them public.
 
-5. Make sure all the tests are still passing.
+5. Ensure the CI build passes locally.
 
    ```bash
-   dotnet tool restore
-   dotnet fake build
+   dotnet fsi build.fsx
    ```
 
 6. Push your topic branch up to your fork:

@@ -14,7 +14,7 @@ type Arguments =
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Verbose
-with
+
     interface IArgParserTemplate with
         member s.Usage = ""
 
@@ -22,13 +22,13 @@ let mutable verbose = false
 
 let fcs = Utils.createFCS None
 
-let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter ())
+let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
 let rec mkKn (ty: System.Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
-        Reflection.FSharpValue.MakeFunction(ty, fun _ -> f)
+        Reflection.FSharpValue.MakeFunction(ty, (fun _ -> f))
     else
         box ()
 
@@ -56,7 +56,8 @@ let loadProject toolsPath projPath =
         let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
 
         return fcsPo
-    } |> Async.RunSynchronously
+    }
+    |> Async.RunSynchronously
 
 let runProject toolsPath proj (globs: Glob list)  =
     let path =
@@ -82,22 +83,28 @@ let runProject toolsPath proj (globs: Glob list)  =
             false
         | None -> true
     )
-    |> Array.choose (fun f -> Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f,  f, opts) |> Option.map (Utils.createContext (checkProjectResults, allSymbolUses)))
+    |> Array.choose (fun f ->
+        Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f,  f, opts)
+        |> Option.map (Utils.createContext (checkProjectResults, allSymbolUses))
+    )
     |> Array.collect (fun ctx ->
         match ctx with
         | Some c ->
             printInfo "Running analyzers for %s" c.FileName
             Client.runAnalyzers c
         | None -> failwithf "could not get context for file %s" path
-            )
-        |> Some
+    )
+    |> Some
 
 let printMessages failOnWarnings (msgs: Message array) =
-    if verbose then printfn ""
-    if verbose && Array.isEmpty msgs then printfn "No messages found from the analyzer(s)"
+    if verbose then
+        printfn ""
+
+    if verbose && Array.isEmpty msgs then
+        printfn "No messages found from the analyzer(s)"
 
     msgs
-    |> Seq.iter(fun m ->
+    |> Seq.iter (fun m ->
         let color =
             match m.Severity with
             | Error -> ConsoleColor.Red
@@ -106,18 +113,31 @@ let printMessages failOnWarnings (msgs: Message array) =
             | Info -> ConsoleColor.Blue
 
         Console.ForegroundColor <- color
-        printfn "%s(%d,%d): %s %s - %s" m.Range.FileName m.Range.StartLine m.Range.StartColumn (m.Severity.ToString()) m.Code m.Message
+
+        printfn
+            "%s(%d,%d): %s %s - %s"
+            m.Range.FileName
+            m.Range.StartLine
+            m.Range.StartColumn
+            (m.Severity.ToString())
+            m.Code
+            m.Message
+
         Console.ForegroundColor <- origForegroundColor
     )
+
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message array option): int =
+let calculateExitCode failOnWarnings (msgs: Message array option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> Array.exists (fun n -> n.Severity = Error || (n.Severity = Warning && failOnWarnings |> List.contains n.Code) )
+            |> Array.exists (fun n ->
+                n.Severity = Error
+                || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
+            )
 
         if check then -2 else 0
 
@@ -137,10 +157,12 @@ let main argv =
     let ignoreFiles = ignoreFiles |> List.map Glob
 
     let analyzersPath =
-        let path = results.GetResult (<@ Analyzers_Path @>, "packages/Analyzers")
-        if System.IO.Path.IsPathRooted path
-        then path
-        else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
+        let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
+
+        if System.IO.Path.IsPathRooted path then
+            path
+        else
+            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
 
     printInfo "Loading analyzers from %s" analyzersPath
 
@@ -148,6 +170,7 @@ let main argv =
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
+
     let results =
         match projOpt with
         | None ->
@@ -155,9 +178,10 @@ let main argv =
             None
         | Some proj ->
             let project =
-                if System.IO.Path.IsPathRooted proj
-                then proj
-                else Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+                if System.IO.Path.IsPathRooted proj then
+                    proj
+                else
+                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
             runProject toolsPath project ignoreFiles
             |> Option.map (printMessages failOnWarnings)
