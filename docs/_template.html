@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-root="{{root}}">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="{{fsdocs-authors}}">
+    <title>{{fsdocs-page-title}} | {{fsdocs-collection-name}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{root}}images/favicon.png"/>
+    <link type="text/css" rel="stylesheet" href="{{root}}/style.css"/>
+<!--    <script type="text/javascript" src="{{root}}content/fsdocs-tips.js"></script>-->
+    {{fsdocs-watch-script}}
+</head>
+
+<body>
+<header>
+    <div class="start">
+        <iconify-icon class="toggle menu-icon" icon="lucide:menu" width="24" height="24"></iconify-icon>
+        <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo" />
+        <strong>FSharp.Analyzers.SDK</strong>
+    </div>
+    <div class="end">
+        <iconify-icon icon="carbon:search" width="24" height="24"></iconify-icon>
+        <iconify-icon icon="ion:moon-sharp" width="24" height="24"></iconify-icon>
+    </div>
+
+</header>
+<aside>
+    <div class="close">
+        <iconify-icon icon="ei:close" class="menu-icon" width="32" height="32"></iconify-icon>
+    </div>
+    <div class="content">
+        {{fsdocs-list-of-documents}}
+        {{fsdocs-list-of-namespaces}}
+    </div>
+<!--    <div id="sidebar-header" class="d-flex justify-content-end mt-1 d-md-none">-->
+<!--        <button class="btn d-md-none" id="close-mobile-menu" aria-controls="sidebar-wrapper" aria-expanded="false"-->
+<!--                aria-label="Toggle navigation">-->
+<!--            <i class="sidebar-toggle fs-3 bi bi-x-lg"></i>-->
+<!--        </button>-->
+<!--    </div>-->
+<!--    <div id="sidebar-logo" class="d-flex justify-content-center p-5">-->
+<!--        <a href="{{root}}docs/index.html"><img id="fsdocs-logo" src="{{root}}/images/logo.png"/></a>-->
+<!--    </div>-->
+<!--    <div id="sidebar-content" class="accordion accordion-flush ps-0 text-white fs-6">-->
+
+<!--    </div>-->
+</aside>
+<main>
+    <nav>
+        navbar
+    </nav>
+    <div id="fsdocs-content">
+        {{fsdocs-content}}
+        {{fsdocs-tooltips}}
+    </div>
+</main>
+<!--<script type="module" src="{{root}}content/docs-setup.js"></script>-->
+<script type="module">
+    document.querySelector("header .toggle").addEventListener("click", () => {
+        document.querySelector("aside").classList.toggle("open");
+    })
+    
+    document.querySelector("aside .menu-icon").addEventListener("click", () => {
+        document.querySelector("aside").classList.toggle("open");
+    });
+    
+    window.showTip = () => {};
+    window.hideTip = () => {};
+</script>
+</body>
+</html>

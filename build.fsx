@@ -29,4 +29,13 @@ pipeline "ReleaseBuild" {
     runIfOnlySpecified true
 }
 
+pipeline "Docs" {
+    restoreStage
+    buildStage
+    stage "fsdocs" {
+        run "dotnet fsdocs watch --properties Configuration=Release"
+    }
+    runIfOnlySpecified true
+}
+
 tryPrintPipelineCommandHelp ()
