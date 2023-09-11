@@ -35,7 +35,8 @@ let getAnalyzerMsgs source =
 
     let opts =
         { opts with
-            SourceFiles = [| fileName |] }
+            SourceFiles = [| fileName |]
+        }
 
     fcs.NotifyFileChanged(fileName, opts) |> Async.RunSynchronously // workaround for https://github.com/dotnet/fsharp/issues/15960
     let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously

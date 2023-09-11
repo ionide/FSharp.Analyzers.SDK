@@ -22,12 +22,14 @@ let notUsed() =
 """
 
     let expectedMsg =
-        { Code = "OV001"
-          Fixes = []
-          Message = "Option.Value shouldn't be used"
-          Range = Range.mkRange "A.fs" (Position.mkPos 6 4) (Position.mkPos 6 16)
-          Severity = Severity.Warning
-          Type = "Option.Value analyzer" }
+        {
+            Code = "OV001"
+            Fixes = []
+            Message = "Option.Value shouldn't be used"
+            Range = Range.mkRange "A.fs" (Position.mkPos 6 4) (Position.mkPos 6 16)
+            Severity = Severity.Warning
+            Type = "Option.Value analyzer"
+        }
 
     let msgs = TestHelpers.getAnalyzerMsgs source
     Assert.IsNotEmpty msgs

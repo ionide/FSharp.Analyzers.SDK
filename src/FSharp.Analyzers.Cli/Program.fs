@@ -59,15 +59,13 @@ let loadProject toolsPath projPath =
     }
     |> Async.RunSynchronously
 
-let runProject toolsPath proj (globs: Glob list)  =
-    let path =
-        Path.Combine(Environment.CurrentDirectory, proj)
-        |> Path.GetFullPath
+let runProject toolsPath proj (globs: Glob list) =
+    let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
     let opts = loadProject toolsPath path
-    
+
     let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
     let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
-    
+
     opts.SourceFiles
     |> Array.filter (fun file ->
         match Path.GetExtension(file).ToLowerInvariant() with
@@ -84,7 +82,7 @@ let runProject toolsPath proj (globs: Glob list)  =
         | None -> true
     )
     |> Array.choose (fun f ->
-        Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f,  f, opts)
+        Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f, f, opts)
         |> Option.map (Utils.createContext (checkProjectResults, allSymbolUses))
     )
     |> Array.collect (fun ctx ->

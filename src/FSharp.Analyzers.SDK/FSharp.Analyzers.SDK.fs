@@ -55,47 +55,63 @@ type Message =
 type Analyzer = Context -> Message list
 
 module Utils =
-    
+
     let private entityCache = EntityCache()
 
     let private getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
-                try
-                    let res = [
-                      yield! AssemblyContent.GetAssemblySignatureContent AssemblyContentType.Full checkResults.PartialAssemblySignature
-                      let ctx = checkResults.ProjectContext
-                      let assembliesByFileName =
+        try
+            let res =
+                [
+                    yield!
+                        AssemblyContent.GetAssemblySignatureContent
+                            AssemblyContentType.Full
+                            checkResults.PartialAssemblySignature
+                    let ctx = checkResults.ProjectContext
+
+                    let assembliesByFileName =
                         ctx.GetReferencedAssemblies()
                         |> Seq.groupBy (fun asm -> asm.FileName)
                         |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
                         |> Seq.toList
                         |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
-                                    // get Content.Entities from it.
+                    // get Content.Entities from it.
 
-                      for fileName, signatures in assembliesByFileName do
-                        let contentType = if publicOnly then AssemblyContentType.Public else AssemblyContentType.Full
-                        let content = AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
+                    for fileName, signatures in assembliesByFileName do
+                        let contentType =
+                            if publicOnly then
+                                AssemblyContentType.Public
+                            else
+                                AssemblyContentType.Full
+
+                        let content =
+                            AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
+
                         yield! content
-                    ]
-                    res
-                with
-                | _ -> []
+                ]
+
+            res
+        with _ ->
+            []
 
     let createContext
         (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
-        (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults) =
+        (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults)
+        =
         match c.ImplementationFile with
         | Some tast ->
-            let context : Context = {
-                ParseFileResults = p
-                CheckFileResults = c
-                CheckProjectResults = checkProjectResults 
-                FileName = file
-                Content = text.Split([|'\n'|])
-                TypedTree = tast
-                GetAllEntities = getAllEntities c
-                AllSymbolUses = allSymbolUses
-                SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file) 
-            }
+            let context: Context =
+                {
+                    ParseFileResults = p
+                    CheckFileResults = c
+                    CheckProjectResults = checkProjectResults
+                    FileName = file
+                    Content = text.Split([| '\n' |])
+                    TypedTree = tast
+                    GetAllEntities = getAllEntities c
+                    AllSymbolUses = allSymbolUses
+                    SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file)
+                }
+
             Some context
         | _ -> None
 
@@ -104,13 +120,19 @@ module Utils =
             documentSource
             |> Option.map DocumentSource.Custom
             |> Option.defaultValue DocumentSource.FileSystem
-        FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true, documentSource = ds)
-        
+
+        FSharpChecker.Create(
+            projectCacheSize = 200,
+            keepAllBackgroundResolutions = true,
+            keepAssemblyContents = true,
+            documentSource = ds
+        )
+
     [<RequireQualifiedAccess>]
     type SourceOfSource =
         | Path of string
         | DiscreteSource of String
-        
+
     let typeCheckFile (fcs: FSharpChecker) (source, file, opts) =
         let text =
             match source with
@@ -118,11 +140,14 @@ module Utils =
                 let text = System.IO.File.ReadAllText path
                 text
             | SourceOfSource.DiscreteSource s -> s
+
         let st = SourceText.ofString text
-        let parseRes, checkAnswer = fcs.ParseAndCheckFileInProject(file,0,st,opts) |> Async.RunSynchronously
+
+        let parseRes, checkAnswer =
+            fcs.ParseAndCheckFileInProject(file, 0, st, opts) |> Async.RunSynchronously
+
         match checkAnswer with
         | FSharpCheckFileAnswer.Aborted ->
             printfn "Checking of file %s aborted" file
             None
-        | FSharpCheckFileAnswer.Succeeded result ->
-            Some (file, text, parseRes, result)
+        | FSharpCheckFileAnswer.Succeeded result -> Some(file, text, parseRes, result)
