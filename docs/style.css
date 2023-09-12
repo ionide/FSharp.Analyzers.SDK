@@ -15,6 +15,7 @@
     --unit-11: calc(11 * var(--unit));
     --unit-12: calc(12 * var(--unit));
     --radius: 6px;
+    --icon-size: 24px;
 
     --container-sm: 768px;
     --container-md: 960px;
@@ -103,7 +104,7 @@ header {
     }
 
     & iconify-icon {
-        padding: var(--unit);
+        padding: 0 var(--unit);
         box-sizing: border-box;
         cursor: pointer;
     }
@@ -264,6 +265,7 @@ main {
             & a {
                 display: block;
                 color: var(--text-color);
+                height: var(--icon-size);
             }
 
             .search {
