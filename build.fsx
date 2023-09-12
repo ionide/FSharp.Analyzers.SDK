@@ -20,12 +20,22 @@ pipeline "Build" {
         run
             "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose"
     }
+    stage "docs" {
+        run "dotnet fsdocs build --properties Configuration=Release --eval --nodefaultcontent --clean --strict"
+    }
     runIfOnlySpecified false
 }
 
 pipeline "ReleaseBuild" {
     restoreStage
     buildStage
+    runIfOnlySpecified true
+}
+
+pipeline "Docs" {
+    restoreStage
+    buildStage
+    stage "fsdocs" { run "dotnet fsdocs watch --properties Configuration=Release --eval" }
     runIfOnlySpecified true
 }
 
