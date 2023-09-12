@@ -55,12 +55,12 @@ Analyzers are .NET core class libraries and they are distributed as such. Howeve
 
 Since analyzers are just .NET core libraries, you can distribute them to the nuget registry just like you would with a normal .NET package. Simply run `dotnet pack --configuration Release` against the analyzer project to get a nuget package and publish it with
 
-```
+```shell
 dotnet nuget push {NugetPackageFullPath} -s nuget.org -k {NugetApiKey}
 ```
 
 However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies has be there *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net6.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
-```
+```shell
 dotnet publish --configuration Release --framework net6.0
 ```
 against the analyzer project and put every file from that output into the `./lib/net6.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:

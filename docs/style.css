@@ -36,6 +36,7 @@
     --doc-tip-background: #F7F7F7;
     --link-color: #4871f7;
     --search-background: rgb(229, 231, 235);
+    --nav-category: rgb(156, 163, 175);
 
     --code-strings-color: #0093A1;
     --code-printf-color: #6B2FBA;
@@ -167,6 +168,35 @@ aside {
 
     .content {
         padding: var(--unit-3);
+
+        .nav-header {
+            text-transform: uppercase;
+            list-style: none;
+            font-size: var(--unit-3);
+            color: var(--nav-category);
+        }
+
+        .nav-header + .nav-item {
+            margin-bottom: var(--unit-6);
+        }
+
+        .nav-item {
+            list-style: none;
+            padding-left: var(--unit-4);
+            margin: var(--unit-2) 0;
+            border-left: 1px solid var(--header-border);
+            transition: border-color 200ms;
+
+            &:hover {
+                border-color: var(--text-color);
+            }
+
+            & a {
+                text-decoration: none;
+                color: var(--text-color);
+                font-size: var(--unit-4);
+            }
+        }
     }
 }
 
@@ -263,6 +293,7 @@ main {
         grid-column-start: 2;
         grid-column-end: 3;
         overflow-x: auto;
+        margin: 0;
     }
 
     .menu-icon {
@@ -271,33 +302,36 @@ main {
 }
 
 @media screen and (min-width: 768px) {
-    main {
+    #fsdocs-content {
         max-width: calc(var(--container-sm) - var(--aside-width) - var(--unit-8));
-        margin: auto;
-        padding: var(--unit-3);
+        min-width: calc(var(--container-sm) - var(--aside-width) - var(--unit-8));
+        margin: 0 auto;
     }
 }
 
 @media screen and (min-width: 960px) {
-    main {
+    #fsdocs-content {
+        min-width: calc(var(--container-md) - var(--aside-width) - var(--unit-8));
         max-width: calc(var(--container-md) - var(--aside-width) - var(--unit-8));
     }
 }
 
 @media screen and (min-width: 1024px) {
-    main {
+    #fsdocs-content {
+        min-width: calc(var(--container-lg) - var(--aside-width) - var(--unit-8));
         max-width: calc(var(--container-lg) - var(--aside-width) - var(--unit-8));
     }
 }
 
 @media screen and (min-width: 1200px) {
-    main {
+    #fsdocs-content {
+        min-width: calc(var(--container-xl) - var(--aside-width) - var(--unit-8));
         max-width: calc(var(--container-xl) - var(--aside-width) - var(--unit-8));
     }
 }
 
 @media screen and (min-width: 1400px) {
-    main {
+    #fsdocs-content {
         max-width: calc(var(--container-xxl) - var(--aside-width) - var(--unit-8));
     }
 }
@@ -354,27 +388,40 @@ code, table.pre, pre {
     background-color: var(--code-background);
     color: var(--code-color);
     font-family: var(--monospace-font);
-    padding: var(--unit-2);
 }
 
-table.pre {
+table.pre, pre.fssnip.highlighted {
     margin-bottom: var(--unit-3);
 }
 
+table.pre, pre.fssnip {
+    padding: var(--unit) var(--unit-2);
+}
+
 p > code, li > code {
-    margin: var(--unit-3) 0;
+    margin: 0 var(--unit);
+    padding: var(--unit);
 }
 
 table.pre, code {
     overflow-x: auto;
     max-width: calc(100vw - var(--unit-12));
     box-sizing: border-box;
+    border-radius: var(--radius);
+}
+
+table.pre, pre > code {
     display: block;
 }
 
 pre.fssnip > code {
     max-width: initial;
     margin-bottom: initial;
+}
+
+/* copy icons in the shell commands */
+table.pre td iconify-icon {
+    margin-top: 4px;
 }
 
 @media screen and (min-width: 768px) {
@@ -603,7 +650,7 @@ span[onmouseout] {
 
 [data-theme=dark] {
     --primary: #81cfe0;
-    --background: #2e293a;
+    --background: #32283c;
     --text-color: #F7F7F7;
     --text-hover: #FFF;
     --code-background: #3e3e42;
@@ -612,6 +659,7 @@ span[onmouseout] {
     --doc-tip-background: #2e293a;
     --link-color: #c5eff7;
     --search-background: #020202;
+    --nav-category: rgb(207, 211, 215);
 
     --code-strings-color: #5adfec;
     --code-printf-color: #6B2FBA;

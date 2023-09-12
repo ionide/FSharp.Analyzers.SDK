@@ -19,7 +19,9 @@
 <header>
     <div class="start">
         <iconify-icon class="toggle menu-icon" icon="lucide:menu" width="24" height="24"></iconify-icon>
-        <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo"/>
+        <a href="{{root}}">
+            <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo"/>
+        </a>
         <strong>FSharp.Analyzers.SDK</strong>
         <div id="search-input" class="search">
             <iconify-icon icon="carbon:search" width="16" height="16"></iconify-icon>
@@ -47,9 +49,6 @@
     </div>
 </aside>
 <main>
-    <nav>
-        navbar
-    </nav>
     <div id="fsdocs-content">
         {{fsdocs-content}}
         {{fsdocs-tooltips}}
@@ -64,7 +63,8 @@
         document.querySelector("aside").classList.toggle("open");
     });
 
-    let currentTheme = localStorage.getItem('theme') ?? 'light';
+    const prefersDark = window.matchMedia("@media (prefers-color-scheme: dark)");
+    let currentTheme = localStorage.getItem('theme') ?? (prefersDark ? 'dark' : 'light');
     // set initial theme
     const setTheme = theme => {
         currentTheme = theme;
@@ -85,8 +85,8 @@
             window.alert("This should trigger the algolia thing and is not yet implemented");
         });
     })
-        
 </script>
 <script type="module" src="{{root}}tooltips.js"></script>
+<script type="module" src="{{root}}copyCommand.js"></script>
 </body>
 </html>
