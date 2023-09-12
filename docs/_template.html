@@ -11,8 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="{{root}}images/favicon.png"/>
-    <link type="text/css" rel="stylesheet" href="{{root}}/style.css"/>
-<!--    <script type="text/javascript" src="{{root}}content/fsdocs-tips.js"></script>-->
+    <link type="text/css" rel="stylesheet" href="{{root}}style.css"/>
     {{fsdocs-watch-script}}
 </head>
 
@@ -68,9 +67,7 @@
     document.querySelector("aside .menu-icon").addEventListener("click", () => {
         document.querySelector("aside").classList.toggle("open");
     });
-    
-    window.showTip = () => {};
-    window.hideTip = () => {};
 </script>
+<script type="module" src="{{root}}tooltips.js"></script>
 </body>
 </html>
