@@ -21,9 +21,17 @@
         <iconify-icon class="toggle menu-icon" icon="lucide:menu" width="24" height="24"></iconify-icon>
         <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo"/>
         <strong>FSharp.Analyzers.SDK</strong>
+        <div id="search-input" class="search">
+            <iconify-icon icon="carbon:search" width="16" height="16"></iconify-icon>
+            <em>Search the docs...</em>
+            <iconify-icon icon="iconoir:slash" width="16" height="16"></iconify-icon>
+        </div>
     </div>
     <div class="end">
-        <iconify-icon icon="carbon:search" width="24" height="24"></iconify-icon>
+        <a href="{{fsdocs-package-project-url}}" target="_blank">
+            <iconify-icon icon="uil:github" width="24" height="24"></iconify-icon>
+        </a>
+        <iconify-icon icon="carbon:search" class="search" width="24" height="24"></iconify-icon>
         <iconify-icon class="themeToggle light" icon="ion:moon-sharp" width="24" height="24"></iconify-icon>
         <iconify-icon class="themeToggle dark" icon="clarity:sun-solid" width="24" height="24"></iconify-icon>
     </div>
@@ -37,18 +45,6 @@
         {{fsdocs-list-of-documents}}
         {{fsdocs-list-of-namespaces}}
     </div>
-    <!--    <div id="sidebar-header" class="d-flex justify-content-end mt-1 d-md-none">-->
-    <!--        <button class="btn d-md-none" id="close-mobile-menu" aria-controls="sidebar-wrapper" aria-expanded="false"-->
-    <!--                aria-label="Toggle navigation">-->
-    <!--            <i class="sidebar-toggle fs-3 bi bi-x-lg"></i>-->
-    <!--        </button>-->
-    <!--    </div>-->
-    <!--    <div id="sidebar-logo" class="d-flex justify-content-center p-5">-->
-    <!--        <a href="{{root}}docs/index.html"><img id="fsdocs-logo" src="{{root}}/images/logo.png"/></a>-->
-    <!--    </div>-->
-    <!--    <div id="sidebar-content" class="accordion accordion-flush ps-0 text-white fs-6">-->
-
-    <!--    </div>-->
 </aside>
 <main>
     <nav>
@@ -59,7 +55,6 @@
         {{fsdocs-tooltips}}
     </div>
 </main>
-<!--<script type="module" src="{{root}}content/docs-setup.js"></script>-->
 <script type="module">
     document.querySelector("header .toggle").addEventListener("click", () => {
         document.querySelector("aside").classList.toggle("open");
@@ -84,6 +79,13 @@
             setTheme(otherTheme);
         });
     });
+    
+    [...document.querySelectorAll(".search")].forEach(search => {
+        search.addEventListener("click", () => {
+            window.alert("This should trigger the algolia thing and is not yet implemented");
+        });
+    })
+        
 </script>
 <script type="module" src="{{root}}tooltips.js"></script>
 </body>
