@@ -584,10 +584,18 @@
       "fsharp.analyzers.sdk": {
         "type": "Project",
         "dependencies": {
+          "CliWrap": "[3.6.4, )",
           "FSharp.Compiler.Service": "[43.7.400, )",
           "FSharp.Core": "[7.0.400, )",
+          "MSBuild.StructuredLogger": "[2.1.815, )",
           "McMaster.NETCore.Plugins": "[1.4.0, )"
         }
+      },
+      "CliWrap": {
+        "type": "CentralTransitive",
+        "requested": "[3.6.4, )",
+        "resolved": "3.6.4",
+        "contentHash": "KVGVZlR0GWgN3Xr88oZMSzYu38TXIogwLz588e6wku3mIfg6lPchxpYWtZSZfurpTY63ANF61xWp8EZF3jkN4g=="
       },
       "FSharp.Compiler.Service": {
         "type": "CentralTransitive",
@@ -613,6 +621,16 @@
         "dependencies": {
           "Microsoft.DotNet.PlatformAbstractions": "3.1.6",
           "Microsoft.Extensions.DependencyModel": "5.0.0"
+        }
+      },
+      "MSBuild.StructuredLogger": {
+        "type": "CentralTransitive",
+        "requested": "[2.1.815, )",
+        "resolved": "2.1.815",
+        "contentHash": "5UfWYgsWBGI3w0npjYLeXPv8TUcNmGB/QBhoYLDeYTosuvmG6pz6HPb+xPg/Boi1bmw2Bgnjo+XopcwzCbZAqg==",
+        "dependencies": {
+          "Microsoft.Build.Framework": "16.10.0",
+          "Microsoft.Build.Utilities.Core": "16.10.0"
         }
       }
     }

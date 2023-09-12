@@ -131,7 +131,7 @@ module Utils =
     [<RequireQualifiedAccess>]
     type SourceOfSource =
         | Path of string
-        | DiscreteSource of String
+        | DiscreteSource of string
 
     let typeCheckFile (fcs: FSharpChecker) (source, file, opts) =
         let text =

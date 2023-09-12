@@ -4,6 +4,7 @@
     <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="CliWrap" Version="3.6.4" />
     <PackageVersion Include="FSharp.Core" Version="7.0.400" />
     <PackageVersion Include="FSharp.Compiler.Service" Version="43.7.400" />
     <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
@@ -19,6 +20,7 @@
     <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageVersion Include="MSBuild.StructuredLogger" Version="2.1.815" />
     <PackageVersion Include="NUnit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.4.2" />
     <PackageVersion Include="NUnit.Analyzers" Version="3.6.1" />
