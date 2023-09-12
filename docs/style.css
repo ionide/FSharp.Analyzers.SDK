@@ -665,9 +665,9 @@ span[onmouseout] {
     --code-printf-color: #6B2FBA;
     --code-escaped-color: #EA8675;
     --code-identifiers-color: #d1b3f5;
-    --code-module-color: #009999;
-    --code-reference-color: #4974D1;
-    --code-value-color: #1B6600;
+    --code-module-color: #15e1e1;
+    --code-reference-color: #7a9cee;
+    --code-value-color: #66d73d;
     --code-interface-color: #43AEC6;
     --code-typearg-color: #43AEC6;
     --code-disposable-color: #43AEC6;
@@ -675,7 +675,7 @@ span[onmouseout] {
     --code-punctuation-color: #43AEC6;
     --code-punctuation2-color: var(--text-color);
     --code-function-color: #6B2FBA;
-    --code-function2-color: #990000;
+    --code-function2-color: #da9d9d;
     --code-activepattern-color: #4ec9b0;
     --code-unioncase-color: #4ec9b0;
     --code-enumeration-color: #8C6C41;
