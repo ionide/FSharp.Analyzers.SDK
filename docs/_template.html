@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-root="{{root}}">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="author" content="{{fsdocs-authors}}">
+    <title>{{fsdocs-page-title}} | {{fsdocs-collection-name}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{root}}images/favicon.png"/>
+    <link type="text/css" rel="stylesheet" href="{{root}}style.css"/>
+    {{fsdocs-watch-script}}
+</head>
+
+<body>
+<header>
+    <div class="start">
+        <iconify-icon class="toggle menu-icon" icon="lucide:menu" width="24" height="24"></iconify-icon>
+        <a href="{{root}}">
+            <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo"/>
+        </a>
+        <strong>FSharp.Analyzers.SDK</strong>
+        <div id="search-input" class="search">
+            <iconify-icon icon="carbon:search" width="16" height="16"></iconify-icon>
+            <em>Search the docs...</em>
+            <iconify-icon icon="iconoir:slash" width="16" height="16"></iconify-icon>
+        </div>
+    </div>
+    <div class="end">
+        <a href="{{fsdocs-repository-link}}" target="_blank">
+            <iconify-icon icon="uil:github" width="24" height="24"></iconify-icon>
+        </a>
+        <iconify-icon icon="carbon:search" class="search" width="24" height="24"></iconify-icon>
+        <iconify-icon class="themeToggle light" icon="ion:moon-sharp" width="24" height="24"></iconify-icon>
+        <iconify-icon class="themeToggle dark" icon="clarity:sun-solid" width="24" height="24"></iconify-icon>
+    </div>
+
+</header>
+<aside>
+    <div class="close">
+        <iconify-icon icon="ei:close" class="menu-icon" width="32" height="32"></iconify-icon>
+    </div>
+    <div class="content">
+        {{fsdocs-list-of-documents}}
+        {{fsdocs-list-of-namespaces}}
+    </div>
+</aside>
+<main>
+    <div id="fsdocs-content">
+        {{fsdocs-content}}
+        {{fsdocs-tooltips}}
+    </div>
+</main>
+<script type="module">
+    document.querySelector("header .toggle").addEventListener("click", () => {
+        document.querySelector("aside").classList.toggle("open");
+    })
+
+    document.querySelector("aside .menu-icon").addEventListener("click", () => {
+        document.querySelector("aside").classList.toggle("open");
+    });
+
+    const prefersDark = window.matchMedia("@media (prefers-color-scheme: dark)").matches;
+    let currentTheme = localStorage.getItem('theme') ?? (prefersDark ? 'dark' : 'light');
+
+    const setTheme = theme => {
+        currentTheme = theme;
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+    }
+    // set initial theme
+    setTheme(currentTheme);
+    const toggles = [ ...document.querySelectorAll(".themeToggle") ];
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const otherTheme = currentTheme === "light" ? "dark" : "light";
+            setTheme(otherTheme);
+        });
+    });
+    
+    [...document.querySelectorAll(".search")].forEach(search => {
+        search.addEventListener("click", () => {
+            window.alert("This should trigger the algolia thing and is not yet implemented");
+        });
+    })
+</script>
+<script type="module" src="{{root}}tooltips.js"></script>
+<script type="module" src="{{root}}copyCommand.js"></script>
+</body>
+</html>
