@@ -63,13 +63,15 @@
         document.querySelector("aside").classList.toggle("open");
     });
 
-    const prefersDark = window.matchMedia("@media (prefers-color-scheme: dark)");
+    const prefersDark = window.matchMedia("@media (prefers-color-scheme: dark)").matches;
     let currentTheme = localStorage.getItem('theme') ?? (prefersDark ? 'dark' : 'light');
-    // set initial theme
+
     const setTheme = theme => {
         currentTheme = theme;
         document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
     }
+    // set initial theme
     setTheme(currentTheme);
     const toggles = [ ...document.querySelectorAll(".themeToggle") ];
 
