@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Reflection
 open System.Runtime.Loader
+open System.Text.RegularExpressions
 open McMaster.NETCore.Plugins
 open System.Collections.Concurrent
 
@@ -84,8 +85,13 @@ module Client =
     let loadAnalyzers (printError: string -> unit) (dir: string) : (int * int) =
         if Directory.Exists dir then
             let analyzerAssemblies =
+                let regex = Regex(@".*test.*\.dll$")
+
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
-                |> Array.filter (fun a -> not (a.EndsWith("FSharp.Analyzers.SDK.dll") || a.EndsWith("Test.dll")))
+                |> Array.filter (fun a ->
+                    let s = Path.GetFileName(a).ToLowerInvariant()
+                    not (s.EndsWith("fsharp.analyzers.sdk.dll") || regex.IsMatch(s))
+                )
                 |> Array.choose (fun analyzerDll ->
                     try
                         // loads an assembly and all of it's dependencies
