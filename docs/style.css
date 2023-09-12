@@ -214,11 +214,18 @@ main {
                     display: block;
                 }
 
+                & iconify-icon:last-child {
+                    border: 1px dashed var(--text-hover);
+                    border-radius: var(--radius);
+                    padding: var(--unit) calc(var(--unit) / 2);
+                }
+
                 & em {
                     display: block;
                     font-size: var(--unit-4);
                     line-height: 2;
                     opacity: 0.7;
+                    margin-right: var(--unit-4);
                 }
             }
         }
