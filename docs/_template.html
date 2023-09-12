@@ -19,12 +19,13 @@
 <header>
     <div class="start">
         <iconify-icon class="toggle menu-icon" icon="lucide:menu" width="24" height="24"></iconify-icon>
-        <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo" />
+        <img src="{{root}}/images/logo.png" alt="FSharp.Analyzers.SDK logo"/>
         <strong>FSharp.Analyzers.SDK</strong>
     </div>
     <div class="end">
         <iconify-icon icon="carbon:search" width="24" height="24"></iconify-icon>
-        <iconify-icon icon="ion:moon-sharp" width="24" height="24"></iconify-icon>
+        <iconify-icon class="themeToggle light" icon="ion:moon-sharp" width="24" height="24"></iconify-icon>
+        <iconify-icon class="themeToggle dark" icon="clarity:sun-solid" width="24" height="24"></iconify-icon>
     </div>
 
 </header>
@@ -36,18 +37,18 @@
         {{fsdocs-list-of-documents}}
         {{fsdocs-list-of-namespaces}}
     </div>
-<!--    <div id="sidebar-header" class="d-flex justify-content-end mt-1 d-md-none">-->
-<!--        <button class="btn d-md-none" id="close-mobile-menu" aria-controls="sidebar-wrapper" aria-expanded="false"-->
-<!--                aria-label="Toggle navigation">-->
-<!--            <i class="sidebar-toggle fs-3 bi bi-x-lg"></i>-->
-<!--        </button>-->
-<!--    </div>-->
-<!--    <div id="sidebar-logo" class="d-flex justify-content-center p-5">-->
-<!--        <a href="{{root}}docs/index.html"><img id="fsdocs-logo" src="{{root}}/images/logo.png"/></a>-->
-<!--    </div>-->
-<!--    <div id="sidebar-content" class="accordion accordion-flush ps-0 text-white fs-6">-->
+    <!--    <div id="sidebar-header" class="d-flex justify-content-end mt-1 d-md-none">-->
+    <!--        <button class="btn d-md-none" id="close-mobile-menu" aria-controls="sidebar-wrapper" aria-expanded="false"-->
+    <!--                aria-label="Toggle navigation">-->
+    <!--            <i class="sidebar-toggle fs-3 bi bi-x-lg"></i>-->
+    <!--        </button>-->
+    <!--    </div>-->
+    <!--    <div id="sidebar-logo" class="d-flex justify-content-center p-5">-->
+    <!--        <a href="{{root}}docs/index.html"><img id="fsdocs-logo" src="{{root}}/images/logo.png"/></a>-->
+    <!--    </div>-->
+    <!--    <div id="sidebar-content" class="accordion accordion-flush ps-0 text-white fs-6">-->
 
-<!--    </div>-->
+    <!--    </div>-->
 </aside>
 <main>
     <nav>
@@ -63,9 +64,25 @@
     document.querySelector("header .toggle").addEventListener("click", () => {
         document.querySelector("aside").classList.toggle("open");
     })
-    
+
     document.querySelector("aside .menu-icon").addEventListener("click", () => {
         document.querySelector("aside").classList.toggle("open");
+    });
+
+    let currentTheme = localStorage.getItem('theme') ?? 'light';
+    // set initial theme
+    const setTheme = theme => {
+        currentTheme = theme;
+        document.documentElement.setAttribute("data-theme", theme);
+    }
+    setTheme(currentTheme);
+    const toggles = [ ...document.querySelectorAll(".themeToggle") ];
+
+    toggles.forEach(toggle => {
+        toggle.addEventListener("click", () => {
+            const otherTheme = currentTheme === "light" ? "dark" : "light";
+            setTheme(otherTheme);
+        });
     });
 </script>
 <script type="module" src="{{root}}tooltips.js"></script>

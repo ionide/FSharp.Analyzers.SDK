@@ -21,15 +21,19 @@
     --container-lg: 1024px;
     --container-xl: 1200px;
 
+    --primary: #1e8bc3;
+
+    /* light theme */
     --background: #f5f5f6;
     --text-color: #020202;
-    --grey: #e8ecf1;
-    --dark-grey: #bdc3c7;
-    --white: #F7F7F7;
-    --dark: #020202;
-    --primary: #1e8bc3;
+    --text-hover: #282828;
     --code-background: #ffffff;
     --code-color: #1B6504;
+    --header-border: #e8ecf1;
+    --menu-icon-hover: #F7F7F7;
+    --menu-icon-hover-background: #bdc3c7;
+    --doc-tip-background: #F7F7F7;
+    --link-color: #4871f7;
 }
 
 html, body {
@@ -46,7 +50,7 @@ header {
     align-content: center;
     justify-content: space-between;
     padding: var(--unit-3);
-    border-bottom: 1px solid var(--grey);
+    border-bottom: 1px solid var(--header-border);
 
     & .start {
         display: flex;
@@ -76,16 +80,16 @@ header {
 }
 
 .menu-icon {
-    border: 1px solid var(--grey);
+    border: 1px solid var(--header-border);
 
     &:hover {
         cursor: pointer;
-        background-color: var(--dark-grey);
-        color: var(--white);
+        background-color: var(--menu-icon-hover-background);
+        color: var(--menu-icon-hover);
     }
 
     &:active {
-        color: var(--dark);
+        color: var(--text-color);
     }
 }
 
@@ -108,12 +112,12 @@ aside {
 
     .close {
         padding: var(--unit-3);
-        border-bottom: 1px solid var(--grey);
+        border-bottom: 1px solid var(--header-border);
 
         > iconify-icon {
             padding: var(--unit);
             box-sizing: border-box;
-            border: 1px solid var(--grey);
+            border: 1px solid var(--header-border);
 
             &:hover {
                 cursor: pointer;
@@ -194,20 +198,31 @@ h6 {
     font-size: var(--unit-2);
 }
 
+/* Common items */
+a {
+    color: var(--link-color);
+}
+
 /* Code snippets */
+
+/* reset browser style */
+pre {
+    margin: 0;
+    padding: 0;
+}
 
 code, table.pre, pre {
     background-color: var(--code-background);
     color: var(--code-color);
     font-family: var(--monospace-font);
-    padding: var(--unit);
+    padding: var(--unit-2);
 }
 
 table.pre {
     margin-bottom: var(--unit-3);
 }
 
-p > code {
+p > code, li > code {
     margin: var(--unit-3) 0;
 }
 
@@ -251,7 +266,7 @@ pre.fssnip > code {
 
 div.fsdocs-tip {
     display: none;
-    background-color: var(--white);
+    background-color: var(--doc-tip-background);
     border-right: var(--radius);
     padding: var(--unit-3);
     font-family: var(--monospace-font);
@@ -264,4 +279,45 @@ div.fsdocs-tip {
 
 span[onmouseout] {
     cursor: pointer;
+}
+
+/* Light/Dark */
+
+[data-theme=dark] {
+    --background: #2e293a;
+    --text-color: #F7F7F7;
+    --text-hover: #FFF;
+    --code-background: #3e3e42;
+    --code-color: #f5f5f6;
+    --doc-tip-background: #2e293a;
+    --link-color: #c5eff7;
+}
+
+/* theme toggling */
+
+.themeToggle.dark {
+    display: block;
+}
+
+.themeToggle.light {
+    display: none;
+}
+
+[data-theme=dark] {
+    .themeToggle.light {
+        display: block;
+    }
+
+    .themeToggle.dark {
+        display: none;
+    }
+}
+
+.themeToggle {
+    cursor: pointer;
+    color: var(--text-color);
+
+    &:hover {
+        color: var(--text-hover);
+    }
 }
