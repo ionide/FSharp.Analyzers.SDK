@@ -104,78 +104,77 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
     let stdOutBuffer = System.Text.StringBuilder()
     let stdErrBuffer = System.Text.StringBuilder()
 
-    try
-        let id = Guid.NewGuid().ToString("N")
-        let tmpDir = Path.Combine(Path.GetTempPath(), id)
-        let binLogPath = Path.Combine(tmpDir, $"{id}.binlog")
+    task {
+        try
+            let id = Guid.NewGuid().ToString("N")
+            let tmpDir = Path.Combine(Path.GetTempPath(), id)
+            let binLogPath = Path.Combine(tmpDir, $"{id}.binlog")
 
-        Directory.CreateDirectory(tmpDir) |> ignore
+            Directory.CreateDirectory(tmpDir) |> ignore
 
-        // Todo remove
-        Cli
-            .Wrap("dotnet")
-            .WithWorkingDirectory(tmpDir)
-            .WithArguments("--version")
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync()
-            .Task.Result
-        |> ignore
+            // Todo remove
+            let! _ =
+                Cli
+                    .Wrap("dotnet")
+                    .WithWorkingDirectory(tmpDir)
+                    .WithArguments("--version")
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                    .WithValidation(CommandResultValidation.ZeroExitCode)
+                    .ExecuteAsync()
 
-        Cli
-            .Wrap("dotnet")
-            .WithWorkingDirectory(tmpDir)
-            .WithArguments($"new classlib -f {framework} -lang F#")
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync()
-            .Task.Result
-        |> ignore
+            let! _ =
+                Cli
+                    .Wrap("dotnet")
+                    .WithWorkingDirectory(tmpDir)
+                    .WithArguments($"new classlib -f {framework} -lang F#")
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                    .WithValidation(CommandResultValidation.ZeroExitCode)
+                    .ExecuteAsync()
 
-        // Todo remove
-        Cli
-            .Wrap("dotnet")
-            .WithWorkingDirectory(tmpDir)
-            .WithArguments("--version")
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync()
-            .Task.Result
-        |> ignore
+            // Todo remove
+            let! _ =
+                Cli
+                    .Wrap("dotnet")
+                    .WithWorkingDirectory(tmpDir)
+                    .WithArguments("--version")
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                    .WithValidation(CommandResultValidation.ZeroExitCode)
+                    .ExecuteAsync()
 
-        additionalPkgs
-        |> List.iter (fun p ->
-            Cli
-                .Wrap("dotnet")
-                .WithWorkingDirectory(tmpDir)
-                .WithArguments($"add package {p.Name} --version {p.Version}")
-                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-                .WithValidation(CommandResultValidation.ZeroExitCode)
-                .ExecuteAsync()
-                .Task.Result
-            |> ignore
-        )
+            for p in additionalPkgs do
+                let! _ =
+                    Cli
+                        .Wrap("dotnet")
+                        .WithWorkingDirectory(tmpDir)
+                        .WithArguments($"add package {p.Name} --version {p.Version}")
+                        .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                        .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                        .WithValidation(CommandResultValidation.ZeroExitCode)
+                        .ExecuteAsync()
 
-        Cli
-            .Wrap("dotnet")
-            .WithWorkingDirectory(tmpDir)
-            .WithArguments($"build -bl:{Path.GetFileName(binLogPath)}")
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-            .WithValidation(CommandResultValidation.ZeroExitCode)
-            .ExecuteAsync()
-            .Task.Result
-        |> ignore
+                ()
 
-        mkOptionsFromBinaryLog binLogPath
-    with e ->
-        printfn $"%s{stdOutBuffer.ToString()}"
-        printfn $"%s{stdErrBuffer.ToString()}"
-        reraise ()
+            let! _ =
+                Cli
+                    .Wrap("dotnet")
+                    .WithWorkingDirectory(tmpDir)
+                    .WithArguments($"build -bl:{Path.GetFileName(binLogPath)}")
+                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                    .WithValidation(CommandResultValidation.ZeroExitCode)
+                    .ExecuteAsync()
+
+            return mkOptionsFromBinaryLog binLogPath
+
+        with e ->
+            printfn $"StdOut:\n%s{stdOutBuffer.ToString()}"
+            printfn $"StdErr:\n%s{stdErrBuffer.ToString()}"
+            printfn $"Exception:\n%s{e.ToString()}"
+            return FSharpProjectOptions.zero
+    }
 
 let getContext (opts: FSharpProjectOptions) source =
     let fileName = "A.fs"

@@ -10,20 +10,24 @@ let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 
 [<SetUp>]
 let Setup () =
-    projectOptions <-
-        mkOptionsFromProject
-            // Todo: changing this to net8.0 makes "dotnet test" fail when run inside the repo, from outside or in the IDE the tests work fine
-            "net7.0"
-            [
-                {
-                    Name = "Newtonsoft.Json"
-                    Version = "13.0.3"
-                }
-                {
-                    Name = "Fantomas.FCS"
-                    Version = "6.2.0"
-                }
-            ]
+    task {
+        let! opts =
+            mkOptionsFromProject
+                // Todo: changing this to net8.0 makes "dotnet test" fail when run inside the repo, from outside or in the IDE the tests work fine
+                "net7.0"
+                [
+                    {
+                        Name = "Newtonsoft.Json"
+                        Version = "13.0.3"
+                    }
+                    {
+                        Name = "Fantomas.FCS"
+                        Version = "6.2.0"
+                    }
+                ]
+
+        projectOptions <- opts
+    }
 
 [<Test>]
 let ``warnings are emitted`` () =
