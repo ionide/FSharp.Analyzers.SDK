@@ -9,15 +9,6 @@ open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
 
-type DotNetVersion =
-    | Six
-    | Seven
-
-    override this.ToString() =
-        match this with
-        | Six -> "net6.0"
-        | Seven -> "net7.0"
-
 type FSharpProjectOptions with
 
     static member zero =
@@ -44,6 +35,9 @@ let isFSharpFile (file: string) =
 
 let readCompilerArgsFromBinLog file =
     let build = BinaryLog.ReadBuild file
+
+    if not build.Succeeded then
+        failwith $"Build failed: {file}"
 
     let projectName =
         build.Children
@@ -106,43 +100,82 @@ let mkOptionsFromBinaryLog binLogPath =
     let compilerArgs = readCompilerArgsFromBinLog binLogPath
     mkOptions compilerArgs
 
-let mkOptionsFromProject (version: DotNetVersion) (additionalPkg: Package option) =
-    let id = Guid.NewGuid().ToString("N")
-    let tmpDir = Path.Combine(Path.GetTempPath(), id)
-    let binLogPath = Path.Combine(tmpDir, $"{id}.binlog")
+let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
+    let stdOutBuffer = System.Text.StringBuilder()
+    let stdErrBuffer = System.Text.StringBuilder()
 
-    Directory.CreateDirectory(tmpDir) |> ignore
+    try
+        let id = Guid.NewGuid().ToString("N")
+        let tmpDir = Path.Combine(Path.GetTempPath(), id)
+        let binLogPath = Path.Combine(tmpDir, $"{id}.binlog")
 
-    Cli
-        .Wrap("dotnet")
-        .WithWorkingDirectory(tmpDir)
-        .WithArguments($"new classlib -f {version.ToString()} -lang F#")
-        .WithValidation(CommandResultValidation.None)
-        .ExecuteAsync()
-        .Task.Result
-    |> ignore
+        Directory.CreateDirectory(tmpDir) |> ignore
 
-    additionalPkg
-    |> Option.iter (fun p ->
+        // Todo remove
         Cli
             .Wrap("dotnet")
             .WithWorkingDirectory(tmpDir)
-            .WithArguments($"add package {p.Name} --version {p.Version}")
-            .WithValidation(CommandResultValidation.None)
+            .WithArguments("--version")
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+            .WithValidation(CommandResultValidation.ZeroExitCode)
             .ExecuteAsync()
             .Task.Result
         |> ignore
-    )
 
-    Cli
-        .Wrap("dotnet")
-        .WithArguments($"build {tmpDir} -bl:{binLogPath}")
-        .WithValidation(CommandResultValidation.None)
-        .ExecuteAsync()
-        .Task.Result
-    |> ignore
+        Cli
+            .Wrap("dotnet")
+            .WithWorkingDirectory(tmpDir)
+            .WithArguments($"new classlib -f {framework} -lang F#")
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+            .WithValidation(CommandResultValidation.ZeroExitCode)
+            .ExecuteAsync()
+            .Task.Result
+        |> ignore
 
-    mkOptionsFromBinaryLog binLogPath
+        // Todo remove
+        Cli
+            .Wrap("dotnet")
+            .WithWorkingDirectory(tmpDir)
+            .WithArguments("--version")
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+            .WithValidation(CommandResultValidation.ZeroExitCode)
+            .ExecuteAsync()
+            .Task.Result
+        |> ignore
+
+        additionalPkgs
+        |> List.iter (fun p ->
+            Cli
+                .Wrap("dotnet")
+                .WithWorkingDirectory(tmpDir)
+                .WithArguments($"add package {p.Name} --version {p.Version}")
+                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+                .WithValidation(CommandResultValidation.ZeroExitCode)
+                .ExecuteAsync()
+                .Task.Result
+            |> ignore
+        )
+
+        Cli
+            .Wrap("dotnet")
+            .WithWorkingDirectory(tmpDir)
+            .WithArguments($"build -bl:{Path.GetFileName(binLogPath)}")
+            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
+            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
+            .WithValidation(CommandResultValidation.ZeroExitCode)
+            .ExecuteAsync()
+            .Task.Result
+        |> ignore
+
+        mkOptionsFromBinaryLog binLogPath
+    with e ->
+        printfn $"%s{stdOutBuffer.ToString()}"
+        printfn $"%s{stdErrBuffer.ToString()}"
+        reraise ()
 
 let getContext (opts: FSharpProjectOptions) source =
     let fileName = "A.fs"

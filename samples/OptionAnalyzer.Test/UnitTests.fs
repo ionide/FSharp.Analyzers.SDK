@@ -12,12 +12,18 @@ let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 let Setup () =
     projectOptions <-
         mkOptionsFromProject
-            DotNetVersion.Seven
-            (Some
+            // Todo: changing this to net8.0 makes "dotnet test" fail when run inside the repo, from outside or in the IDE the tests work fine
+            "net7.0"
+            [
                 {
                     Name = "Newtonsoft.Json"
                     Version = "13.0.3"
-                })
+                }
+                {
+                    Name = "Fantomas.FCS"
+                    Version = "6.2.0"
+                }
+            ]
 
 [<Test>]
 let ``warnings are emitted`` () =
@@ -43,8 +49,11 @@ let ``expected warning is emitted`` () =
 module M
 
 open Newtonsoft.Json
+open Fantomas.FCS
 
 let json = JsonConvert.SerializeObject([1;2;3])
+
+let p = Fantomas.FCS.Text.Position.mkPos 23 2
 
 let notUsed() =
     let option : Option<int> = None
@@ -56,7 +65,7 @@ let notUsed() =
             Code = "OV001"
             Fixes = []
             Message = "Option.Value shouldn't be used"
-            Range = Range.mkRange "A.fs" (Position.mkPos 10 4) (Position.mkPos 10 16)
+            Range = Range.mkRange "A.fs" (Position.mkPos 13 4) (Position.mkPos 13 16)
             Severity = Severity.Warning
             Type = "Option.Value analyzer"
         }
