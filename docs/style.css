@@ -347,6 +347,7 @@ h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {
 
 h1, h2, h3, h4, h5, h6 {
     margin-top: 0;
+    margin-bottom: var(--unit-3);
 }
 
 h1 {
@@ -632,9 +633,11 @@ table.pre td iconify-icon {
 /* tooltips */
 
 div.fsdocs-tip {
+    z-index: 1000;
     display: none;
     background-color: var(--doc-tip-background);
-    border-right: var(--radius);
+    border-radius: var(--radius);
+    border: 1px solid var(--header-border);
     padding: var(--unit-3);
     font-family: var(--monospace-font);
     color: var(--code-color);
@@ -646,6 +649,108 @@ div.fsdocs-tip {
 
 span[onmouseout] {
     cursor: pointer;
+}
+
+/* API docs */
+.table {
+    width: 100%;
+
+    & thead tr td {
+        font-weight: bold;
+        padding: var(--unit-3) 0;
+    }
+
+    & tbody td {
+        border-top: 1px solid var(--header-border);
+        padding: var(--unit-2) 0;
+    }
+
+    .fsdocs-entity-xmldoc {
+        > div {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: flex-start;
+            align-items: center;
+
+            > p {
+                margin: 0 var(--unit-2) 0 0;
+            }
+        }
+    }
+
+    .fsdocs-member-usage {
+        display: block;
+        margin-right: var(--unit-2);
+    }
+
+    .fsdocs-member-xmldoc {
+        & details {
+            margin-left: var(--unit-2);
+
+            & .fsdocs-summary {
+                margin-left: var(--unit-2);
+            }
+        }
+
+        & summary {
+            list-style: none;
+
+            .fsdocs-summary {
+                display: flex;
+                align-items: center;
+            }
+
+            &::after {
+                content: '▶';
+                cursor: pointer;
+                margin-left: var(--unit-4);
+            }
+        }
+
+        & details[open] summary::after {
+            content: "▼";
+        }
+
+        .fsdocs-returns, .fsdocs-params {
+            margin-left: var(--unit-4);
+        }
+
+        /* hide the browser mark and display one after the summary */
+
+        & ::marker {
+            display: none;
+        }
+    }
+}
+
+.fsdocs-source-link {
+    padding: 0 var(--unit);
+
+    > img {
+        height: var(--icon-size);
+        cursor: pointer;
+
+        &.hover {
+            display: none;
+        }
+    }
+
+    &:hover {
+        > img.normal {
+            display: none;
+        }
+
+        > img.hover {
+            display: block;
+        }
+    }
+}
+
+[data-theme=dark] {
+    .fsdocs-source-link img.normal {
+        filter: invert(1);
+    }
+;
 }
 
 /* dark theme */
@@ -672,8 +777,8 @@ span[onmouseout] {
     --code-value-color: #66d73d;
     --code-interface-color: #43AEC6;
     --code-typearg-color: #43AEC6;
-    --code-disposable-color: #43AEC6;
-    --code-property-color: #43AEC6;
+    --code-disposable-color: #6dd6f1;
+    --code-property-color: #6acfe7;
     --code-punctuation-color: #43AEC6;
     --code-punctuation2-color: var(--text-color);
     --code-function-color: #6B2FBA;
