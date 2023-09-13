@@ -1,7 +1,6 @@
 ﻿open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
-open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
@@ -30,7 +29,7 @@ let fcs = createFCS ()
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -65,73 +64,33 @@ let loadProject toolsPath projPath =
     }
     |> Async.RunSynchronously
 
-let typeCheckFile (file, opts) =
-    let text = File.ReadAllText file
-    let st = SourceText.ofString text
-
-    let (parseRes, checkAnswer) =
-        fcs.ParseAndCheckFileInProject(file, 0, st, opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
+let typeCheckFile (options: FSharpProjectOptions) (fileName: string) (sourceText: ISourceText) =
+    let parseRes, checkAnswer =
+        fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
+        |> Async.RunSynchronously //ToDo: Validate if 0 is ok
 
     match checkAnswer with
     | FSharpCheckFileAnswer.Aborted ->
-        printError "Checking of file %s aborted" file
+        printError "Checking of file %s aborted" fileName
         None
-    | FSharpCheckFileAnswer.Succeeded result -> Some(file, text, parseRes, result)
-
-let entityCache = EntityCache()
-
-let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
-    try
-        let res =
-            [
-                yield!
-                    AssemblyContent.GetAssemblySignatureContent
-                        AssemblyContentType.Full
-                        checkResults.PartialAssemblySignature
-                let ctx = checkResults.ProjectContext
-
-                let assembliesByFileName =
-                    ctx.GetReferencedAssemblies()
-                    |> Seq.groupBy (fun asm -> asm.FileName)
-                    |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
-                    |> Seq.toList
-                    |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
-                // get Content.Entities from it.
-
-                for fileName, signatures in assembliesByFileName do
-                    let contentType =
-                        if publicOnly then
-                            AssemblyContentType.Public
-                        else
-                            AssemblyContentType.Full
-
-                    let content =
-                        AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
-
-                    yield! content
-            ]
-
-        res
-    with _ ->
-        []
+    | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)
 
 let createContext
-    (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
-    (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults)
+    (checkProjectResults: Async<FSharpCheckProjectResults>)
+    (fileName: string)
+    (sourceText: ISourceText)
+    (parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults)
     =
-    match c.ImplementationFile with
+    match checkFileResults.ImplementationFile with
     | Some tast ->
         let context: Context =
             {
-                ParseFileResults = p
-                CheckFileResults = c
-                CheckProjectResults = checkProjectResults
-                FileName = file
-                Content = text.Split([| '\n' |])
+                FileName = fileName
+                SourceText = sourceText
+                ParseFileResults = parseFileResults
+                CheckFileResults = checkFileResults
                 TypedTree = tast
-                GetAllEntities = getAllEntities c
-                AllSymbolUses = allSymbolUses
-                SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file)
+                CheckProjectResults = checkProjectResults
             }
 
         Some context
@@ -139,12 +98,11 @@ let createContext
 
 let runProject toolsPath proj (globs: Glob list) =
     let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-    let opts = loadProject toolsPath path
+    let option = loadProject toolsPath path
 
-    let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
-    let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
+    let checkProjectResults = fcs.ParseAndCheckProject(option)
 
-    opts.SourceFiles
+    option.SourceFiles
     |> Array.filter (fun file ->
         match globs |> List.tryFind (fun g -> g.IsMatch file) with
         | Some g ->
@@ -152,9 +110,12 @@ let runProject toolsPath proj (globs: Glob list) =
             false
         | None -> true
     )
-    |> Array.choose (fun f ->
-        typeCheckFile (f, opts)
-        |> Option.map (createContext (checkProjectResults, allSymbolUses))
+    |> Array.choose (fun fileName ->
+        let fileContent = File.ReadAllText fileName
+        let sourceText = SourceText.ofString fileContent
+
+        typeCheckFile option fileName sourceText
+        |> Option.map (createContext checkProjectResults fileName sourceText)
     )
     |> Array.collect (fun ctx ->
         match ctx with
@@ -212,7 +173,7 @@ let calculateExitCode failOnWarnings (msgs: Message array option) : int =
 
 [<EntryPoint>]
 let main argv =
-    let toolsPath = Init.init (IO.DirectoryInfo Environment.CurrentDirectory) None
+    let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
@@ -228,7 +189,7 @@ let main argv =
     let analyzersPath =
         let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
 
-        if System.IO.Path.IsPathRooted path then
+        if Path.IsPathRooted path then
             path
         else
             Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
@@ -247,7 +208,7 @@ let main argv =
             None
         | Some proj ->
             let project =
-                if System.IO.Path.IsPathRooted proj then
+                if Path.IsPathRooted proj then
                     proj
                 else
                     Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))

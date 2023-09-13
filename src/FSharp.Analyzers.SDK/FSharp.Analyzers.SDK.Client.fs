@@ -15,14 +15,14 @@ type AnalysisResult =
 
 module Client =
 
-    let internal attributeName = "AnalyzerAttribute"
+    let attributeName = "AnalyzerAttribute"
 
-    let internal isAnalyzer (mi: MemberInfo) =
+    let isAnalyzer (mi: MemberInfo) =
         mi.GetCustomAttributes true
         |> Seq.tryFind (fun n -> n.GetType().Name = attributeName)
         |> Option.map unbox<AnalyzerAttribute>
 
-    let internal analyzerFromMember (mi: MemberInfo) : (string * Analyzer) option =
+    let analyzerFromMember (mi: MemberInfo) : (string * Analyzer) option =
         let inline unboxAnalyzer v =
             if isNull v then failwith "Analyzer is null" else unbox v
 
@@ -61,7 +61,7 @@ module Client =
             | None -> None
         | None -> None
 
-    let internal analyzersFromType (t: Type) =
+    let analyzersFromType (t: Type) =
         let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
         let bindingFlags = BindingFlags.Public ||| BindingFlags.Static
 
@@ -78,10 +78,7 @@ module Client =
     let registeredAnalyzers: ConcurrentDictionary<string, (string * Analyzer) list> =
         ConcurrentDictionary()
 
-    ///Loads into private state any analyzers defined in any assembly
-    ///matching `*Analyzer*.dll` in given directory (and any subdirectories)
-    ///Returns number of found dlls matching `*Analyzer*.dll` and number of registered analyzers
-    let loadAnalyzers (printError: string -> unit) (dir: string) : (int * int) =
+    let loadAnalyzers (printError: string -> unit) (dir: string) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
@@ -124,7 +121,7 @@ module Client =
                         false
                 )
                 |> Array.map (fun (path, assembly) ->
-                    let analyzers = assembly.GetExportedTypes() |> Seq.collect (analyzersFromType)
+                    let analyzers = assembly.GetExportedTypes() |> Seq.collect analyzersFromType
                     path, analyzers
                 )
 
@@ -136,17 +133,15 @@ module Client =
                 |> ignore
             )
 
-            Seq.length analyzers, analyzers |> Seq.collect (snd) |> Seq.length
+            Seq.length analyzers, analyzers |> Seq.collect snd |> Seq.length
         else
             0, 0
 
-    ///Runs all registered analyzers for given context (file).
-    ///Returns list of messages. Ignores errors from the analyzers
     let runAnalyzers (ctx: Context) : Message[] =
         let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
         analyzers
-        |> Seq.collect (fun (analyzerName, analyzer) ->
+        |> Seq.collect (fun (_analyzerName, analyzer) ->
             try
                 analyzer ctx
             with error ->
@@ -154,8 +149,6 @@ module Client =
         )
         |> Seq.toArray
 
-    /// Runs all registered analyzers for given context (file).
-    /// Returns list of results per analyzer which can ei
     let runAnalyzersSafely (ctx: Context) : AnalysisResult list =
         let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
