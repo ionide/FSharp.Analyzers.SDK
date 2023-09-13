@@ -108,9 +108,6 @@ module Client =
                         None
                 )
 
-            let currentFSharpAnalyzersSDKVersion =
-                Assembly.GetExecutingAssembly().GetName().Version
-
             let findFSharpAnalyzerSDKVersion (assembly: Assembly) =
                 let references = assembly.GetReferencedAssemblies()
                 let fas = references |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
@@ -121,11 +118,11 @@ module Client =
                 |> Array.filter (fun (name, analyzerAssembly) ->
                     let version = findFSharpAnalyzerSDKVersion analyzerAssembly
 
-                    if version = currentFSharpAnalyzersSDKVersion then
+                    if version = Utils.currentFSharpAnalyzersSDKVersion then
                         true
                     else
                         printError
-                            $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
+                            $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{Utils.currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
 
                         false
                 )

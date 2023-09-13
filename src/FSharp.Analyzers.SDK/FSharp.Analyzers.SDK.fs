@@ -9,6 +9,7 @@ open FSharp.Compiler.Text
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
 open System.Runtime.InteropServices
+open System.Reflection
 
 /// Marks an analyzer for scanning
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
@@ -55,6 +56,9 @@ type Message =
 type Analyzer = Context -> Message list
 
 module Utils =
+
+    let currentFSharpAnalyzersSDKVersion =
+        Assembly.GetExecutingAssembly().GetName().Version
 
     let private entityCache = EntityCache()
 

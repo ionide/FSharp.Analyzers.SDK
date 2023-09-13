@@ -26,7 +26,13 @@ type FSharpProjectOptions with
             Stamp = None
         }
 
-type Package = { Name: string; Version: string }
+type Package =
+    {
+        Name: string
+        Version: string
+    }
+
+    override x.ToString() = $"{x.Name}_{x.Version}"
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 
@@ -100,23 +106,19 @@ let mkOptionsFromBinaryLog binLogPath =
     let compilerArgs = readCompilerArgsFromBinLog binLogPath
     mkOptions compilerArgs
 
-let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
+let createProject (binLogPath: string) (tmpProjectDir: string) (framework: string) (additionalPkgs: Package list) =
     let stdOutBuffer = System.Text.StringBuilder()
     let stdErrBuffer = System.Text.StringBuilder()
 
     task {
         try
-            let id = Guid.NewGuid().ToString("N")
-            let tmpDir = Path.Combine(Path.GetTempPath(), id)
-            let binLogPath = Path.Combine(tmpDir, $"{id}.binlog")
-
-            Directory.CreateDirectory(tmpDir) |> ignore
+            Directory.CreateDirectory(tmpProjectDir) |> ignore
 
             // Todo remove
             let! _ =
                 Cli
                     .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpDir)
+                    .WithWorkingDirectory(tmpProjectDir)
                     .WithArguments("--version")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
@@ -126,7 +128,7 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
             let! _ =
                 Cli
                     .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpDir)
+                    .WithWorkingDirectory(tmpProjectDir)
                     .WithArguments($"new classlib -f {framework} -lang F#")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
@@ -137,7 +139,7 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
             let! _ =
                 Cli
                     .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpDir)
+                    .WithWorkingDirectory(tmpProjectDir)
                     .WithArguments("--version")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
@@ -148,7 +150,7 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
                 let! _ =
                     Cli
                         .Wrap("dotnet")
-                        .WithWorkingDirectory(tmpDir)
+                        .WithWorkingDirectory(tmpProjectDir)
                         .WithArguments($"add package {p.Name} --version {p.Version}")
                         .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                         .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
@@ -160,18 +162,44 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
             let! _ =
                 Cli
                     .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpDir)
-                    .WithArguments($"build -bl:{Path.GetFileName(binLogPath)}")
+                    .WithWorkingDirectory(tmpProjectDir)
+                    .WithArguments($"build -bl:{binLogPath}")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                     .WithValidation(CommandResultValidation.ZeroExitCode)
                     .ExecuteAsync()
 
-            return mkOptionsFromBinaryLog binLogPath
-
+            return ()
         with e ->
             printfn $"StdOut:\n%s{stdOutBuffer.ToString()}"
             printfn $"StdErr:\n%s{stdErrBuffer.ToString()}"
+            printfn $"Exception:\n%s{e.ToString()}"
+    }
+
+let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
+    task {
+        try
+            let id = Guid.NewGuid().ToString("N")
+            let tmpProjectDir = Path.Combine(Path.GetTempPath(), id)
+
+            let uniqueBinLogName =
+                let packages =
+                    additionalPkgs |> List.map (fun p -> p.ToString()) |> String.concat "_"
+
+                $"v{Utils.currentFSharpAnalyzersSDKVersion}_{framework}_{packages}.binlog"
+
+            let binLogCache =
+                Path.Combine(Path.GetTempPath(), "FSharp.Analyzer.SDK.BinLogCache")
+
+            let binLogPath = Path.Combine(binLogCache, uniqueBinLogName)
+
+            if not (File.Exists(binLogPath)) then
+                Directory.CreateDirectory(binLogCache) |> ignore
+                let! _ = createProject binLogPath tmpProjectDir framework additionalPkgs
+                ()
+
+            return mkOptionsFromBinaryLog binLogPath
+        with e ->
             printfn $"Exception:\n%s{e.ToString()}"
             return FSharpProjectOptions.zero
     }
