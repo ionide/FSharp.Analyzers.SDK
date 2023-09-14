@@ -199,7 +199,7 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
                 $"v{Utils.currentFSharpAnalyzersSDKVersion}_{framework}_{packages}.binlog"
 
             let binLogCache =
-                Path.Combine(Path.GetTempPath(), "FSharp.Analyzer.SDK.BinLogCache")
+                Path.Combine(Path.GetTempPath(), "FSharp.Analyzers.SDK.BinLogCache")
 
             let binLogPath = Path.Combine(binLogCache, uniqueBinLogName)
 
