@@ -13,7 +13,8 @@ let Setup () =
     task {
         let! opts =
             mkOptionsFromProject
-                // Todo: changing this to net8.0 makes "dotnet test" fail when run inside the repo, from outside or in the IDE the tests work fine
+                // Todo: changing this to net8.0 makes "dotnet test" fail when run inside the repo
+                // from outside the repo or in the IDE (but not in a debug session) the tests work fine with net8
                 "net7.0"
                 [
                     {

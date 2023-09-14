@@ -39,11 +39,9 @@ let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 let isFSharpFile (file: string) =
     Seq.exists (fun (ext: string) -> file.EndsWith ext) fsharpFiles
 
-let readCompilerArgsFromBinLog file =
-    let build = BinaryLog.ReadBuild file
-
+let readCompilerArgsFromBinLog (build: Build) =
     if not build.Succeeded then
-        failwith $"Build failed: {file}"
+        failwith $"Build failed: {build.LogFilePath}"
 
     let projectName =
         build.Children
@@ -75,7 +73,7 @@ let readCompilerArgsFromBinLog file =
     )
 
     match args with
-    | None -> failwith $"Could not parse binlog at {file}, does it contain CoreCompile?"
+    | None -> failwith $"Could not parse binlog at {build.LogFilePath}, does it contain CoreCompile?"
     | Some args ->
         let idx = args.IndexOf "-o:"
         args.Substring(idx).Split [| '\n' |]
@@ -102,9 +100,21 @@ let mkOptions (compilerArgs: string array) =
         Stamp = None
     }
 
-let mkOptionsFromBinaryLog binLogPath =
-    let compilerArgs = readCompilerArgsFromBinLog binLogPath
+let mkOptionsFromBinaryLog build =
+    let compilerArgs = readCompilerArgsFromBinLog build
     mkOptions compilerArgs
+
+let getCachedIfOldBuildSucceeded binLogPath =
+    if File.Exists binLogPath then
+        let build = BinaryLog.ReadBuild binLogPath
+
+        if build.Succeeded then
+            Some build
+        else
+            File.Delete binLogPath
+            None
+    else
+        None
 
 let createProject (binLogPath: string) (tmpProjectDir: string) (framework: string) (additionalPkgs: Package list) =
     let stdOutBuffer = System.Text.StringBuilder()
@@ -114,7 +124,7 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
         try
             Directory.CreateDirectory(tmpProjectDir) |> ignore
 
-            // Todo remove
+            // Todo remove after net8 issue is solved
             let! _ =
                 Cli
                     .Wrap("dotnet")
@@ -135,7 +145,7 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
                     .WithValidation(CommandResultValidation.ZeroExitCode)
                     .ExecuteAsync()
 
-            // Todo remove
+            // Todo remove after net8 issue is solved
             let! _ =
                 Cli
                     .Wrap("dotnet")
@@ -193,12 +203,19 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
 
             let binLogPath = Path.Combine(binLogCache, uniqueBinLogName)
 
-            if not (File.Exists(binLogPath)) then
-                Directory.CreateDirectory(binLogCache) |> ignore
-                let! _ = createProject binLogPath tmpProjectDir framework additionalPkgs
-                ()
+            let! binLogFile =
+                let cached = getCachedIfOldBuildSucceeded binLogPath
 
-            return mkOptionsFromBinaryLog binLogPath
+                match cached with
+                | Some f -> task { return f }
+                | None ->
+                    task {
+                        Directory.CreateDirectory(binLogCache) |> ignore
+                        let! _ = createProject binLogPath tmpProjectDir framework additionalPkgs
+                        return BinaryLog.ReadBuild binLogPath
+                    }
+
+            return mkOptionsFromBinaryLog binLogFile
         with e ->
             printfn $"Exception:\n%s{e.ToString()}"
             return FSharpProjectOptions.zero
