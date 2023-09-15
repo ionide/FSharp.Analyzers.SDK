@@ -62,7 +62,6 @@ let loadProject toolsPath projPath =
 
         return fcsPo
     }
-    |> Async.RunSynchronously
 
 let typeCheckFile (options: FSharpProjectOptions) (fileName: string) (sourceText: ISourceText) =
     let parseRes, checkAnswer =
@@ -76,14 +75,15 @@ let typeCheckFile (options: FSharpProjectOptions) (fileName: string) (sourceText
     | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)
 
 let createContext
-    (checkProjectResults: Async<FSharpCheckProjectResults>)
+    (checkProjectResults: FSharpCheckProjectResults)
     (fileName: string)
     (sourceText: ISourceText)
-    (parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults)
+    ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
+    : CliContext option
     =
     match checkFileResults.ImplementationFile with
     | Some tast ->
-        let context: Context =
+        let context: CliContext =
             {
                 FileName = fileName
                 SourceText = sourceText
@@ -96,35 +96,37 @@ let createContext
         Some context
     | _ -> None
 
-let runProject toolsPath proj (globs: Glob list) =
-    let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-    let option = loadProject toolsPath path
+let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+    async {
+        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
+        let! option = loadProject toolsPath path
+        let! checkProjectResults = fcs.ParseAndCheckProject(option)
 
-    let checkProjectResults = fcs.ParseAndCheckProject(option)
+        return
+            option.SourceFiles
+            |> Array.filter (fun file ->
+                match globs |> List.tryFind (fun g -> g.IsMatch file) with
+                | Some g ->
+                    printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+                    false
+                | None -> true
+            )
+            |> Array.choose (fun fileName ->
+                let fileContent = File.ReadAllText fileName
+                let sourceText = SourceText.ofString fileContent
 
-    option.SourceFiles
-    |> Array.filter (fun file ->
-        match globs |> List.tryFind (fun g -> g.IsMatch file) with
-        | Some g ->
-            printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
-            false
-        | None -> true
-    )
-    |> Array.choose (fun fileName ->
-        let fileContent = File.ReadAllText fileName
-        let sourceText = SourceText.ofString fileContent
-
-        typeCheckFile option fileName sourceText
-        |> Option.map (createContext checkProjectResults fileName sourceText)
-    )
-    |> Array.collect (fun ctx ->
-        match ctx with
-        | Some c ->
-            printInfo "Running analyzers for %s" c.FileName
-            Client.runAnalyzers c
-        | None -> failwithf "could not get context for file %s" path
-    )
-    |> Some
+                typeCheckFile option fileName sourceText
+                |> Option.map (createContext checkProjectResults fileName sourceText)
+            )
+            |> Array.collect (fun ctx ->
+                match ctx with
+                | Some c ->
+                    printInfo "Running analyzers for %s" c.FileName
+                    client.RunAnalyzers c
+                | None -> failwithf "could not get context for file %s" path
+            )
+            |> Some
+    }
 
 let printMessages failOnWarnings (msgs: Message array) =
     if verbose then
@@ -196,24 +198,33 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let dlls, analyzers = Client.loadAnalyzers (printError "%s") analyzersPath
+    let client = Client<CliAnalyzerAttribute, CliContext>()
+
+    let dlls, analyzers = client.LoadAnalyzers (printError "%s") analyzersPath
+
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
 
     let results =
-        match projOpt with
-        | None ->
-            printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
-            None
-        | Some proj ->
-            let project =
-                if Path.IsPathRooted proj then
-                    proj
-                else
-                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+        async {
+            match projOpt with
+            | None ->
+                printError
+                    "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
+                    ""
 
-            runProject toolsPath project ignoreFiles
-            |> Option.map (printMessages failOnWarnings)
+                return None
+            | Some proj ->
+                let project =
+                    if Path.IsPathRooted proj then
+                        proj
+                    else
+                        Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+
+                let! results = runProject client toolsPath project ignoreFiles
+                return results |> Option.map (printMessages failOnWarnings)
+        }
+        |> Async.RunSynchronously
 
     calculateExitCode failOnWarnings results

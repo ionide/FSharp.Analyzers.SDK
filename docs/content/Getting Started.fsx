@@ -29,7 +29,20 @@ paket add FSharp.Analyzers.SDK
 
 ## First analyzer
 
-An [Analyzer](../reference/fsharp-analyzers-sdk-analyzer.html) is a function that takes a `Context` and returns a list of `Message`.
+An [Analyzer<'TContext>](../reference/fsharp-analyzers-sdk-analyzer-1.html) is a function that takes a `Context` and returns a list of `Message`.  
+There are two flavours of analyzers:
+
+- Console application analyzers ([CliAnalyzer](../reference/fsharp-analyzers-sdk-clianalyzerattribute.html))
+- Editor analyzers ([EditorAnalyzer](../reference/fsharp-analyzers-sdk-editoranalyzerattribute.html))
+
+The key difference between them is that the console application analyzer will have the *full project* information.  
+Per file this included the untyped tree, typed tree, type-check results of the file and project type-check results.  
+The [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool will collect all this information upfront and pass it down to the analyzer via the [CliContext](../reference/fsharp-analyzers-sdk-clicontext.html).
+
+In the case of an editor analyzer, the IDE might not have all the available information available and will be more selective in what it can pass down to the analyzer.
+The main reasoning behind this is performance. It might be desirable for some analyzers to run after every keystroke, while other should be executed more sparingly.
+
+In the following example we will be 
 *)
 
 (*** hide ***)
@@ -41,10 +54,10 @@ module OptionAnalyzer =
 
     open FSharp.Analyzers.SDK
 
-    // This attribute is required!
-    [<Analyzer>]
-    let optionValueAnalyzer: Analyzer =
-        fun (context: Context) ->
+    // This attribute is required and needs to match the correct context type!
+    [<CliAnalyzer>]
+    let optionValueAnalyzer: Analyzer<CliContext> =
+        fun (context: CliContext) ->
             // inspect context to determine the error/warning messages
             // A potential implementation might traverse the untyped syntax tree
             // to find any references of `Option.Value`
@@ -62,7 +75,8 @@ module OptionAnalyzer =
 (**
 ## Running your first analyzer
 
-After building your project you can run your analyzer on a project of your choosing using the [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool.
+After building your project you can run your analyzer on a project of your choosing using the [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool.  
+Please again verify your analyzer is a `CliAnalyzerAttribute` and uses the `CliContext`!
 
 ```shell
 dotnet tool install --global fsharp-analyzers
@@ -71,4 +85,7 @@ dotnet tool install --global fsharp-analyzers
 ```shell
 fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/bin/Release --verbose
 ```
+
+[Next]({{fsdocs-next-page-link}})
+
 *)

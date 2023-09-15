@@ -8,34 +8,17 @@ open System.Runtime.InteropServices
 open FSharp.Compiler.Text
 
 module EntityCache =
-    let entityCache = EntityCache()
+    let private entityCache = EntityCache()
 
-/// Marks an analyzer for scanning
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type AnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit Attribute()
-
-    member _.Name = name
-
-type Context =
-    {
-        FileName: string
-        SourceText: ISourceText
-        ParseFileResults: FSharpParseFileResults
-        CheckFileResults: FSharpCheckFileResults
-        TypedTree: FSharpImplementationFileContents
-        CheckProjectResults: Async<FSharpCheckProjectResults>
-    }
-
-    member x.GetAllEntities(publicOnly: bool) =
+    let getEntities (publicOnly: bool) (checkFileResults: FSharpCheckFileResults) =
         try
             let res =
                 [
                     yield!
                         AssemblyContent.GetAssemblySignatureContent
                             AssemblyContentType.Full
-                            x.CheckFileResults.PartialAssemblySignature
-                    let ctx = x.CheckFileResults.ProjectContext
+                            checkFileResults.PartialAssemblySignature
+                    let ctx = checkFileResults.ProjectContext
 
                     let assembliesByFileName =
                         ctx.GetReferencedAssemblies()
@@ -53,11 +36,7 @@ type Context =
                                 AssemblyContentType.Full
 
                         let content =
-                            AssemblyContent.GetAssemblyContent
-                                EntityCache.entityCache.Locking
-                                contentType
-                                fileName
-                                signatures
+                            AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
 
                         yield! content
                 ]
@@ -66,14 +45,75 @@ type Context =
         with _ ->
             []
 
+[<AbstractClass>]
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type AnalyzerAttribute([<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string) =
+    inherit Attribute()
+    member val Name: string = name
+
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type CliAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
+    inherit AnalyzerAttribute(name)
+
+    member _.Name = name
+
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type EditorAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
+    inherit AnalyzerAttribute(name)
+
+    member _.Name = name
+
+type Context =
+    interface
+    end
+
+type CliContext =
+    {
+        FileName: string
+        SourceText: ISourceText
+        ParseFileResults: FSharpParseFileResults
+        CheckFileResults: FSharpCheckFileResults
+        TypedTree: FSharpImplementationFileContents
+        CheckProjectResults: FSharpCheckProjectResults
+    }
+
+    interface Context
+
+    member x.GetAllEntities(publicOnly: bool) =
+        EntityCache.getEntities publicOnly x.CheckFileResults
+
     member x.GetAllSymbolUsesOfProject() =
-        async {
-            let! checkProjectResults = x.CheckProjectResults
-            return checkProjectResults.GetAllUsesOfAllSymbols()
-        }
+        x.CheckProjectResults.GetAllUsesOfAllSymbols()
 
     member x.GetAllSymbolUsesOfFile() =
         x.CheckFileResults.GetAllUsesOfAllSymbolsInFile()
+
+type EditorContext =
+    {
+        FileName: string
+        SourceText: ISourceText option
+        ParseFileResults: FSharpParseFileResults option
+        CheckFileResults: FSharpCheckFileResults option
+        TypedTree: FSharpImplementationFileContents option
+        CheckProjectResults: FSharpCheckProjectResults option
+    }
+
+    interface Context
+
+    member x.GetAllEntities(publicOnly: bool) : AssemblySymbol list =
+        match x.CheckFileResults with
+        | None -> List.empty
+        | Some checkFileResults -> EntityCache.getEntities publicOnly checkFileResults
+
+    member x.GetAllSymbolUsesOfProject() : FSharpSymbolUse array =
+        match x.CheckProjectResults with
+        | None -> Array.empty
+        | Some checkProjectResults -> checkProjectResults.GetAllUsesOfAllSymbols()
+
+    member x.GetAllSymbolUsesOfFile() : FSharpSymbolUse seq =
+        match x.CheckFileResults with
+        | None -> Seq.empty
+        | Some checkFileResults -> checkFileResults.GetAllUsesOfAllSymbolsInFile()
 
 type Fix =
     {
@@ -97,4 +137,4 @@ type Message =
         Fixes: Fix list
     }
 
-type Analyzer = Context -> Message list
+type Analyzer<'TContext> = 'TContext -> Message list

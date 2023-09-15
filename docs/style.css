@@ -53,7 +53,7 @@
     --code-punctuation-color: #43AEC6;
     --code-punctuation2-color: var(--text-color);
     --code-function-color: #6B2FBA;
-    --code-function2-color: #990000;
+    --code-function2-color: #6B2FBA;
     --code-activepattern-color: #4ec9b0;
     --code-unioncase-color: #4ec9b0;
     --code-enumeration-color: #8C6C41;
@@ -175,10 +175,10 @@ aside {
             list-style: none;
             font-size: var(--unit-3);
             color: var(--nav-category);
-        }
-
-        .nav-header + .nav-item {
-            margin-bottom: var(--unit-6);
+            
+            &:nth-child(n + 2) {
+                margin-top: var(--unit-6);
+            }
         }
 
         .nav-item {
@@ -187,7 +187,7 @@ aside {
             margin: var(--unit-2) 0;
             border-left: 1px solid var(--header-border);
             transition: border-color 200ms;
-
+            
             &:hover {
                 border-color: var(--text-color);
             }
@@ -379,6 +379,39 @@ a {
     color: var(--link-color);
 }
 
+p {
+    line-height: 1.8;
+}
+
+/* Navigation links at the end of a page */
+#fsdocs-content > p:last-of-type {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--unit-6);
+    
+    &:has(a + a) {
+        justify-content: space-between;
+    }
+    
+    > a {
+        text-decoration: none;
+        background: var(--menu-icon-hover-background);
+        color: var(--code-background);
+        padding: var(--unit) var(--unit-2);
+        margin: 0;
+        display: inline-block;
+        box-sizing: border-box;
+        border-radius: var(--radius);
+
+        &:hover {
+            background-color: var(--nav-category);
+        }
+
+        &:focus {
+            color: var(--text-color);
+        }
+    }
+}
 /* Code snippets */
 
 /* reset browser style */
@@ -402,8 +435,8 @@ table.pre, pre.fssnip {
 }
 
 p > code, li > code {
-    margin: 0 var(--unit);
     padding: var(--unit);
+    transform: translateY(var(--unit));
 }
 
 table.pre, code {

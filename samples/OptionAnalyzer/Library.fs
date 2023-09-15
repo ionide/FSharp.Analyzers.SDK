@@ -109,8 +109,8 @@ let notUsed () =
     let option: Option<int> = None
     option.Value
 
-[<Analyzer "OptionAnalyzer">]
-let optionValueAnalyzer: Analyzer =
+[<CliAnalyzer "OptionAnalyzer">]
+let optionValueAnalyzer: Analyzer<CliContext> =
     fun ctx ->
         let state = ResizeArray<range>()
 
