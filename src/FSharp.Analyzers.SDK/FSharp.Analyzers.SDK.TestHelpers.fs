@@ -187,6 +187,18 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
     }
 
 let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
+    // Todo: using net8.0 (newer than our global.json) makes "dotnet test" fail when run inside the repo
+    // from outside the repo or in the IDE (but not in a debug session) the tests work fine with net8
+    // It seems to be related to unit testing contexts as the code works in normal console projects
+    // tried, but failed, ideas:
+    // - moving global.json in Analyzers repo to xxxglobal.json while doing this
+    // - generating global.json in tmp proj folder
+    // - double spawning pwsh in CliWrap (works in console proj)
+    // - other testing framework
+    // - create .bat file with command and execute bat file in unit test (works in console proj)
+    if framework.Contains("net8") then
+        failwith $"Framework {framework} not supported yet"
+
     task {
         try
             let id = Guid.NewGuid().ToString("N")
