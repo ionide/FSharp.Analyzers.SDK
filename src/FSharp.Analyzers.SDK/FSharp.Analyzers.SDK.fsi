@@ -104,6 +104,7 @@ type Fix =
 
 type Severity =
     | Info
+    | Hint
     | Warning
     | Error
 
