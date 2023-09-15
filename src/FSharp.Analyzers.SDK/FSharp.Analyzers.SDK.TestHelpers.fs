@@ -262,3 +262,22 @@ let getContext (opts: FSharpProjectOptions) source =
         | Some c -> c
         | None -> failwith "Context creation failed"
     | None -> failwith "typechecking file failed"
+
+module AssertionHelpers =
+
+    let areWarningsInLines (msgs: FSharp.Analyzers.SDK.Message list) (expectedLines: Set<int>) =
+        let msgLines = msgs |> List.map (fun m -> m.Range.StartLine) |> Set.ofList
+        msgLines = expectedLines
+
+    let messageContains (expectedContent: string) (msg: FSharp.Analyzers.SDK.Message) =
+        not (String.IsNullOrWhiteSpace(msg.Message))
+        && msg.Message.Contains(expectedContent)
+
+    let allMessagesContain (expectedContent: string) (msgs: FSharp.Analyzers.SDK.Message list) =
+        msgs |> List.forall (messageContains expectedContent)
+
+    let messageContainsAny (expectedContents: string list) (msg: FSharp.Analyzers.SDK.Message) =
+        expectedContents |> List.exists msg.Message.Contains
+
+    let messagesContainAny (expectedContents: string list) (msgs: FSharp.Analyzers.SDK.Message list) =
+        msgs |> List.forall (messageContainsAny expectedContents)

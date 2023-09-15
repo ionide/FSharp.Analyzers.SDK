@@ -16,3 +16,15 @@ type Package = { Name: string; Version: string }
 val mkOptionsFromProject: framework: string -> additionalPkgs: Package list -> Task<FSharpProjectOptions>
 
 val getContext: opts: FSharpProjectOptions -> source: string -> Context
+
+module AssertionHelpers =
+
+    val areWarningsInLines: msgs: Message list -> expectedLines: Set<int> -> bool
+
+    val messageContains: expectedContent: string -> msg: Message -> bool
+
+    val allMessagesContain: expectedContent: string -> msgs: Message list -> bool
+
+    val messageContainsAny: expectedContents: string list -> msg: Message -> bool
+
+    val messagesContainAny: expectedContents: string list -> msgs: Message list -> bool
