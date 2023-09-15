@@ -39,7 +39,7 @@ module Client =
                     Some(m.Invoke(null, null) |> unboxAnalyzer)
                 elif
                     m.ReturnType.FullName.StartsWith
-                        "Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
+                        "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
                 then
                     try
                         let analyzer: Analyzer<'TContext> = fun ctx -> m.Invoke(null, [| ctx |]) |> unbox
@@ -138,43 +138,59 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
             for path, analyzers in analyzers do
                 let analyzers = Seq.toList analyzers
 
-                if List.isEmpty analyzers then
-                    failwith "no analyzers"
-
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
-
-            if registeredAnalyzers.Count = 0 then
-                failwith "Nothing was added"
 
             Seq.length analyzers, analyzers |> Seq.collect snd |> Seq.length
         else
             0, 0
 
-    member x.RunAnalyzers(ctx: 'TContext) : Message array =
-        let analyzers = registeredAnalyzers.Values |> Seq.collect id
+    member x.RunAnalyzers(ctx: 'TContext) : Async<Message list> =
+        async {
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
-        analyzers
-        |> Seq.collect (fun (_analyzerName, analyzer) ->
-            try
-                analyzer ctx
-            with error ->
-                []
-        )
-        |> Seq.toArray
-
-    member x.RunAnalyzersSafely(ctx: 'TContext) : AnalysisResult list =
-        let analyzers = registeredAnalyzers.Values |> Seq.collect id
-
-        analyzers
-        |> Seq.map (fun (analyzerName, analyzer) ->
-            {
-                AnalyzerName = analyzerName
-                Output =
+            let! messagesPerAnalyzer =
+                analyzers
+                |> Seq.map (fun (_analyzerName, analyzer) ->
                     try
-                        Ok(analyzer ctx)
+                        analyzer ctx
                     with error ->
-                        Result.Error error
-            }
-        )
-        |> Seq.toList
+                        async.Return []
+                )
+                |> Async.Parallel
+
+            return
+                [
+                    for messages in messagesPerAnalyzer do
+                        yield! messages
+                ]
+        }
+
+    member x.RunAnalyzersSafely(ctx: 'TContext) : Async<AnalysisResult list> =
+        async {
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id
+
+            let! results =
+                analyzers
+                |> Seq.map (fun (analyzerName, analyzer) ->
+                    async {
+                        try
+                            let! result = analyzer ctx
+
+                            return
+                                {
+                                    AnalyzerName = analyzerName
+                                    Output = Result.Ok result
+                                }
+                        with error ->
+                            return
+                                {
+                                    AnalyzerName = analyzerName
+                                    Output = Result.Error error
+                                }
+                    }
+                )
+                |> Async.Parallel
+
+            return List.ofArray results
+        }

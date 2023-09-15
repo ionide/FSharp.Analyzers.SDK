@@ -102,7 +102,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
         let! option = loadProject toolsPath path
         let! checkProjectResults = fcs.ParseAndCheckProject(option)
 
-        return
+        let! messagesPerAnalyzer =
             option.SourceFiles
             |> Array.filter (fun file ->
                 match globs |> List.tryFind (fun g -> g.IsMatch file) with
@@ -118,21 +118,28 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 typeCheckFile option fileName sourceText
                 |> Option.map (createContext checkProjectResults fileName sourceText)
             )
-            |> Array.collect (fun ctx ->
+            |> Array.map (fun ctx ->
                 match ctx with
                 | Some c ->
                     printInfo "Running analyzers for %s" c.FileName
                     client.RunAnalyzers c
                 | None -> failwithf "could not get context for file %s" path
             )
-            |> Some
+            |> Async.Parallel
+
+        return
+            Some
+                [
+                    for messages in messagesPerAnalyzer do
+                        yield! messages
+                ]
     }
 
-let printMessages failOnWarnings (msgs: Message array) =
+let printMessages failOnWarnings (msgs: Message list) =
     if verbose then
         printfn ""
 
-    if verbose && Array.isEmpty msgs then
+    if verbose && List.isEmpty msgs then
         printfn "No messages found from the analyzer(s)"
 
     msgs
@@ -143,6 +150,7 @@ let printMessages failOnWarnings (msgs: Message array) =
             | Warning when failOnWarnings |> List.contains m.Code -> ConsoleColor.Red
             | Warning -> ConsoleColor.DarkYellow
             | Info -> ConsoleColor.Blue
+            | Hint -> ConsoleColor.Cyan
 
         Console.ForegroundColor <- color
 
@@ -160,13 +168,13 @@ let printMessages failOnWarnings (msgs: Message array) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message array option) : int =
+let calculateExitCode failOnWarnings (msgs: Message list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> Array.exists (fun n ->
+            |> List.exists (fun n ->
                 n.Severity = Error
                 || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
             )

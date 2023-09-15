@@ -16,7 +16,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     member LoadAnalyzers: printError: (string -> unit) -> dir: string -> int * int
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
-    member RunAnalyzers: ctx: 'TContext -> Message array
+    member RunAnalyzers: ctx: 'TContext -> Async<Message list>
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of results per analyzer which can either messages or an exception.</returns>
-    member RunAnalyzersSafely: ctx: 'TContext -> AnalysisResult list
+    member RunAnalyzersSafely: ctx: 'TContext -> Async<AnalysisResult list>

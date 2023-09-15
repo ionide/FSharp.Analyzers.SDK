@@ -138,4 +138,4 @@ type Message =
         Fixes: Fix list
     }
 
-type Analyzer<'TContext> = 'TContext -> Message list
+type Analyzer<'TContext> = 'TContext -> Async<Message list>
