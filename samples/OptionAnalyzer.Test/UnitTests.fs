@@ -45,6 +45,7 @@ let notUsed() =
     let ctx = getContext projectOptions source
     let msgs = optionValueAnalyzer ctx
     Assert.IsNotEmpty msgs
+    Assert.IsTrue(AssertionHelpers.messageContains "Option.Value" msgs[0])
 
 [<Test>]
 let ``expected warning is emitted`` () =
