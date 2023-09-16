@@ -1,5 +1,6 @@
 module FSharp.Analyzers.SDK.TestHelpers
 
+// Don't warn about using NotifyFileChanged of the FCS API
 #nowarn "57"
 
 open FSharp.Compiler.Text
@@ -7,6 +8,8 @@ open Microsoft.Build.Logging.StructuredLogger
 open CliWrap
 open System
 open System.IO
+open System.Collections.Generic
+open System.Collections.ObjectModel
 open FSharp.Compiler.CodeAnalysis
 
 type FSharpProjectOptions with
@@ -124,16 +127,11 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
         try
             Directory.CreateDirectory(tmpProjectDir) |> ignore
 
-            // Todo remove after net8 issue is solved
-            let! _ =
-                Cli
-                    .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpProjectDir)
-                    .WithArguments("--version")
-                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-                    .WithValidation(CommandResultValidation.ZeroExitCode)
-                    .ExecuteAsync()
+            // needed to escape the global.json circle of influence in a unit testing process
+            let envDic = Dictionary<string, string>()
+            envDic["MSBuildExtensionsPath"] <- null
+            envDic["MSBuildSDKsPath"] <- null
+            let roDic = ReadOnlyDictionary(envDic)
 
             let! _ =
                 Cli
@@ -145,21 +143,11 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
                     .WithValidation(CommandResultValidation.ZeroExitCode)
                     .ExecuteAsync()
 
-            // Todo remove after net8 issue is solved
-            let! _ =
-                Cli
-                    .Wrap("dotnet")
-                    .WithWorkingDirectory(tmpProjectDir)
-                    .WithArguments("--version")
-                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                    .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
-                    .WithValidation(CommandResultValidation.ZeroExitCode)
-                    .ExecuteAsync()
-
             for p in additionalPkgs do
                 let! _ =
                     Cli
                         .Wrap("dotnet")
+                        .WithEnvironmentVariables(roDic)
                         .WithWorkingDirectory(tmpProjectDir)
                         .WithArguments($"add package {p.Name} --version {p.Version}")
                         .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
@@ -172,6 +160,7 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
             let! _ =
                 Cli
                     .Wrap("dotnet")
+                    .WithEnvironmentVariables(roDic)
                     .WithWorkingDirectory(tmpProjectDir)
                     .WithArguments($"build -bl:{binLogPath}")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
@@ -187,18 +176,6 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
     }
 
 let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
-    // Todo: using net8.0 (newer than our global.json) makes "dotnet test" fail when run inside the repo
-    // from outside the repo or in the IDE (but not in a debug session) the tests work fine with net8
-    // It seems to be related to unit testing contexts as the code works in normal console projects
-    // tried, but failed, ideas:
-    // - moving global.json in Analyzers repo to xxxglobal.json while doing this
-    // - generating global.json in tmp proj folder
-    // - double spawning pwsh in CliWrap (works in console proj)
-    // - other testing framework
-    // - create .bat file with command and execute bat file in unit test (works in console proj)
-    if framework.Contains("net8") then
-        failwith $"Framework {framework} not supported yet"
-
     task {
         try
             let id = Guid.NewGuid().ToString("N")
