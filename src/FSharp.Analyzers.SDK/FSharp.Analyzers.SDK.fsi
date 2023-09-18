@@ -71,10 +71,10 @@ type EditorContext =
         FileName: string
         /// Source of the current file.
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-text-isourcetext.html">ISourceText Type</a>
-        SourceText: ISourceText option
+        SourceText: ISourceText
         /// Represents the results of parsing an F# file and a set of analysis operations based on the parse tree alone.
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpparsefileresults.html">FSharpParseFileResults Type</a>
-        ParseFileResults: FSharpParseFileResults option
+        ParseFileResults: FSharpParseFileResults
         /// A handle to the results of CheckFileInProject.
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckfileresults.html">FSharpCheckFileResults Type</a>
         CheckFileResults: FSharpCheckFileResults option

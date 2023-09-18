@@ -91,8 +91,8 @@ type CliContext =
 type EditorContext =
     {
         FileName: string
-        SourceText: ISourceText option
-        ParseFileResults: FSharpParseFileResults option
+        SourceText: ISourceText
+        ParseFileResults: FSharpParseFileResults
         CheckFileResults: FSharpCheckFileResults option
         TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults option
