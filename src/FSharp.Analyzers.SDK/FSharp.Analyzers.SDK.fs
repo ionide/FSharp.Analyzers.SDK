@@ -73,7 +73,7 @@ type CliContext =
         SourceText: ISourceText
         ParseFileResults: FSharpParseFileResults
         CheckFileResults: FSharpCheckFileResults
-        TypedTree: FSharpImplementationFileContents
+        TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults
     }
 

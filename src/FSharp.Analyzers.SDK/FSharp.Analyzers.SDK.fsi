@@ -46,9 +46,10 @@ type CliContext =
         /// A handle to the results of CheckFileInProject.
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckfileresults.html">FSharpCheckFileResults Type</a>
         CheckFileResults: FSharpCheckFileResults
-        /// Represents the definitional contents of a single file or fragment in an assembly, as seen by the F# language
+        /// Represents the definitional contents of a single file or fragment in an assembly, as seen by the F# language.
+        /// Only available for implementation files.
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpimplementationfilecontents.html">FSharpImplementationFileContents Type</a>
-        TypedTree: FSharpImplementationFileContents
+        TypedTree: FSharpImplementationFileContents option
         /// A handle to the results of the entire project
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckprojectresults.html">FSharpCheckProjectResults Type</a>
         CheckProjectResults: FSharpCheckProjectResults

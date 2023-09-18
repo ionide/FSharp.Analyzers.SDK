@@ -121,7 +121,9 @@ let optionValueAnalyzer: Analyzer<CliContext> =
                 if name = "Microsoft.FSharp.Core.FSharpOption`1.Value" then
                     state.Add range
 
-            ctx.TypedTree.Declarations |> List.iter (visitDeclaration handler)
+            match ctx.TypedTree with
+            | None -> ()
+            | Some typedTree -> typedTree.Declarations |> List.iter (visitDeclaration handler)
 
             return
                 state
