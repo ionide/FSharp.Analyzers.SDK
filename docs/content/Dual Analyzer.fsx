@@ -17,6 +17,7 @@ With a little orchestration it is possible to easily write two analyzer function
 (** *)
 
 open FSharp.Analyzers.SDK
+open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open FSharp.Compiler.Syntax
 
@@ -24,23 +25,30 @@ open FSharp.Compiler.Syntax
 /// See https://learn.microsoft.com/en-us/dotnet/fsharp/style-guide/conventions#sort-open-statements-topologically
 /// Note that this implementation is not complete and only serves as an illustration.
 /// Nested modules are not taken into account.
-let private topologicallySortedOpenStatementsAnalyzer (untypedTree: ParsedInput) : Async<Message list> =
+let private topologicallySortedOpenStatementsAnalyzer
+    (sourceText: ISourceText)
+    (untypedTree: ParsedInput)
+    (checkResults: FSharpCheckFileResults)
+    : Async<Message list>
+    =
     async {
         let allOpenStatements =
-            let allOpenStatements = ResizeArray<string * range>()
+            let allOpenStatements = ResizeArray<string list * range>()
 
             let (|LongIdentAsString|) (lid: SynLongIdent) =
-                lid.LongIdent |> List.map (fun ident -> ident.idText) |> String.concat "."
+                lid.LongIdent |> List.map (fun ident -> ident.idText)
 
             let rec visitSynModuleSigDecl (decl: SynModuleSigDecl) =
                 match decl with
-                | SynModuleSigDecl.Open(SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value), mOpen) ->
+                | SynModuleSigDecl.Open(
+                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
                     allOpenStatements.Add(value, mOpen)
                 | _ -> ()
 
             let rec visitSynModuleDecl (decl: SynModuleDecl) =
                 match decl with
-                | SynModuleDecl.Open(SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value), mOpen) ->
+                | SynModuleDecl.Open(
+                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
                     allOpenStatements.Add(value, mOpen)
                 | _ -> ()
 
@@ -57,17 +65,32 @@ let private topologicallySortedOpenStatementsAnalyzer (untypedTree: ParsedInput)
 
             allOpenStatements |> Seq.toList
 
-        let isOpenStatement (openStatement: string, _) = openStatement.StartsWith("System")
+        let isSystemOpenStatement (openStatement: string list, mOpen: range) =
+            let isFromBCL () =
+                let line = sourceText.GetLineString(mOpen.EndLine - 1)
 
-        let nonSystemOpens = allOpenStatements |> List.skipWhile isOpenStatement
+                match checkResults.GetSymbolUseAtLocation(mOpen.EndLine, mOpen.EndColumn, line, openStatement) with
+                | Some symbolUse ->
+                    match symbolUse.Symbol.Assembly.FileName with
+                    | None -> false
+                    | Some assemblyPath ->
+                        // This might not be an airtight check
+                        assemblyPath.ToLower().Contains "microsoft.netcore.app.ref"
+                | _ -> false
+
+            openStatement.[0].StartsWith("System") && isFromBCL ()
+
+        let nonSystemOpens = allOpenStatements |> List.skipWhile isSystemOpenStatement
 
         return
             nonSystemOpens
-            |> List.filter isOpenStatement
+            |> List.filter isSystemOpenStatement
             |> List.map (fun (openStatement, mOpen) ->
+                let openStatementText = openStatement |> String.concat "."
+
                 {
                     Type = "Unsorted System open statement"
-                    Message = $"%s{openStatement} was found after non System namespaces where opened!"
+                    Message = $"%s{openStatementText} was found after non System namespaces where opened!"
                     Code = "SOT001"
                     Severity = Warning
                     Range = mOpen
@@ -78,14 +101,15 @@ let private topologicallySortedOpenStatementsAnalyzer (untypedTree: ParsedInput)
 
 [<CliAnalyzer "Topologically sorted open statements">]
 let cliAnalyzer (ctx: CliContext) : Async<Message list> =
-    topologicallySortedOpenStatementsAnalyzer ctx.ParseFileResults.ParseTree
+    topologicallySortedOpenStatementsAnalyzer ctx.SourceText ctx.ParseFileResults.ParseTree ctx.CheckFileResults
 
 [<EditorAnalyzer "Topologically sorted open statements">]
 let editorAnalyzer (ctx: EditorContext) : Async<Message list> =
-    match ctx.ParseFileResults with
-    // The editor might not have any parse results for a given file. So we don't return any messages.
+    match ctx.CheckFileResults with
+    // The editor might not have any check results for a given file. So we don't return any messages.
     | None -> async.Return []
-    | Some parseResults -> topologicallySortedOpenStatementsAnalyzer parseResults.ParseTree
+    | Some checkResults ->
+        topologicallySortedOpenStatementsAnalyzer ctx.SourceText ctx.ParseFileResults.ParseTree checkResults
 
 (**
 Both analyzers will follow the same code path: the console application will always have the required data, while the editor needs to be more careful.  
