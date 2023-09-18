@@ -36,11 +36,11 @@ There are two flavours of analyzers:
 - Editor analyzers ([EditorAnalyzer](../reference/fsharp-analyzers-sdk-editoranalyzerattribute.html))
 
 The key difference between them is that the console application analyzer will have the *full project* information.  
-Per file this included the untyped tree, typed tree, type-check results of the file and project type-check results.  
+Per file this includes the untyped tree, typed tree, type-check results of the file and project type-check results.  
 The [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool will collect all this information upfront and pass it down to the analyzer via the [CliContext](../reference/fsharp-analyzers-sdk-clicontext.html).
 
 In the case of an editor analyzer, the IDE might not have all the available information available and will be more selective in what it can pass down to the analyzer.
-The main reasoning behind this is performance. It might be desirable for some analyzers to run after every keystroke, while other should be executed more sparingly.
+The main reasoning behind this is performance. It might be desirable for some analyzers to run after every keystroke, while others should be executed more sparingly.
 
 In the following example we will be 
 *)
@@ -79,7 +79,7 @@ module OptionAnalyzer =
 ## Running your first analyzer
 
 After building your project you can run your analyzer on a project of your choosing using the [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool.  
-Please again verify your analyzer is a `CliAnalyzerAttribute` and uses the `CliContext`!
+Again, please verify your analyzer is a `CliAnalyzerAttribute` and uses the `CliContext`!
 
 ```shell
 dotnet tool install --global fsharp-analyzers

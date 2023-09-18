@@ -7,7 +7,7 @@ index: 2
 
 # Writing an analyzer for both console and editor
 
-With a little orchestration is it possible to easily write two analyzer functions that share a common implementation.
+With a little orchestration it is possible to easily write two analyzer functions that share a common implementation.
 
 *)
 
@@ -23,7 +23,7 @@ open FSharp.Compiler.Syntax
 /// This analyzer function will try and detect if any `System.*` open statement was found after any non System open.
 /// See https://learn.microsoft.com/en-us/dotnet/fsharp/style-guide/conventions#sort-open-statements-topologically
 /// Note that this implementation is not complete and only serves as an illustration.
-/// Nested modules are not taking into account.
+/// Nested modules are not taken into account.
 let private topologicallySortedOpenStatementsAnalyzer (untypedTree: ParsedInput) : Async<Message list> =
     async {
         let allOpenStatements =
@@ -88,7 +88,7 @@ let editorAnalyzer (ctx: EditorContext) : Async<Message list> =
     | Some parseResults -> topologicallySortedOpenStatementsAnalyzer parseResults.ParseTree
 
 (**
-Both analyzer will follow the same code path: the console application will always have the required data, while the editor needs to be more careful.  
+Both analyzers will follow the same code path: the console application will always have the required data, while the editor needs to be more careful.  
 ⚠️ Please do not be tempted by calling `.Value` on the `EditorContext` 😉.
 
 [Previous]({{fsdocs-previous-page-link}})

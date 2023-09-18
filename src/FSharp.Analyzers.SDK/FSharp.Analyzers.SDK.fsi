@@ -49,7 +49,7 @@ type CliContext =
         /// Represents the definitional contents of a single file or fragment in an assembly, as seen by the F# language
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpimplementationfilecontents.html">FSharpImplementationFileContents Type</a>
         TypedTree: FSharpImplementationFileContents
-        /// A handle the results of the entire project
+        /// A handle to the results of the entire project
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckprojectresults.html">FSharpCheckProjectResults Type</a>
         CheckProjectResults: FSharpCheckProjectResults
     }
@@ -81,7 +81,7 @@ type EditorContext =
         /// Represents the definitional contents of a single file or fragment in an assembly, as seen by the F# language
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpimplementationfilecontents.html">FSharpImplementationFileContents Type</a>
         TypedTree: FSharpImplementationFileContents option
-        /// A handle the results of the entire project
+        /// A handle to the results of the entire project
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckprojectresults.html">FSharpCheckProjectResults Type</a>
         CheckProjectResults: FSharpCheckProjectResults option
     }
