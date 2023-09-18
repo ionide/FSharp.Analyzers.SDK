@@ -30,8 +30,8 @@ module BadCodeAnalyzer
 open FSharp.Analyzers.SDK
 
 [<Analyzer>]
-let badCodeAnalyzer : Analyzer =
-  fun (context: Context) ->
+let badCodeAnalyzer : Analyzer<CliContext> =
+  fun (context: CliContext) ->
     // inspect context to determine the error/warning messages
     [   ]
 ```
@@ -40,8 +40,8 @@ Notice how we expose the function `BadCodeAnalyzer.badCodeAnalyzer` with an attr
 Analyzers can also be named which allows for better logging if something went wrong while using the SDK from Ionide:
 ```fs
 [<Analyzer "BadCodeAnalyzer">]
-let badCodeAnalyzer : Analyzer =
-  fun (context: Context) ->
+let badCodeAnalyzer : Analyzer<CliContext> =
+  fun (context: CliContext) ->
     // inspect context to determine the error/warning messages
     [   ]
 ```
@@ -137,3 +137,5 @@ The project is hosted on [GitHub](https://github.com/Krzysztof-Cieslak/FSharp.An
 the project and submit pull requests.
 
 The library is available under [MIT license](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/blob/master/LICENSE.md), which allows modification and redistribution for both commercial and non-commercial purposes.
+
+[Next]({{fsdocs-next-page-link}})

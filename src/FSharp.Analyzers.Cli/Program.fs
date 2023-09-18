@@ -1,7 +1,6 @@
 ﻿open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
-open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
@@ -30,7 +29,7 @@ let fcs = createFCS ()
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -63,113 +62,84 @@ let loadProject toolsPath projPath =
 
         return fcsPo
     }
-    |> Async.RunSynchronously
 
-let typeCheckFile (file, opts) =
-    let text = File.ReadAllText file
-    let st = SourceText.ofString text
-
-    let (parseRes, checkAnswer) =
-        fcs.ParseAndCheckFileInProject(file, 0, st, opts) |> Async.RunSynchronously //ToDo: Validate if 0 is ok
+let typeCheckFile (options: FSharpProjectOptions) (fileName: string) (sourceText: ISourceText) =
+    let parseRes, checkAnswer =
+        fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
+        |> Async.RunSynchronously //ToDo: Validate if 0 is ok
 
     match checkAnswer with
     | FSharpCheckFileAnswer.Aborted ->
-        printError "Checking of file %s aborted" file
+        printError "Checking of file %s aborted" fileName
         None
-    | FSharpCheckFileAnswer.Succeeded result -> Some(file, text, parseRes, result)
-
-let entityCache = EntityCache()
-
-let getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
-    try
-        let res =
-            [
-                yield!
-                    AssemblyContent.GetAssemblySignatureContent
-                        AssemblyContentType.Full
-                        checkResults.PartialAssemblySignature
-                let ctx = checkResults.ProjectContext
-
-                let assembliesByFileName =
-                    ctx.GetReferencedAssemblies()
-                    |> Seq.groupBy (fun asm -> asm.FileName)
-                    |> Seq.map (fun (fileName, asms) -> fileName, List.ofSeq asms)
-                    |> Seq.toList
-                    |> List.rev // if mscorlib.dll is the first then FSC raises exception when we try to
-                // get Content.Entities from it.
-
-                for fileName, signatures in assembliesByFileName do
-                    let contentType =
-                        if publicOnly then
-                            AssemblyContentType.Public
-                        else
-                            AssemblyContentType.Full
-
-                    let content =
-                        AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
-
-                    yield! content
-            ]
-
-        res
-    with _ ->
-        []
+    | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)
 
 let createContext
-    (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
-    (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults)
+    (checkProjectResults: FSharpCheckProjectResults)
+    (fileName: string)
+    (sourceText: ISourceText)
+    ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
+    : CliContext option
     =
-    match c.ImplementationFile with
+    match checkFileResults.ImplementationFile with
     | Some tast ->
-        let context: Context =
+        let context: CliContext =
             {
-                ParseFileResults = p
-                CheckFileResults = c
-                CheckProjectResults = checkProjectResults
-                FileName = file
-                Content = text.Split([| '\n' |])
+                FileName = fileName
+                SourceText = sourceText
+                ParseFileResults = parseFileResults
+                CheckFileResults = checkFileResults
                 TypedTree = tast
-                GetAllEntities = getAllEntities c
-                AllSymbolUses = allSymbolUses
-                SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file)
+                CheckProjectResults = checkProjectResults
             }
 
         Some context
     | _ -> None
 
-let runProject toolsPath proj (globs: Glob list) =
-    let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-    let opts = loadProject toolsPath path
+let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+    async {
+        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
+        let! option = loadProject toolsPath path
+        let! checkProjectResults = fcs.ParseAndCheckProject(option)
 
-    let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
-    let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
+        let! messagesPerAnalyzer =
+            option.SourceFiles
+            |> Array.filter (fun file ->
+                match globs |> List.tryFind (fun g -> g.IsMatch file) with
+                | Some g ->
+                    printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+                    false
+                | None -> true
+            )
+            |> Array.choose (fun fileName ->
+                let fileContent = File.ReadAllText fileName
+                let sourceText = SourceText.ofString fileContent
 
-    opts.SourceFiles
-    |> Array.filter (fun file ->
-        match globs |> List.tryFind (fun g -> g.IsMatch file) with
-        | Some g ->
-            printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
-            false
-        | None -> true
-    )
-    |> Array.choose (fun f ->
-        typeCheckFile (f, opts)
-        |> Option.map (createContext (checkProjectResults, allSymbolUses))
-    )
-    |> Array.collect (fun ctx ->
-        match ctx with
-        | Some c ->
-            printInfo "Running analyzers for %s" c.FileName
-            Client.runAnalyzers c
-        | None -> failwithf "could not get context for file %s" path
-    )
-    |> Some
+                typeCheckFile option fileName sourceText
+                |> Option.map (createContext checkProjectResults fileName sourceText)
+            )
+            |> Array.map (fun ctx ->
+                match ctx with
+                | Some c ->
+                    printInfo "Running analyzers for %s" c.FileName
+                    client.RunAnalyzers c
+                | None -> failwithf "could not get context for file %s" path
+            )
+            |> Async.Parallel
 
-let printMessages failOnWarnings (msgs: Message array) =
+        return
+            Some
+                [
+                    for messages in messagesPerAnalyzer do
+                        yield! messages
+                ]
+    }
+
+let printMessages failOnWarnings (msgs: Message list) =
     if verbose then
         printfn ""
 
-    if verbose && Array.isEmpty msgs then
+    if verbose && List.isEmpty msgs then
         printfn "No messages found from the analyzer(s)"
 
     msgs
@@ -180,6 +150,7 @@ let printMessages failOnWarnings (msgs: Message array) =
             | Warning when failOnWarnings |> List.contains m.Code -> ConsoleColor.Red
             | Warning -> ConsoleColor.DarkYellow
             | Info -> ConsoleColor.Blue
+            | Hint -> ConsoleColor.Cyan
 
         Console.ForegroundColor <- color
 
@@ -197,13 +168,13 @@ let printMessages failOnWarnings (msgs: Message array) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message array option) : int =
+let calculateExitCode failOnWarnings (msgs: Message list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> Array.exists (fun n ->
+            |> List.exists (fun n ->
                 n.Severity = Error
                 || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
             )
@@ -212,7 +183,7 @@ let calculateExitCode failOnWarnings (msgs: Message array option) : int =
 
 [<EntryPoint>]
 let main argv =
-    let toolsPath = Init.init (IO.DirectoryInfo Environment.CurrentDirectory) None
+    let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
@@ -228,31 +199,40 @@ let main argv =
     let analyzersPath =
         let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
 
-        if System.IO.Path.IsPathRooted path then
+        if Path.IsPathRooted path then
             path
         else
             Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let dlls, analyzers = Client.loadAnalyzers (printError "%s") analyzersPath
+    let client = Client<CliAnalyzerAttribute, CliContext>()
+
+    let dlls, analyzers = client.LoadAnalyzers (printError "%s") analyzersPath
+
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
 
     let results =
-        match projOpt with
-        | None ->
-            printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
-            None
-        | Some proj ->
-            let project =
-                if System.IO.Path.IsPathRooted proj then
-                    proj
-                else
-                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+        async {
+            match projOpt with
+            | None ->
+                printError
+                    "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
+                    ""
 
-            runProject toolsPath project ignoreFiles
-            |> Option.map (printMessages failOnWarnings)
+                return None
+            | Some proj ->
+                let project =
+                    if Path.IsPathRooted proj then
+                        proj
+                    else
+                        Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+
+                let! results = runProject client toolsPath project ignoreFiles
+                return results |> Option.map (printMessages failOnWarnings)
+        }
+        |> Async.RunSynchronously
 
     calculateExitCode failOnWarnings results

@@ -2,10 +2,10 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open System.IO
+open System.Collections.Concurrent
 open System.Reflection
 open System.Runtime.Loader
 open McMaster.NETCore.Plugins
-open System.Collections.Concurrent
 
 type AnalysisResult =
     {
@@ -15,53 +15,57 @@ type AnalysisResult =
 
 module Client =
 
-    let internal attributeName = "AnalyzerAttribute"
-
-    let internal isAnalyzer (mi: MemberInfo) =
+    let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
         mi.GetCustomAttributes true
-        |> Seq.tryFind (fun n -> n.GetType().Name = attributeName)
-        |> Option.map unbox<AnalyzerAttribute>
+        |> Seq.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
+        |> Option.map unbox<'TAttribute>
 
-    let internal analyzerFromMember (mi: MemberInfo) : (string * Analyzer) option =
+    let analyzerFromMember<'TAnalyzerAttribute, 'TContext when 'TAnalyzerAttribute :> AnalyzerAttribute>
+        (mi: MemberInfo)
+        : (string * Analyzer<'TContext>) option
+        =
         let inline unboxAnalyzer v =
             if isNull v then failwith "Analyzer is null" else unbox v
 
         let getAnalyzerFromMemberInfo mi =
             match box mi with
             | :? FieldInfo as m ->
-                if m.FieldType = typeof<Analyzer> then
+                if m.FieldType = typeof<Analyzer<'TContext>> then
                     Some(m.GetValue(null) |> unboxAnalyzer)
                 else
                     None
             | :? MethodInfo as m ->
-                if m.ReturnType = typeof<Analyzer> then
+                if m.ReturnType = typeof<Analyzer<'TContext>> then
                     Some(m.Invoke(null, null) |> unboxAnalyzer)
                 elif
                     m.ReturnType.FullName.StartsWith
-                        "Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
+                        "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
                 then
                     try
-                        let analyzer: Analyzer = fun ctx -> m.Invoke(null, [| ctx |]) |> unbox
+                        let analyzer: Analyzer<'TContext> = fun ctx -> m.Invoke(null, [| ctx |]) |> unbox
                         Some analyzer
                     with ex ->
                         None
                 else
                     None
             | :? PropertyInfo as m ->
-                if m.PropertyType = typeof<Analyzer> then
+                if m.PropertyType = typeof<Analyzer<'TContext>> then
                     Some(m.GetValue(null, null) |> unboxAnalyzer)
                 else
                     None
             | _ -> None
 
-        match isAnalyzer mi with
+        match isAnalyzer<'TAnalyzerAttribute> mi with
         | Some analyzerAttribute ->
             match getAnalyzerFromMemberInfo mi with
             | Some analyzer -> Some(analyzerAttribute.Name, analyzer)
             | None -> None
         | None -> None
 
-    let internal analyzersFromType (t: Type) =
+    let analyzersFromType<'TAnalyzerAttribute, 'TContext when 'TAnalyzerAttribute :> AnalyzerAttribute>
+        (t: Type)
+        : (string * Analyzer<'TContext>) list
+        =
         let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
         let bindingFlags = BindingFlags.Public ||| BindingFlags.Static
 
@@ -73,15 +77,15 @@ module Client =
             ]
             |> Seq.collect id
 
-        members |> Seq.choose analyzerFromMember |> Seq.toList
+        members
+        |> Seq.choose analyzerFromMember<'TAnalyzerAttribute, 'TContext>
+        |> Seq.toList
 
-    let registeredAnalyzers: ConcurrentDictionary<string, (string * Analyzer) list> =
-        ConcurrentDictionary()
+type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>() =
+    let registeredAnalyzers =
+        ConcurrentDictionary<string, (string * Analyzer<'TContext>) list>()
 
-    ///Loads into private state any analyzers defined in any assembly
-    ///matching `*Analyzer*.dll` in given directory (and any subdirectories)
-    ///Returns number of found dlls matching `*Analyzer*.dll` and number of registered analyzers
-    let loadAnalyzers (printError: string -> unit) (dir: string) : (int * int) =
+    member x.LoadAnalyzers (printError: string -> unit) (dir: string) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
@@ -124,50 +128,69 @@ module Client =
                         false
                 )
                 |> Array.map (fun (path, assembly) ->
-                    let analyzers = assembly.GetExportedTypes() |> Seq.collect (analyzersFromType)
+                    let analyzers =
+                        assembly.GetExportedTypes()
+                        |> Seq.collect Client.analyzersFromType<'TAttribute, 'TContext>
+
                     path, analyzers
                 )
 
-            analyzers
-            |> Seq.iter (fun (path, analyzers) ->
+            for path, analyzers in analyzers do
                 let analyzers = Seq.toList analyzers
 
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
-            )
 
-            Seq.length analyzers, analyzers |> Seq.collect (snd) |> Seq.length
+            Seq.length analyzers, analyzers |> Seq.collect snd |> Seq.length
         else
             0, 0
 
-    ///Runs all registered analyzers for given context (file).
-    ///Returns list of messages. Ignores errors from the analyzers
-    let runAnalyzers (ctx: Context) : Message[] =
-        let analyzers = registeredAnalyzers.Values |> Seq.collect id
+    member x.RunAnalyzers(ctx: 'TContext) : Async<Message list> =
+        async {
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
-        analyzers
-        |> Seq.collect (fun (analyzerName, analyzer) ->
-            try
-                analyzer ctx
-            with error ->
-                []
-        )
-        |> Seq.toArray
-
-    /// Runs all registered analyzers for given context (file).
-    /// Returns list of results per analyzer which can ei
-    let runAnalyzersSafely (ctx: Context) : AnalysisResult list =
-        let analyzers = registeredAnalyzers.Values |> Seq.collect id
-
-        analyzers
-        |> Seq.map (fun (analyzerName, analyzer) ->
-            {
-                AnalyzerName = analyzerName
-                Output =
+            let! messagesPerAnalyzer =
+                analyzers
+                |> Seq.map (fun (_analyzerName, analyzer) ->
                     try
-                        Ok(analyzer ctx)
+                        analyzer ctx
                     with error ->
-                        Result.Error error
-            }
-        )
-        |> Seq.toList
+                        async.Return []
+                )
+                |> Async.Parallel
+
+            return
+                [
+                    for messages in messagesPerAnalyzer do
+                        yield! messages
+                ]
+        }
+
+    member x.RunAnalyzersSafely(ctx: 'TContext) : Async<AnalysisResult list> =
+        async {
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id
+
+            let! results =
+                analyzers
+                |> Seq.map (fun (analyzerName, analyzer) ->
+                    async {
+                        try
+                            let! result = analyzer ctx
+
+                            return
+                                {
+                                    AnalyzerName = analyzerName
+                                    Output = Result.Ok result
+                                }
+                        with error ->
+                            return
+                                {
+                                    AnalyzerName = analyzerName
+                                    Output = Result.Error error
+                                }
+                    }
+                )
+                |> Async.Parallel
+
+            return List.ofArray results
+        }
