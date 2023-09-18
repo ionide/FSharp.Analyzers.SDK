@@ -79,22 +79,16 @@ let createContext
     (fileName: string)
     (sourceText: ISourceText)
     ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
-    : CliContext option
+    : CliContext
     =
-    match checkFileResults.ImplementationFile with
-    | Some tast ->
-        let context: CliContext =
-            {
-                FileName = fileName
-                SourceText = sourceText
-                ParseFileResults = parseFileResults
-                CheckFileResults = checkFileResults
-                TypedTree = tast
-                CheckProjectResults = checkProjectResults
-            }
-
-        Some context
-    | _ -> None
+    {
+        FileName = fileName
+        SourceText = sourceText
+        ParseFileResults = parseFileResults
+        CheckFileResults = checkFileResults
+        TypedTree = checkFileResults.ImplementationFile
+        CheckProjectResults = checkProjectResults
+    }
 
 let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
     async {
@@ -119,11 +113,8 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 |> Option.map (createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
-                match ctx with
-                | Some c ->
-                    printInfo "Running analyzers for %s" c.FileName
-                    client.RunAnalyzers c
-                | None -> failwithf "could not get context for file %s" path
+                printInfo "Running analyzers for %s" ctx.FileName
+                client.RunAnalyzers ctx
             )
             |> Async.Parallel
 

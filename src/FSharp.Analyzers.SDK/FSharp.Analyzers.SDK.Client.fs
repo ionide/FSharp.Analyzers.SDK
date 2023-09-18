@@ -27,6 +27,23 @@ module Client =
         let inline unboxAnalyzer v =
             if isNull v then failwith "Analyzer is null" else unbox v
 
+        let hasExpectReturnType (t: Type) =
+            // t might be a System.RunTimeType as could have no FullName
+            if not (isNull t.FullName) then
+                t.FullName.StartsWith
+                    "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
+            elif t.Name = "FSharpAsync`1" && t.GenericTypeArguments.Length = 1 then
+                let listType = t.GenericTypeArguments.[0]
+
+                if listType.Name = "FSharpList`1" && listType.GenericTypeArguments.Length = 1 then
+                    // This could still be generic, as in an empty list is returned from the analyzer
+                    let msgType = listType.GenericTypeArguments.[0]
+                    msgType.Name = "a" || msgType = typeof<Message>
+                else
+                    false
+            else
+                false
+
         let getAnalyzerFromMemberInfo mi =
             match box mi with
             | :? FieldInfo as m ->
@@ -37,10 +54,7 @@ module Client =
             | :? MethodInfo as m ->
                 if m.ReturnType = typeof<Analyzer<'TContext>> then
                     Some(m.Invoke(null, null) |> unboxAnalyzer)
-                elif
-                    m.ReturnType.FullName.StartsWith
-                        "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
-                then
+                elif hasExpectReturnType m.ReturnType then
                     try
                         let analyzer: Analyzer<'TContext> = fun ctx -> m.Invoke(null, [| ctx |]) |> unbox
                         Some analyzer
