@@ -1,6 +1,13 @@
 #r "nuget: Fun.Build, 0.5.2"
 
 open Fun.Build
+open System.IO
+
+let purgeBinLogCache () =
+    let binLogCache =
+        Path.Combine(Path.GetTempPath(), "FSharp.Analyzers.SDK.BinLogCache")
+    if (Directory.Exists(binLogCache)) then
+        Directory.Delete(binLogCache, true)
 
 let restoreStage =
     stage "restore" {
@@ -15,7 +22,10 @@ pipeline "Build" {
     restoreStage
     stage "lint" { run "dotnet fantomas . --check" }
     stage "build" { run "dotnet build -c Release --no-restore -maxCpuCount" }
-    stage "test" { run "dotnet test -c Release --no-build" }
+    stage "test" {
+        purgeBinLogCache ()
+        run "dotnet test -c Release --no-build"
+    }
     stage "sample" {
         run
             "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose"
