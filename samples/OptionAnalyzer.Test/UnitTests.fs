@@ -4,7 +4,7 @@ open FSharp.Compiler.CodeAnalysis
 open NUnit.Framework
 open FSharp.Compiler.Text
 open FSharp.Analyzers.SDK
-open FSharp.Analyzers.SDK.TestHelpers
+open FSharp.Analyzers.SDK.Testing
 
 let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 
@@ -43,7 +43,7 @@ let notUsed() =
     let ctx = getContext projectOptions source
     let msgs = optionValueAnalyzer ctx
     Assert.IsNotEmpty msgs
-    Assert.IsTrue(AssertionHelpers.messageContains "Option.Value" msgs[0])
+    Assert.IsTrue(Assert.messageContains "Option.Value" msgs[0])
 
 [<Test>]
 let ``expected warning is emitted`` () =

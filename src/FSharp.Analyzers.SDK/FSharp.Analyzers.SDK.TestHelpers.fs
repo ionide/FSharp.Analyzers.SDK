@@ -1,4 +1,4 @@
-module FSharp.Analyzers.SDK.TestHelpers
+module FSharp.Analyzers.SDK.Testing
 
 // Don't warn about using NotifyFileChanged of the FCS API
 #nowarn "57"
@@ -252,9 +252,9 @@ let getContext (opts: FSharpProjectOptions) source =
         | None -> failwith "Context creation failed"
     | None -> failwith "typechecking file failed"
 
-module AssertionHelpers =
+module Assert =
 
-    let areWarningsInLines (msgs: FSharp.Analyzers.SDK.Message list) (expectedLines: Set<int>) =
+    let hasWarningsInLines (expectedLines: Set<int>) (msgs: FSharp.Analyzers.SDK.Message list) =
         let msgLines = msgs |> List.map (fun m -> m.Range.StartLine) |> Set.ofList
         msgLines = expectedLines
 
