@@ -120,3 +120,30 @@ type Message =
     }
 
 type Analyzer<'TContext> = 'TContext -> Async<Message list>
+
+module Utils =
+
+    [<RequireQualifiedAccess>]
+    type SourceOfSource =
+        | Path of string
+        | DiscreteSource of string
+        | SourceText of ISourceText
+
+    val currentFSharpAnalyzersSDKVersion: Version
+
+    val createFCS: documentSource: option<string -> Async<option<ISourceText>>> -> FSharpChecker
+
+    val typeCheckFile:
+        fcs: FSharpChecker ->
+        printError: (string -> unit) ->
+        options: FSharpProjectOptions ->
+        fileName: string ->
+        source: SourceOfSource ->
+            option<FSharpParseFileResults * FSharpCheckFileResults>
+
+    val createContext:
+        checkProjectResults: FSharpCheckProjectResults ->
+        fileName: string ->
+        sourceText: ISourceText ->
+        parseFileResults: FSharpParseFileResults * checkFileResults: FSharpCheckFileResults ->
+            CliContext

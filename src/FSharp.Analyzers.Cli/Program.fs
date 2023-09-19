@@ -19,13 +19,7 @@ type Arguments =
 
 let mutable verbose = false
 
-let createFCS () =
-    let checker =
-        FSharpChecker.Create(projectCacheSize = 200, keepAllBackgroundResolutions = true, keepAssemblyContents = true)
-    // checker.ImplicitlyStartBackgroundWork <- true
-    checker
-
-let fcs = createFCS ()
+let fcs = Utils.createFCS None
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
@@ -63,33 +57,6 @@ let loadProject toolsPath projPath =
         return fcsPo
     }
 
-let typeCheckFile (options: FSharpProjectOptions) (fileName: string) (sourceText: ISourceText) =
-    let parseRes, checkAnswer =
-        fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
-        |> Async.RunSynchronously //ToDo: Validate if 0 is ok
-
-    match checkAnswer with
-    | FSharpCheckFileAnswer.Aborted ->
-        printError "Checking of file %s aborted" fileName
-        None
-    | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)
-
-let createContext
-    (checkProjectResults: FSharpCheckProjectResults)
-    (fileName: string)
-    (sourceText: ISourceText)
-    ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
-    : CliContext
-    =
-    {
-        FileName = fileName
-        SourceText = sourceText
-        ParseFileResults = parseFileResults
-        CheckFileResults = checkFileResults
-        TypedTree = checkFileResults.ImplementationFile
-        CheckProjectResults = checkProjectResults
-    }
-
 let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
     async {
         let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
@@ -109,8 +76,13 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 let fileContent = File.ReadAllText fileName
                 let sourceText = SourceText.ofString fileContent
 
-                typeCheckFile option fileName sourceText
-                |> Option.map (createContext checkProjectResults fileName sourceText)
+                Utils.typeCheckFile
+                    fcs
+                    (fun s -> printError "%s" s)
+                    option
+                    fileName
+                    (Utils.SourceOfSource.SourceText sourceText)
+                |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
                 printInfo "Running analyzers for %s" ctx.FileName

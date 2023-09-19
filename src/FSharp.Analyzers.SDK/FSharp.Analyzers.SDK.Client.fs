@@ -5,6 +5,7 @@ open System.IO
 open System.Collections.Concurrent
 open System.Reflection
 open System.Runtime.Loader
+open System.Text.RegularExpressions
 open McMaster.NETCore.Plugins
 
 type AnalysisResult =
@@ -102,8 +103,13 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     member x.LoadAnalyzers (printError: string -> unit) (dir: string) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
+                let regex = Regex(@".*test.*\.dll$")
+
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
-                |> Array.filter (fun a -> not (a.EndsWith("FSharp.Analyzers.SDK.dll")))
+                |> Array.filter (fun a ->
+                    let s = Path.GetFileName(a).ToLowerInvariant()
+                    not (s.EndsWith("fsharp.analyzers.sdk.dll") || regex.IsMatch(s))
+                )
                 |> Array.choose (fun analyzerDll ->
                     try
                         // loads an assembly and all of it's dependencies
@@ -120,9 +126,6 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         None
                 )
 
-            let currentFSharpAnalyzersSDKVersion =
-                Assembly.GetExecutingAssembly().GetName().Version
-
             let findFSharpAnalyzerSDKVersion (assembly: Assembly) =
                 let references = assembly.GetReferencedAssemblies()
                 let fas = references |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
@@ -133,11 +136,11 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 |> Array.filter (fun (name, analyzerAssembly) ->
                     let version = findFSharpAnalyzerSDKVersion analyzerAssembly
 
-                    if version = currentFSharpAnalyzersSDKVersion then
+                    if version = Utils.currentFSharpAnalyzersSDKVersion then
                         true
                     else
                         printError
-                            $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
+                            $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{Utils.currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
 
                         false
                 )

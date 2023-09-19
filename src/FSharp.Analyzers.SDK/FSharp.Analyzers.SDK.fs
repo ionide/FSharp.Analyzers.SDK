@@ -1,9 +1,12 @@
 namespace FSharp.Analyzers.SDK
 
+#nowarn "57"
+
 open System
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
+open System.Reflection
 open System.Runtime.InteropServices
 open FSharp.Compiler.Text
 
@@ -139,3 +142,69 @@ type Message =
     }
 
 type Analyzer<'TContext> = 'TContext -> Async<Message list>
+
+module Utils =
+
+    let currentFSharpAnalyzersSDKVersion =
+        Assembly.GetExecutingAssembly().GetName().Version
+
+    let createContext
+        (checkProjectResults: FSharpCheckProjectResults)
+        (fileName: string)
+        (sourceText: ISourceText)
+        ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
+        : CliContext
+        =
+        {
+            FileName = fileName
+            SourceText = sourceText
+            ParseFileResults = parseFileResults
+            CheckFileResults = checkFileResults
+            TypedTree = checkFileResults.ImplementationFile
+            CheckProjectResults = checkProjectResults
+        }
+
+    let createFCS documentSource =
+        let ds =
+            documentSource
+            |> Option.map DocumentSource.Custom
+            |> Option.defaultValue DocumentSource.FileSystem
+
+        FSharpChecker.Create(
+            projectCacheSize = 200,
+            keepAllBackgroundResolutions = true,
+            keepAssemblyContents = true,
+            documentSource = ds
+        )
+
+    [<RequireQualifiedAccess>]
+    type SourceOfSource =
+        | Path of string
+        | DiscreteSource of string
+        | SourceText of ISourceText
+
+    let typeCheckFile
+        (fcs: FSharpChecker)
+        (printError: (string -> unit))
+        (options: FSharpProjectOptions)
+        (fileName: string)
+        (source: SourceOfSource)
+        =
+
+        let sourceText =
+            match source with
+            | SourceOfSource.Path path ->
+                let text = System.IO.File.ReadAllText path
+                SourceText.ofString text
+            | SourceOfSource.DiscreteSource s -> SourceText.ofString s
+            | SourceOfSource.SourceText s -> s
+
+        let parseRes, checkAnswer =
+            fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
+            |> Async.RunSynchronously //ToDo: Validate if 0 is ok
+
+        match checkAnswer with
+        | FSharpCheckFileAnswer.Aborted ->
+            printError $"Checking of file {fileName} aborted"
+            None
+        | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)

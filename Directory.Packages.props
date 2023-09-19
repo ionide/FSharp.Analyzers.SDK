@@ -1,22 +1,29 @@
 <Project>
-    <PropertyGroup>
-        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageVersion Include="FSharp.Core" Version="7.0.400" />
-        <PackageVersion Include="FSharp.Compiler.Service" Version="43.7.400" />
-        <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
-        <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
-        <PackageVersion Include="Argu" Version="6.1.1" />
-        <PackageVersion Include="Glob" Version="1.1.9" />
-        <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.62.0" />
-        <PackageVersion Include="Microsoft.Build" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
-        <PackageVersion Include="Microsoft.Build.Framework" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
-        <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
-        <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
-        <PackageVersion Include="Microsoft.Build.Locator" Version="1.4.1" />
-        <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
-        <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
-    </ItemGroup>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="CliWrap" Version="3.6.4" />
+    <PackageVersion Include="FSharp.Core" Version="7.0.400" />
+    <PackageVersion Include="FSharp.Compiler.Service" Version="43.7.400" />
+    <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
+    <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+    <PackageVersion Include="Argu" Version="6.1.1" />
+    <PackageVersion Include="Glob" Version="1.1.9" />
+    <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.62.0" />
+    <PackageVersion Include="Microsoft.Build" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+    <PackageVersion Include="Microsoft.Build.Framework" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+    <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+    <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
+    <PackageVersion Include="Microsoft.Build.Locator" Version="1.4.1" />
+    <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageVersion Include="MSBuild.StructuredLogger" Version="2.1.815" />
+    <PackageVersion Include="NUnit" Version="3.13.3" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.4.2" />
+    <PackageVersion Include="NUnit.Analyzers" Version="3.6.1" />
+    <PackageVersion Include="coverlet.collector" Version="3.2.0" />
+  </ItemGroup>
 </Project>
