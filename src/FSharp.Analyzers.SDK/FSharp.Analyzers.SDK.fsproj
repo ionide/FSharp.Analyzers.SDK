@@ -12,7 +12,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="FSharp.Analyzers.SDK.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
+    <Compile Include="FSharp.Analyzers.SDK.Client.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
     <Compile Include="FSharp.Analyzers.SDK.TestHelpers.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.TestHelpers.fs" />

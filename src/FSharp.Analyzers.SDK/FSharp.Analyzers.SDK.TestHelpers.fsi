@@ -15,7 +15,7 @@ type Package = { Name: string; Version: string }
 /// <returns>FSharpProjectOptions</returns>
 val mkOptionsFromProject: framework: string -> additionalPkgs: Package list -> Task<FSharpProjectOptions>
 
-val getContext: opts: FSharpProjectOptions -> source: string -> Context
+val getContext: opts: FSharpProjectOptions -> source: string -> CliContext
 
 module Assert =
 

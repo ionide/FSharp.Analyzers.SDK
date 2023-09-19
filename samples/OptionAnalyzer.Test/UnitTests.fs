@@ -30,26 +30,28 @@ let Setup () =
 
 [<Test>]
 let ``warnings are emitted`` () =
-
-    let source =
-        """
+    async {
+        let source =
+            """
 module M
 
 let notUsed() =
     let option : Option<int> = None
     option.Value
-"""
+    """
 
-    let ctx = getContext projectOptions source
-    let msgs = optionValueAnalyzer ctx
-    Assert.IsNotEmpty msgs
-    Assert.IsTrue(Assert.messageContains "Option.Value" msgs[0])
+        let ctx = getContext projectOptions source
+        let! msgs = optionValueAnalyzer ctx
+        Assert.IsNotEmpty msgs
+        Assert.IsTrue(Assert.messageContains "Option.Value" msgs[0])
+
+    }
 
 [<Test>]
 let ``expected warning is emitted`` () =
-
-    let source =
-        """
+    async {
+        let source =
+            """
 module M
 
 open Newtonsoft.Json
@@ -62,18 +64,19 @@ let p = Fantomas.FCS.Text.Position.mkPos 23 2
 let notUsed() =
     let option : Option<int> = None
     option.Value
-"""
+    """
 
-    let expectedMsg =
-        {
-            Code = "OV001"
-            Fixes = []
-            Message = "Option.Value shouldn't be used"
-            Range = Range.mkRange "A.fs" (Position.mkPos 13 4) (Position.mkPos 13 16)
-            Severity = Severity.Warning
-            Type = "Option.Value analyzer"
-        }
+        let expectedMsg =
+            {
+                Code = "OV001"
+                Fixes = []
+                Message = "Option.Value shouldn't be used"
+                Range = Range.mkRange "A.fs" (Position.mkPos 13 4) (Position.mkPos 13 16)
+                Severity = Severity.Warning
+                Type = "Option.Value analyzer"
+            }
 
-    let ctx = getContext projectOptions source
-    let msgs = optionValueAnalyzer ctx
-    Assert.IsTrue(msgs |> List.contains expectedMsg)
+        let ctx = getContext projectOptions source
+        let! msgs = optionValueAnalyzer ctx
+        Assert.IsTrue(msgs |> List.contains expectedMsg)
+    }

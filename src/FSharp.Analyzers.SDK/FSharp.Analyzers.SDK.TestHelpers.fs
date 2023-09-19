@@ -222,7 +222,8 @@ let getContext (opts: FSharpProjectOptions) source =
     let pathToAnalyzerDlls = Path.GetFullPath(".")
 
     let foundDlls, registeredAnalyzers =
-        Client.loadAnalyzers printError pathToAnalyzerDlls
+        let client = Client<CliAnalyzerAttribute, CliContext>()
+        client.LoadAnalyzers printError pathToAnalyzerDlls
 
     if foundDlls = 0 then
         failwith $"no Dlls found in {pathToAnalyzerDlls}"
@@ -242,14 +243,12 @@ let getContext (opts: FSharpProjectOptions) source =
     if Array.isEmpty allSymbolUses then
         failwith "no symboluses"
 
-    match Utils.typeCheckFile fcs (Utils.SourceOfSource.DiscreteSource source, fileName, opts) with
-    | Some(file, text, parseRes, result) ->
-        let ctx =
-            Utils.createContext (checkProjectResults, allSymbolUses) (file, text, parseRes, result)
+    let printError s = printf $"{s}"
 
-        match ctx with
-        | Some c -> c
-        | None -> failwith "Context creation failed"
+    match Utils.typeCheckFile fcs printError opts fileName (Utils.SourceOfSource.DiscreteSource source) with
+    | Some(parseFileResults, checkFileResults) ->
+        let sourceText = SourceText.ofString source
+        Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
     | None -> failwith "typechecking file failed"
 
 module Assert =

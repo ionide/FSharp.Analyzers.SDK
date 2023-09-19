@@ -1,7 +1,6 @@
 ﻿open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
-open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
@@ -24,7 +23,7 @@ let fcs = Utils.createFCS None
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
-let rec mkKn (ty: System.Type) =
+let rec mkKn (ty: Type) =
     if Reflection.FSharpType.IsFunction(ty) then
         let _, ran = Reflection.FSharpType.GetFunctionElements(ty)
         let f = mkKn ran
@@ -57,41 +56,53 @@ let loadProject toolsPath projPath =
 
         return fcsPo
     }
-    |> Async.RunSynchronously
 
-let runProject toolsPath proj (globs: Glob list) =
-    let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-    let opts = loadProject toolsPath path
+let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+    async {
+        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
+        let! option = loadProject toolsPath path
+        let! checkProjectResults = fcs.ParseAndCheckProject(option)
 
-    let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
-    let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
+        let! messagesPerAnalyzer =
+            option.SourceFiles
+            |> Array.filter (fun file ->
+                match globs |> List.tryFind (fun g -> g.IsMatch file) with
+                | Some g ->
+                    printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+                    false
+                | None -> true
+            )
+            |> Array.choose (fun fileName ->
+                let fileContent = File.ReadAllText fileName
+                let sourceText = SourceText.ofString fileContent
 
-    opts.SourceFiles
-    |> Array.filter (fun file ->
-        match globs |> List.tryFind (fun g -> g.IsMatch file) with
-        | Some g ->
-            printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
-            false
-        | None -> true
-    )
-    |> Array.choose (fun f ->
-        Utils.typeCheckFile fcs (Utils.SourceOfSource.Path f, f, opts)
-        |> Option.map (Utils.createContext (checkProjectResults, allSymbolUses))
-    )
-    |> Array.collect (fun ctx ->
-        match ctx with
-        | Some c ->
-            printInfo "Running analyzers for %s" c.FileName
-            Client.runAnalyzers c
-        | None -> failwithf "could not get context for file %s" path
-    )
-    |> Some
+                Utils.typeCheckFile
+                    fcs
+                    (fun s -> printError "%s" s)
+                    option
+                    fileName
+                    (Utils.SourceOfSource.SourceText sourceText)
+                |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
+            )
+            |> Array.map (fun ctx ->
+                printInfo "Running analyzers for %s" ctx.FileName
+                client.RunAnalyzers ctx
+            )
+            |> Async.Parallel
 
-let printMessages failOnWarnings (msgs: Message array) =
+        return
+            Some
+                [
+                    for messages in messagesPerAnalyzer do
+                        yield! messages
+                ]
+    }
+
+let printMessages failOnWarnings (msgs: Message list) =
     if verbose then
         printfn ""
 
-    if verbose && Array.isEmpty msgs then
+    if verbose && List.isEmpty msgs then
         printfn "No messages found from the analyzer(s)"
 
     msgs
@@ -102,6 +113,7 @@ let printMessages failOnWarnings (msgs: Message array) =
             | Warning when failOnWarnings |> List.contains m.Code -> ConsoleColor.Red
             | Warning -> ConsoleColor.DarkYellow
             | Info -> ConsoleColor.Blue
+            | Hint -> ConsoleColor.Cyan
 
         Console.ForegroundColor <- color
 
@@ -119,13 +131,13 @@ let printMessages failOnWarnings (msgs: Message array) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message array option) : int =
+let calculateExitCode failOnWarnings (msgs: Message list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> Array.exists (fun n ->
+            |> List.exists (fun n ->
                 n.Severity = Error
                 || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
             )
@@ -134,7 +146,7 @@ let calculateExitCode failOnWarnings (msgs: Message array option) : int =
 
 [<EntryPoint>]
 let main argv =
-    let toolsPath = Init.init (IO.DirectoryInfo Environment.CurrentDirectory) None
+    let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
     verbose <- results.Contains <@ Verbose @>
@@ -150,31 +162,40 @@ let main argv =
     let analyzersPath =
         let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
 
-        if System.IO.Path.IsPathRooted path then
+        if Path.IsPathRooted path then
             path
         else
             Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let dlls, analyzers = Client.loadAnalyzers (printError "%s") analyzersPath
+    let client = Client<CliAnalyzerAttribute, CliContext>()
+
+    let dlls, analyzers = client.LoadAnalyzers (printError "%s") analyzersPath
+
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpt = results.TryGetResult <@ Project @>
 
     let results =
-        match projOpt with
-        | None ->
-            printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
-            None
-        | Some proj ->
-            let project =
-                if System.IO.Path.IsPathRooted proj then
-                    proj
-                else
-                    Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+        async {
+            match projOpt with
+            | None ->
+                printError
+                    "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
+                    ""
 
-            runProject toolsPath project ignoreFiles
-            |> Option.map (printMessages failOnWarnings)
+                return None
+            | Some proj ->
+                let project =
+                    if Path.IsPathRooted proj then
+                        proj
+                    else
+                        Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+
+                let! results = runProject client toolsPath project ignoreFiles
+                return results |> Option.map (printMessages failOnWarnings)
+        }
+        |> Async.RunSynchronously
 
     calculateExitCode failOnWarnings results

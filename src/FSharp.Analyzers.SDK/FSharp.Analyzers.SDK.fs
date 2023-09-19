@@ -3,74 +3,25 @@ namespace FSharp.Analyzers.SDK
 #nowarn "57"
 
 open System
-open FSharp.Compiler
 open FSharp.Compiler.CodeAnalysis
-open FSharp.Compiler.Text
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
-open System.Runtime.InteropServices
 open System.Reflection
+open System.Runtime.InteropServices
+open FSharp.Compiler.Text
 
-/// Marks an analyzer for scanning
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type AnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit Attribute()
-
-    member _.Name = name
-
-type Context =
-    {
-        ParseFileResults: FSharpParseFileResults
-        CheckFileResults: FSharpCheckFileResults
-        CheckProjectResults: FSharpCheckProjectResults
-        FileName: string
-        Content: string[]
-        TypedTree: FSharpImplementationFileContents
-        GetAllEntities: bool -> AssemblySymbol list
-        AllSymbolUses: FSharpSymbolUse array
-        SymbolUsesOfFile: FSharpSymbolUse array
-    }
-
-type Fix =
-    {
-        FromRange: Text.Range
-        FromText: string
-        ToText: string
-    }
-
-type Severity =
-    | Info
-    | Warning
-    | Error
-
-type Message =
-    {
-        Type: string
-        Message: string
-        Code: string
-        Severity: Severity
-        Range: Text.Range
-        Fixes: Fix list
-    }
-
-type Analyzer = Context -> Message list
-
-module Utils =
-
-    let currentFSharpAnalyzersSDKVersion =
-        Assembly.GetExecutingAssembly().GetName().Version
-
+module EntityCache =
     let private entityCache = EntityCache()
 
-    let private getAllEntities (checkResults: FSharpCheckFileResults) (publicOnly: bool) : AssemblySymbol list =
+    let getEntities (publicOnly: bool) (checkFileResults: FSharpCheckFileResults) =
         try
             let res =
                 [
                     yield!
                         AssemblyContent.GetAssemblySignatureContent
                             AssemblyContentType.Full
-                            checkResults.PartialAssemblySignature
-                    let ctx = checkResults.ProjectContext
+                            checkFileResults.PartialAssemblySignature
+                    let ctx = checkFileResults.ProjectContext
 
                     let assembliesByFileName =
                         ctx.GetReferencedAssemblies()
@@ -97,27 +48,121 @@ module Utils =
         with _ ->
             []
 
-    let createContext
-        (checkProjectResults: FSharpCheckProjectResults, allSymbolUses: FSharpSymbolUse array)
-        (file, text: string, p: FSharpParseFileResults, c: FSharpCheckFileResults)
-        =
-        match c.ImplementationFile with
-        | Some tast ->
-            let context: Context =
-                {
-                    ParseFileResults = p
-                    CheckFileResults = c
-                    CheckProjectResults = checkProjectResults
-                    FileName = file
-                    Content = text.Split([| '\n' |])
-                    TypedTree = tast
-                    GetAllEntities = getAllEntities c
-                    AllSymbolUses = allSymbolUses
-                    SymbolUsesOfFile = allSymbolUses |> Array.filter (fun s -> s.FileName = file)
-                }
+[<AbstractClass>]
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type AnalyzerAttribute([<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string) =
+    inherit Attribute()
+    member val Name: string = name
 
-            Some context
-        | _ -> None
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type CliAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
+    inherit AnalyzerAttribute(name)
+
+    member _.Name = name
+
+[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+type EditorAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
+    inherit AnalyzerAttribute(name)
+
+    member _.Name = name
+
+type Context =
+    interface
+    end
+
+type CliContext =
+    {
+        FileName: string
+        SourceText: ISourceText
+        ParseFileResults: FSharpParseFileResults
+        CheckFileResults: FSharpCheckFileResults
+        TypedTree: FSharpImplementationFileContents option
+        CheckProjectResults: FSharpCheckProjectResults
+    }
+
+    interface Context
+
+    member x.GetAllEntities(publicOnly: bool) =
+        EntityCache.getEntities publicOnly x.CheckFileResults
+
+    member x.GetAllSymbolUsesOfProject() =
+        x.CheckProjectResults.GetAllUsesOfAllSymbols()
+
+    member x.GetAllSymbolUsesOfFile() =
+        x.CheckFileResults.GetAllUsesOfAllSymbolsInFile()
+
+type EditorContext =
+    {
+        FileName: string
+        SourceText: ISourceText
+        ParseFileResults: FSharpParseFileResults
+        CheckFileResults: FSharpCheckFileResults option
+        TypedTree: FSharpImplementationFileContents option
+        CheckProjectResults: FSharpCheckProjectResults option
+    }
+
+    interface Context
+
+    member x.GetAllEntities(publicOnly: bool) : AssemblySymbol list =
+        match x.CheckFileResults with
+        | None -> List.empty
+        | Some checkFileResults -> EntityCache.getEntities publicOnly checkFileResults
+
+    member x.GetAllSymbolUsesOfProject() : FSharpSymbolUse array =
+        match x.CheckProjectResults with
+        | None -> Array.empty
+        | Some checkProjectResults -> checkProjectResults.GetAllUsesOfAllSymbols()
+
+    member x.GetAllSymbolUsesOfFile() : FSharpSymbolUse seq =
+        match x.CheckFileResults with
+        | None -> Seq.empty
+        | Some checkFileResults -> checkFileResults.GetAllUsesOfAllSymbolsInFile()
+
+type Fix =
+    {
+        FromRange: range
+        FromText: string
+        ToText: string
+    }
+
+type Severity =
+    | Info
+    | Hint
+    | Warning
+    | Error
+
+type Message =
+    {
+        Type: string
+        Message: string
+        Code: string
+        Severity: Severity
+        Range: range
+        Fixes: Fix list
+    }
+
+type Analyzer<'TContext> = 'TContext -> Async<Message list>
+
+module Utils =
+
+    let currentFSharpAnalyzersSDKVersion =
+        Assembly.GetExecutingAssembly().GetName().Version
+
+    let createContext
+        (checkProjectResults: FSharpCheckProjectResults)
+        (fileName: string)
+        (sourceText: ISourceText)
+        ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
+        : CliContext
+        =
+        {
+            FileName = fileName
+            SourceText = sourceText
+            ParseFileResults = parseFileResults
+            CheckFileResults = checkFileResults
+            TypedTree = checkFileResults.ImplementationFile
+            CheckProjectResults = checkProjectResults
+        }
 
     let createFCS documentSource =
         let ds =
@@ -136,22 +181,30 @@ module Utils =
     type SourceOfSource =
         | Path of string
         | DiscreteSource of string
+        | SourceText of ISourceText
 
-    let typeCheckFile (fcs: FSharpChecker) (source, file, opts) =
-        let text =
+    let typeCheckFile
+        (fcs: FSharpChecker)
+        (printError: (string -> unit))
+        (options: FSharpProjectOptions)
+        (fileName: string)
+        (source: SourceOfSource)
+        =
+
+        let sourceText =
             match source with
             | SourceOfSource.Path path ->
                 let text = System.IO.File.ReadAllText path
-                text
-            | SourceOfSource.DiscreteSource s -> s
-
-        let st = SourceText.ofString text
+                SourceText.ofString text
+            | SourceOfSource.DiscreteSource s -> SourceText.ofString s
+            | SourceOfSource.SourceText s -> s
 
         let parseRes, checkAnswer =
-            fcs.ParseAndCheckFileInProject(file, 0, st, opts) |> Async.RunSynchronously
+            fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
+            |> Async.RunSynchronously //ToDo: Validate if 0 is ok
 
         match checkAnswer with
         | FSharpCheckFileAnswer.Aborted ->
-            printfn "Checking of file %s aborted" file
+            printError $"Checking of file {fileName} aborted"
             None
-        | FSharpCheckFileAnswer.Succeeded result -> Some(file, text, parseRes, result)
+        | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)

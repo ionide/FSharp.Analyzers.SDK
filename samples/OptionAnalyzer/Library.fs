@@ -109,28 +109,33 @@ let notUsed () =
     let option: Option<int> = None
     option.Value
 
-[<Analyzer "OptionAnalyzer">]
-let optionValueAnalyzer: Analyzer =
+[<CliAnalyzer "OptionAnalyzer">]
+let optionValueAnalyzer: Analyzer<CliContext> =
     fun ctx ->
-        let state = ResizeArray<range>()
+        async {
+            let state = ResizeArray<range>()
 
-        let handler (range: range) (m: FSharpMemberOrFunctionOrValue) =
-            let name = String.Join(".", m.DeclaringEntity.Value.FullName, m.DisplayName)
+            let handler (range: range) (m: FSharpMemberOrFunctionOrValue) =
+                let name = String.Join(".", m.DeclaringEntity.Value.FullName, m.DisplayName)
 
-            if name = "Microsoft.FSharp.Core.FSharpOption`1.Value" then
-                state.Add range
+                if name = "Microsoft.FSharp.Core.FSharpOption`1.Value" then
+                    state.Add range
 
-        ctx.TypedTree.Declarations |> List.iter (visitDeclaration handler)
+            match ctx.TypedTree with
+            | None -> ()
+            | Some typedTree -> typedTree.Declarations |> List.iter (visitDeclaration handler)
 
-        state
-        |> Seq.map (fun r ->
-            {
-                Type = "Option.Value analyzer"
-                Message = "Option.Value shouldn't be used"
-                Code = "OV001"
-                Severity = Warning
-                Range = r
-                Fixes = []
-            }
-        )
-        |> Seq.toList
+            return
+                state
+                |> Seq.map (fun r ->
+                    {
+                        Type = "Option.Value analyzer"
+                        Message = "Option.Value shouldn't be used"
+                        Code = "OV001"
+                        Severity = Warning
+                        Range = r
+                        Fixes = []
+                    }
+                )
+                |> Seq.toList
+        }
