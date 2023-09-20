@@ -26,4 +26,5 @@ client.RunAnalyzers(ctx)
 
 (**
 [Previous]({{fsdocs-previous-page-link}})
+[Next]({{fsdocs-next-page-link}})
 *)
