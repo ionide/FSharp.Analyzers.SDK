@@ -7,13 +7,13 @@ index: 4
 
 # Unit testing an analyzer
 
-To help analyzer authors testing their analyzers there's dedicated [testing package](https://www.nuget.org/packages/FSharp.Analyzers.SDK.Testing).
+To help analyzer authors testing their analyzers, there's a dedicated [testing package](https://www.nuget.org/packages/FSharp.Analyzers.SDK.Testing).
 It contains easy to use utility functions to create a context for the analyzer and assertion helpers.  
 
-`FSharp.Analyzers.SDK.Testing.mkOptionsFromProject` creates the `FSharpProjectOptions` for the given framework (e.g. `net7.0`) and the given list of packages to reference.  
-`FSharp.Analyzers.SDK.Testing.getContext` then takes the `FSharpProjectOptions` and the source code to test and creates a `CliContext` you can pass along to your analyzer function.  
-The module `FSharp.Analyzers.SDK.Testing.Assert` offers various functions to help with assertion statements from your favorite unit testing framework.  
-For a complete example of an unit testing project, take a look at `OptionAnalyzer.Test` in the `samples` folder of the SDK repository.
+[`FSharp.Analyzers.SDK.Testing.mkOptionsFromProject`](../reference/fsharp-analyzers-sdk-testing.html#mkOptionsFromProject) creates the [`FSharpProjectOptions`](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpprojectoptions.html) for the given framework (e.g. `net7.0`) and the given list of packages to reference.  
+[`FSharp.Analyzers.SDK.Testing.getContext`](../reference/fsharp-analyzers-sdk-testing.html#getContext) then takes the `FSharpProjectOptions` and the source code to test and creates a [`CliContext`](../reference/fsharp-analyzers-sdk-clicontext.html) you can pass along to your analyzer function.  
+The module [`FSharp.Analyzers.SDK.Testing.Assert`](../reference/fsharp-analyzers-sdk-testing-assert.html) offers various functions to help with assertion statements from your favorite unit testing framework.  
+For a complete example of an unit testing project, take a look at [`OptionAnalyzer.Test`](https://github.com/ionide/FSharp.Analyzers.SDK/tree/7b7ec530c507d765ab18d93ebb7aa45ab59accc2/samples/OptionAnalyzer.Test) in the `samples` folder of the SDK repository.
 *)
 
 (*** hide ***)
@@ -38,13 +38,11 @@ let Setup () =
             mkOptionsFromProject
                 "net7.0"
                 [
+                    // The SDK uses this in a "dotnet add package x --version y" command
+                    // to generate the needed FSharpProjectOptions
                     {
                         Name = "Newtonsoft.Json"
                         Version = "13.0.3"
-                    }
-                    {
-                        Name = "Fantomas.FCS"
-                        Version = "6.2.0"
                     }
                 ]
 
