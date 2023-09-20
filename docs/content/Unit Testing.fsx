@@ -67,7 +67,6 @@ let notUsed() =
         let! msgs = optionValueAnalyzer ctx
         Assert.IsNotEmpty msgs
         Assert.IsTrue(Assert.messageContains "Option.Value" msgs[0])
-
     }
 
 (**
