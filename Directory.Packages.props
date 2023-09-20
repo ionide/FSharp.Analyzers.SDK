@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
+    <MsBuildPackageVersion>17.7.2</MsBuildPackageVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="CliWrap" Version="3.6.4" />
