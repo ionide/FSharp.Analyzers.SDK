@@ -383,6 +383,10 @@ p {
     line-height: 1.8;
 }
 
+ol li {
+    margin-bottom: var(--unit-2);
+}
+
 /* Navigation links at the end of a page */
 #fsdocs-content > p:last-of-type {
     display: flex;
