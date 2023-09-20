@@ -18,7 +18,6 @@
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Argu" />
     <PackageReference Include="Glob" />
-    <PackageReference Include="Ionide.KeepAChangelog.Tasks"  PrivateAssets="all" />
     <PackageReference Include="Ionide.ProjInfo.ProjectSystem"/>
     <PackageReference Include="Microsoft.Build"  ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Framework"  ExcludeAssets="runtime" />

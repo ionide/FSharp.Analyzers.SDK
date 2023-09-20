@@ -7,8 +7,6 @@
         <Authors>Florian Verdonck, David Schaefer</Authors>
         <Description>Test facilities for the FSharp.Analyzers.SDK</Description>
         <Copyright>Copyright 2023</Copyright>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
     </PropertyGroup>
 
 
@@ -18,7 +16,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Ionide.KeepAChangelog.Tasks"  PrivateAssets="all" />
       <PackageReference Include="FSharp.Compiler.Service"/>
       <PackageReference Include="CliWrap" />
       <PackageReference Include="MSBuild.StructuredLogger" />

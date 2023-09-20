@@ -7,8 +7,6 @@
     <Authors>Krzysztof Cieslak</Authors>
     <Description>SDK for building custom analyzers for FSAC / F# editors</Description>
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +19,6 @@
   <ItemGroup>
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="FSharp.Compiler.Service"/>
-    <PackageReference Include="Ionide.KeepAChangelog.Tasks" PrivateAssets="all" />
     <PackageReference Include="McMaster.NETCore.Plugins" />
   </ItemGroup>
 
