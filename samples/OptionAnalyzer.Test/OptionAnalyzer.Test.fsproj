@@ -25,6 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK.Testing\FSharp.Analyzers.SDK.Testing.fsproj" />
       <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
       <ProjectReference Include="..\OptionAnalyzer\OptionAnalyzer.fsproj" />
     </ItemGroup>

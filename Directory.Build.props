@@ -21,4 +21,13 @@
     <Content Include="$(MSBuildThisFileDirectory)README.md" PackagePath="README.md" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(GeneratePackageOnBuild)' == 'true'">
+    <PackageReference Include="Ionide.KeepAChangelog.Tasks" PrivateAssets="All" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
+  </PropertyGroup>
+
 </Project>

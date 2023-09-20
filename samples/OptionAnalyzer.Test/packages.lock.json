@@ -469,11 +469,18 @@
       "fsharp.analyzers.sdk": {
         "type": "Project",
         "dependencies": {
-          "CliWrap": "[3.6.4, )",
           "FSharp.Compiler.Service": "[43.7.400, )",
           "FSharp.Core": "[7.0.400, )",
-          "MSBuild.StructuredLogger": "[2.1.815, )",
           "McMaster.NETCore.Plugins": "[1.4.0, )"
+        }
+      },
+      "fsharp.analyzers.sdk.testing": {
+        "type": "Project",
+        "dependencies": {
+          "CliWrap": "[3.6.4, )",
+          "FSharp.Analyzers.SDK": "[1.0.0, )",
+          "FSharp.Compiler.Service": "[43.7.400, )",
+          "MSBuild.StructuredLogger": "[2.1.815, )"
         }
       },
       "optionanalyzer": {

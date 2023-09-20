@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <IsPackable>true</IsPackable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Authors>Florian Verdonck, David Schaefer</Authors>
+        <Description>Test facilities for the FSharp.Analyzers.SDK</Description>
+        <Copyright>Copyright 2023</Copyright>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+      <Compile Include="FSharp.Analyzers.SDK.Testing.fsi" />  
+      <Compile Include="FSharp.Analyzers.SDK.Testing.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="FSharp.Compiler.Service"/>
+      <PackageReference Include="CliWrap" />
+      <PackageReference Include="MSBuild.StructuredLogger" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
+    </ItemGroup>
+
+</Project>

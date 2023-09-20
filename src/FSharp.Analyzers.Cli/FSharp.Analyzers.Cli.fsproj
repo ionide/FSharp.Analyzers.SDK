@@ -5,6 +5,7 @@
     <RollForward>LatestMajor</RollForward>
     <OutputType>Exe</OutputType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
@@ -18,7 +19,6 @@
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Argu" />
     <PackageReference Include="Glob" />
-    <PackageReference Include="Ionide.KeepAChangelog.Tasks"  PrivateAssets="all" />
     <PackageReference Include="Ionide.ProjInfo.ProjectSystem"/>
     <PackageReference Include="Microsoft.Build"  ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Framework"  ExcludeAssets="runtime" />
