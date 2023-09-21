@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.14.0 - 2023-09-21
+## [0.14.0] - 2023-09-21
 
 ### Added
 * [`FSharp.Analyzers.SDK.Testing` NuGet package](https://github.com/ionide/FSharp.Analyzers.SDK/pull/88) (thanks @dawedawe!)
@@ -15,7 +15,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * [Don't filter out .fsi files](https://github.com/ionide/FSharp.Analyzers.SDK/pull/83) (thanks @dawedawe!)
 * [update to projinfo 0.62 to fix runtime failure](https://github.com/ionide/FSharp.Analyzers.SDK/pull/77) (thanks @dawedawe!)
 
-## 0.13.0 - 2023-09-06
+## [0.13.0] - 2023-09-06
 
 ### Added
 * [Add Parse and Check Results to Context](https://github.com/ionide/FSharp.Analyzers.SDK/pull/73) (thanks @dawedawe!)
