@@ -12,7 +12,7 @@ let purgeBinLogCache () =
 let restoreStage =
     stage "restore" {
         run "dotnet tool restore"
-        run "dotnet restore --locked-mode"
+        run "dotnet restore --locked-mode --force-evaluate"
     }
 
 let buildStage =
