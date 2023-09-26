@@ -3,7 +3,7 @@
   <Sdk Name="DotNet.ReproducibleBuilds.Isolated" Version="1.1.1" />
 
   <PropertyGroup>
-    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
     <DisableImplicitLibraryPacksFolder>true</DisableImplicitLibraryPacksFolder>
     <ChangelogFile>$(MSBuildThisFileDirectory)CHANGELOG.md</ChangelogFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
