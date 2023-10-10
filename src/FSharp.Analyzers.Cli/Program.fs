@@ -12,10 +12,19 @@ type Arguments =
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
+    | Exclude_Analyzer of string list
     | Verbose
 
     interface IArgParserTemplate with
-        member s.Usage = ""
+        member s.Usage =
+            match s with
+            | Project s -> "Path to your .fsproj file."
+            | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
+            | Fail_On_Warnings _ ->
+                "List of analyzer codes that should trigger tool failures in the presence of warnings."
+            | Ignore_Files _ -> "Source files that shouldn't be processed."
+            | Exclude_Analyzer _ -> "The names of analyzer that should not be executed."
+            | Verbose -> "Verbose logging."
 
 let mutable verbose = false
 
