@@ -31,8 +31,10 @@ module Client =
         let hasExpectReturnType (t: Type) =
             // t might be a System.RunTimeType as could have no FullName
             if not (isNull t.FullName) then
-                t.FullName.StartsWith
-                    "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
+                t.FullName.StartsWith(
+                    "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message",
+                    StringComparison.InvariantCulture
+                )
             elif t.Name = "FSharpAsync`1" && t.GenericTypeArguments.Length = 1 then
                 let listType = t.GenericTypeArguments.[0]
 
@@ -123,8 +125,12 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
                 |> Array.filter (fun a ->
-                    let s = Path.GetFileName(a).ToLowerInvariant()
-                    not (s.EndsWith("fsharp.analyzers.sdk.dll") || regex.IsMatch(s))
+                    let s = Path.GetFileName(a)
+
+                    not (
+                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.InvariantCultureIgnoreCase)
+                        || regex.IsMatch(s)
+                    )
                 )
                 |> Array.choose (fun analyzerDll ->
                     try
