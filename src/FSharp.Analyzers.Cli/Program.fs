@@ -131,21 +131,17 @@ let printMessages failOnWarnings (msgs: Message list) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list option array) : int =
+let calculateExitCode failOnWarnings (msgs: Message list array) : int =
     match msgs with
     | [||] -> -1
     | msgsLists ->
         let check =
             let checkList msgs =
                 msgs
-                |> Option.map (fun msgs ->
-                    msgs
-                    |> List.exists (fun n ->
-                        n.Severity = Error
-                        || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
-                    )
+                |> List.exists (fun n ->
+                    n.Severity = Error
+                    || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
                 )
-                |> Option.defaultValue false
 
             msgsLists |> Seq.exists checkList
 
@@ -204,6 +200,10 @@ let main argv =
                     return results |> Option.map (printMessages failOnWarnings)
                 }
 
-            projects |> List.map runProj |> Async.Sequential |> Async.RunSynchronously
+            projects
+            |> List.map runProj
+            |> Async.Sequential
+            |> Async.RunSynchronously
+            |> Array.choose id
 
     calculateExitCode failOnWarnings results
