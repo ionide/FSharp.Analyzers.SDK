@@ -131,10 +131,10 @@ let printMessages failOnWarnings (msgs: Message list) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list) : int =
+let calculateExitCode failOnWarnings (msgs: Message list option) : int =
     match msgs with
-    | [] -> -1
-    | msgs ->
+    | None -> -1
+    | Some msgs ->
         let check =
             msgs
             |> List.exists (fun n ->
@@ -179,7 +179,7 @@ let main argv =
 
     let results =
         if analyzers = 0 then
-            []
+            Some []
         else
             match projOpts with
             | None
@@ -188,7 +188,7 @@ let main argv =
                     "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
                     ""
 
-                []
+                None
             | Some projects ->
                 let runProj (proj: string) =
                     async {
@@ -208,5 +208,6 @@ let main argv =
                 |> Async.RunSynchronously
                 |> Array.choose id
                 |> List.concat
+                |> Some
 
     calculateExitCode failOnWarnings results
