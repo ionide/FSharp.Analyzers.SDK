@@ -178,13 +178,12 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                             not shouldExclude
                         )
+                        |> Seq.toList
 
                     path, analyzers
                 )
 
             for path, analyzers in analyzers do
-                let analyzers = Seq.toList analyzers
-
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
 
