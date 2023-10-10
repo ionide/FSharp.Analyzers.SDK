@@ -8,7 +8,7 @@ open GlobExpressions
 open Ionide.ProjInfo
 
 type Arguments =
-    | Project of string
+    | Project of string list
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
@@ -196,31 +196,39 @@ let main argv =
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
-    let projOpt = results.TryGetResult <@ Project @>
+    let projOpts = results.TryGetResult <@ Project @>
 
     let results =
         if analyzers = 0 then
-            None
+            Some []
         else
-
-        async {
-            match projOpt with
-            | None ->
+            match projOpts with
+            | None
+            | Some [] ->
                 printError
                     "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
                     ""
 
-                return None
-            | Some proj ->
-                let project =
-                    if Path.IsPathRooted proj then
-                        proj
-                    else
-                        Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+                None
+            | Some projects ->
+                let runProj (proj: string) =
+                    async {
+                        let project =
+                            if Path.IsPathRooted proj then
+                                proj
+                            else
+                                Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
-                let! results = runProject client toolsPath project ignoreFiles
-                return results |> Option.map (printMessages failOnWarnings)
-        }
-        |> Async.RunSynchronously
+                        let! results = runProject client toolsPath project ignoreFiles
+                        return results |> Option.map (printMessages failOnWarnings)
+                    }
+
+                projects
+                |> List.map runProj
+                |> Async.Sequential
+                |> Async.RunSynchronously
+                |> Array.choose id
+                |> List.concat
+                |> Some
 
     calculateExitCode failOnWarnings results
