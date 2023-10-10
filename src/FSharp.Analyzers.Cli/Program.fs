@@ -18,7 +18,7 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Project s -> "Path to your .fsproj file."
+            | Project _ -> "Path to your .fsproj file."
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
             | Fail_On_Warnings _ ->
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
@@ -178,9 +178,21 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let client = Client<CliAnalyzerAttribute, CliContext>()
+    let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
 
-    let dlls, analyzers = client.LoadAnalyzers (printError "%s") analyzersPath
+    let logger =
+        { new Logger with
+            member _.Error msg = printError "%s" msg
+
+            member _.Verbose msg =
+                if verbose then
+                    printInfo "%s" msg
+        }
+
+    let client =
+        Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
+
+    let dlls, analyzers = client.LoadAnalyzers analyzersPath
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 

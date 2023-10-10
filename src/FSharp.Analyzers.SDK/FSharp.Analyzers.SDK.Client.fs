@@ -96,11 +96,27 @@ module Client =
         |> Seq.choose analyzerFromMember<'TAnalyzerAttribute, 'TContext>
         |> Seq.toList
 
-type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>() =
+[<Interface>]
+type Logger =
+    abstract member Error: string -> unit
+    abstract member Verbose: string -> unit
+
+type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
+    (logger: Logger, excludedAnalyzers: string Set)
+    =
     let registeredAnalyzers =
         ConcurrentDictionary<string, (string * Analyzer<'TContext>) list>()
 
-    member x.LoadAnalyzers (printError: string -> unit) (dir: string) : int * int =
+    new() =
+        Client(
+            { new Logger with
+                member this.Error _ = ()
+                member this.Verbose _ = ()
+            },
+            Set.empty
+        )
+
+    member x.LoadAnalyzers(dir: string) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")
@@ -139,7 +155,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     if version = Utils.currentFSharpAnalyzersSDKVersion then
                         true
                     else
-                        printError
+                        logger.Error
                             $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{Utils.currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
 
                         false
@@ -148,6 +164,14 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     let analyzers =
                         assembly.GetExportedTypes()
                         |> Seq.collect Client.analyzersFromType<'TAttribute, 'TContext>
+                        |> Seq.filter (fun (analyzerName, _) ->
+                            let shouldExclude = excludedAnalyzers.Contains(analyzerName)
+
+                            if shouldExclude then
+                                logger.Verbose $"Excluding %s{analyzerName} from %s{assembly.FullName}"
+
+                            not shouldExclude
+                        )
 
                     path, analyzers
                 )
