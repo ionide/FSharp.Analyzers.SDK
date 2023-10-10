@@ -178,6 +178,10 @@ let main argv =
     let projOpt = results.TryGetResult <@ Project @>
 
     let results =
+        if analyzers = 0 then
+            None
+        else
+
         async {
             match projOpt with
             | None ->
