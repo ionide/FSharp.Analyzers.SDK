@@ -12,10 +12,19 @@ type Arguments =
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
+    | Exclude_Analyzer of string list
     | Verbose
 
     interface IArgParserTemplate with
-        member s.Usage = ""
+        member s.Usage =
+            match s with
+            | Project _ -> "Path to your .fsproj file."
+            | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
+            | Fail_On_Warnings _ ->
+                "List of analyzer codes that should trigger tool failures in the presence of warnings."
+            | Ignore_Files _ -> "Source files that shouldn't be processed."
+            | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
+            | Verbose -> "Verbose logging."
 
 let mutable verbose = false
 
@@ -169,9 +178,21 @@ let main argv =
 
     printInfo "Loading analyzers from %s" analyzersPath
 
-    let client = Client<CliAnalyzerAttribute, CliContext>()
+    let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
 
-    let dlls, analyzers = client.LoadAnalyzers (printError "%s") analyzersPath
+    let logger =
+        { new Logger with
+            member _.Error msg = printError "%s" msg
+
+            member _.Verbose msg =
+                if verbose then
+                    printInfo "%s" msg
+        }
+
+    let client =
+        Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
+
+    let dlls, analyzers = client.LoadAnalyzers analyzersPath
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 

@@ -218,12 +218,11 @@ let getContext (opts: FSharpProjectOptions) source =
         Map.tryFind fileName files |> async.Return
 
     let fcs = Utils.createFCS (Some documentSource)
-    let printError (s: string) = Console.WriteLine(s)
     let pathToAnalyzerDlls = Path.GetFullPath(".")
 
     let foundDlls, registeredAnalyzers =
         let client = Client<CliAnalyzerAttribute, CliContext>()
-        client.LoadAnalyzers printError pathToAnalyzerDlls
+        client.LoadAnalyzers pathToAnalyzerDlls
 
     if foundDlls = 0 then
         failwith $"no Dlls found in {pathToAnalyzerDlls}"

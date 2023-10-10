@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 * [Support multiple project parameters in the Cli tool](https://github.com/ionide/FSharp.Analyzers.SDK/pull/116) (thanks @dawedawe!)
+* [Exclude analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/issues/112) (thanks @nojaf)
 
 ## [0.14.1] - 2023-09-26
 
