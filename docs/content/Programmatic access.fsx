@@ -20,7 +20,7 @@ The `Client` needs to know what type of analyzer you intend to load: *console* o
 open FSharp.Analyzers.SDK
 
 let client = Client<CliAnalyzerAttribute, CliContext>()
-let countLoaded = client.LoadAnalyzers ignore @"C:\MyAnalyzers"
+let countLoaded = client.LoadAnalyzers @"C:\MyAnalyzers"
 let ctx = Unchecked.defaultof<CliContext> // Construct your context...
 client.RunAnalyzers(ctx)
 

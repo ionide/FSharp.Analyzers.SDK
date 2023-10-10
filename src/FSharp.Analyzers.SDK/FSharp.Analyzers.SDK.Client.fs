@@ -31,8 +31,10 @@ module Client =
         let hasExpectReturnType (t: Type) =
             // t might be a System.RunTimeType as could have no FullName
             if not (isNull t.FullName) then
-                t.FullName.StartsWith
-                    "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message"
+                t.FullName.StartsWith(
+                    "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message",
+                    StringComparison.InvariantCulture
+                )
             elif t.Name = "FSharpAsync`1" && t.GenericTypeArguments.Length = 1 then
                 let listType = t.GenericTypeArguments.[0]
 
@@ -96,19 +98,39 @@ module Client =
         |> Seq.choose analyzerFromMember<'TAnalyzerAttribute, 'TContext>
         |> Seq.toList
 
-type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>() =
+[<Interface>]
+type Logger =
+    abstract member Error: string -> unit
+    abstract member Verbose: string -> unit
+
+type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
+    (logger: Logger, excludedAnalyzers: string Set)
+    =
     let registeredAnalyzers =
         ConcurrentDictionary<string, (string * Analyzer<'TContext>) list>()
 
-    member x.LoadAnalyzers (printError: string -> unit) (dir: string) : int * int =
+    new() =
+        Client(
+            { new Logger with
+                member this.Error _ = ()
+                member this.Verbose _ = ()
+            },
+            Set.empty
+        )
+
+    member x.LoadAnalyzers(dir: string) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")
 
                 Directory.GetFiles(dir, "*Analyzer*.dll", SearchOption.AllDirectories)
                 |> Array.filter (fun a ->
-                    let s = Path.GetFileName(a).ToLowerInvariant()
-                    not (s.EndsWith("fsharp.analyzers.sdk.dll") || regex.IsMatch(s))
+                    let s = Path.GetFileName(a)
+
+                    not (
+                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.InvariantCultureIgnoreCase)
+                        || regex.IsMatch(s)
+                    )
                 )
                 |> Array.choose (fun analyzerDll ->
                     try
@@ -139,7 +161,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     if version = Utils.currentFSharpAnalyzersSDKVersion then
                         true
                     else
-                        printError
+                        logger.Error
                             $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{Utils.currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
 
                         false
@@ -148,13 +170,20 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     let analyzers =
                         assembly.GetExportedTypes()
                         |> Seq.collect Client.analyzersFromType<'TAttribute, 'TContext>
+                        |> Seq.filter (fun (analyzerName, _) ->
+                            let shouldExclude = excludedAnalyzers.Contains(analyzerName)
+
+                            if shouldExclude then
+                                logger.Verbose $"Excluding %s{analyzerName} from %s{assembly.FullName}"
+
+                            not shouldExclude
+                        )
+                        |> Seq.toList
 
                     path, analyzers
                 )
 
             for path, analyzers in analyzers do
-                let analyzers = Seq.toList analyzers
-
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
 
