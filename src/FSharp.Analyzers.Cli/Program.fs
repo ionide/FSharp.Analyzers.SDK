@@ -178,30 +178,35 @@ let main argv =
     let projOpts = results.TryGetResult <@ Project @>
 
     let results =
-        match projOpts with
-        | None
-        | Some [] ->
-            printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s" ""
-
+        if analyzers = 0 then
             []
-        | Some projects ->
-            let runProj (proj: string) =
-                async {
-                    let project =
-                        if Path.IsPathRooted proj then
-                            proj
-                        else
-                            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
+        else
+            match projOpts with
+            | None
+            | Some [] ->
+                printError
+                    "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
+                    ""
 
-                    let! results = runProject client toolsPath project ignoreFiles
-                    return results |> Option.map (printMessages failOnWarnings)
-                }
+                []
+            | Some projects ->
+                let runProj (proj: string) =
+                    async {
+                        let project =
+                            if Path.IsPathRooted proj then
+                                proj
+                            else
+                                Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
-            projects
-            |> List.map runProj
-            |> Async.Sequential
-            |> Async.RunSynchronously
-            |> Array.choose id
-            |> List.concat
+                        let! results = runProject client toolsPath project ignoreFiles
+                        return results |> Option.map (printMessages failOnWarnings)
+                    }
+
+                projects
+                |> List.map runProj
+                |> Async.Sequential
+                |> Async.RunSynchronously
+                |> Array.choose id
+                |> List.concat
 
     calculateExitCode failOnWarnings results
