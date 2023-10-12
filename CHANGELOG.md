@@ -5,11 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2023-10-12
+
+### Added
+* [Analyzer report ](https://github.com/ionide/FSharp.Analyzers.SDK/issues/110) (thanks @nojaf!)
+
 ## [0.15.0] - 2023-10-10
 
 ### Added
 * [Support multiple project parameters in the Cli tool](https://github.com/ionide/FSharp.Analyzers.SDK/pull/116) (thanks @dawedawe!)
-* [Exclude analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/issues/112) (thanks @nojaf)
+* [Exclude analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/issues/112) (thanks @nojaf!)
 
 ## [0.14.1] - 2023-09-26
 

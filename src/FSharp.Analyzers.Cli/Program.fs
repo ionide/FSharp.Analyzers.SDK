@@ -3,6 +3,7 @@ open System.IO
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
+open Thoth.Json.Net
 open FSharp.Analyzers.SDK
 open GlobExpressions
 open Ionide.ProjInfo
@@ -13,6 +14,7 @@ type Arguments =
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Exclude_Analyzer of string list
+    | Report of string
     | Verbose
 
     interface IArgParserTemplate with
@@ -24,6 +26,7 @@ type Arguments =
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
+            | Report _ -> "Write the result messages to a (json) report file."
             | Verbose -> "Verbose logging."
 
 let mutable verbose = false
@@ -140,6 +143,50 @@ let printMessages failOnWarnings (msgs: Message list) =
 
     msgs
 
+let encodeRange (range: range) =
+    Encode.object
+        [
+            "startLine", Encode.int range.StartLine
+            "startColumn", Encode.int range.StartColumn
+            "endLine", Encode.int range.EndLine
+            "endColumn", Encode.int range.EndColumn
+        ]
+
+let encodeSeverity =
+    function
+    | Severity.Info -> Encode.string "info"
+    | Severity.Hint -> Encode.string "hint"
+    | Severity.Warning -> Encode.string "warning"
+    | Severity.Error -> Encode.string "error"
+
+let encodeMessage (message: Message) =
+    Encode.object
+        [
+            "type", Encode.string message.Type
+            "message", Encode.string message.Message
+            "severity", encodeSeverity message.Severity
+            "range", encodeRange message.Range
+        ]
+
+let writeReport results report =
+    let sdkVersion =
+        string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+
+    let json =
+        Encode.object
+            [
+                "analyzerSDKVersion", Encode.string sdkVersion
+                "createdAt", Encode.datetime DateTime.UtcNow
+                "messages", Encode.list (List.map encodeMessage (Option.defaultValue List.empty results))
+            ]
+        |> Encode.toString 4
+
+    try
+        File.WriteAllText(report, json)
+    with ex ->
+        let details = if not verbose then "" else $" %s{ex.Message}"
+        printfn $"Could not write report json to %s{report}%s{details}"
+
 let calculateExitCode failOnWarnings (msgs: Message list option) : int =
     match msgs with
     | None -> -1
@@ -197,6 +244,7 @@ let main argv =
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpts = results.TryGetResult <@ Project @>
+    let report = results.TryGetResult <@ Report @>
 
     let results =
         if analyzers = 0 then
@@ -230,5 +278,7 @@ let main argv =
                 |> Array.choose id
                 |> List.concat
                 |> Some
+
+    report |> Option.iter (writeReport results)
 
     calculateExitCode failOnWarnings results
