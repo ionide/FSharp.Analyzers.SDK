@@ -163,6 +163,7 @@ let encodeMessage (message: Message) =
     Encode.object
         [
             "type", Encode.string message.Type
+            "code", Encode.string message.Code
             "message", Encode.string message.Message
             "severity", encodeSeverity message.Severity
             "range", encodeRange message.Range
