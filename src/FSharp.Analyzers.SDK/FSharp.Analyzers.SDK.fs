@@ -143,8 +143,17 @@ type Message =
 
 type Analyzer<'TContext> = 'TContext -> Async<Message list>
 
-module Utils =
+type AnalyzerMessage =
+    {
+        /// A message produced by the analyzer.
+        Message: Message
+        /// Either the Name property used from the AnalyzerAttribute of the name of the function or member.
+        Name: string
+        /// Assembly the analyzer was found in.
+        AssemblyPath: string
+    }
 
+module Utils =
     let currentFSharpAnalyzersSDKVersion =
         Assembly.GetExecutingAssembly().GetName().Version
 
@@ -185,7 +194,7 @@ module Utils =
 
     let typeCheckFile
         (fcs: FSharpChecker)
-        (printError: (string -> unit))
+        (printError: string -> unit)
         (options: FSharpProjectOptions)
         (fileName: string)
         (source: SourceOfSource)

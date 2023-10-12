@@ -121,6 +121,13 @@ type Message =
 
 type Analyzer<'TContext> = 'TContext -> Async<Message list>
 
+type AnalyzerMessage =
+    {
+        Message: Message
+        Name: string
+        AssemblyPath: string
+    }
+
 module Utils =
 
     [<RequireQualifiedAccess>]

@@ -110,7 +110,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 ]
     }
 
-let printMessages failOnWarnings (msgs: Message list) =
+let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
     if verbose then
         printfn ""
 
@@ -118,7 +118,9 @@ let printMessages failOnWarnings (msgs: Message list) =
         printfn "No messages found from the analyzer(s)"
 
     msgs
-    |> Seq.iter (fun m ->
+    |> Seq.iter (fun analyzerMessage ->
+        let m = analyzerMessage.Message
+
         let color =
             match m.Severity with
             | Error -> ConsoleColor.Red
@@ -159,7 +161,9 @@ let encodeSeverity =
     | Severity.Warning -> Encode.string "warning"
     | Severity.Error -> Encode.string "error"
 
-let encodeMessage (message: Message) =
+let encodeMessage (analyzerMessage: AnalyzerMessage) =
+    let message = analyzerMessage.Message
+
     Encode.object
         [
             "type", Encode.string message.Type
@@ -168,6 +172,8 @@ let encodeMessage (message: Message) =
             "severity", encodeSeverity message.Severity
             "range", encodeRange message.Range
             "fileName", Encode.string message.Range.FileName
+            "assembly", Encode.string analyzerMessage.AssemblyPath
+            "analyzerName", Encode.string analyzerMessage.Name
         ]
 
 let writeReport results report =
@@ -189,15 +195,17 @@ let writeReport results report =
         let details = if not verbose then "" else $" %s{ex.Message}"
         printfn $"Could not write report json to %s{report}%s{details}"
 
-let calculateExitCode failOnWarnings (msgs: Message list option) : int =
+let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> List.exists (fun n ->
-                n.Severity = Error
-                || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
+            |> List.exists (fun analyzerMessage ->
+                let message = analyzerMessage.Message
+
+                message.Severity = Error
+                || (message.Severity = Warning && failOnWarnings |> List.contains message.Code)
             )
 
         if check then -2 else 0
