@@ -166,6 +166,7 @@ let encodeMessage (message: Message) =
             "message", Encode.string message.Message
             "severity", encodeSeverity message.Severity
             "range", encodeRange message.Range
+            "fileName", Encode.string message.Range.FileName
         ]
 
 let writeReport results report =
