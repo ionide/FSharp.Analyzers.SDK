@@ -3,7 +3,6 @@ module FSharp.Analyzers.SDK.Testing
 // Don't warn about using NotifyFileChanged of the FCS API
 #nowarn "57"
 
-open FSharp.Compiler.Text
 open Microsoft.Build.Logging.StructuredLogger
 open CliWrap
 open System
@@ -11,6 +10,8 @@ open System.IO
 open System.Collections.Generic
 open System.Collections.ObjectModel
 open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.Diagnostics
+open FSharp.Compiler.Text
 
 type FSharpProjectOptions with
 
@@ -36,6 +37,8 @@ type Package =
     }
 
     override x.ToString() = $"{x.Name}_{x.Version}"
+
+exception CompilerDiagnosticErrors of FSharpDiagnostic array
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 
@@ -246,6 +249,13 @@ let getContext (opts: FSharpProjectOptions) source =
 
     match Utils.typeCheckFile fcs printError opts fileName (Utils.SourceOfSource.DiscreteSource source) with
     | Some(parseFileResults, checkFileResults) ->
+        let diagErrors =
+            checkFileResults.Diagnostics
+            |> Array.filter (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
+
+        if not (Array.isEmpty diagErrors) then
+            raise (CompilerDiagnosticErrors diagErrors)
+
         let sourceText = SourceText.ofString source
         Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
     | None -> failwith "typechecking file failed"

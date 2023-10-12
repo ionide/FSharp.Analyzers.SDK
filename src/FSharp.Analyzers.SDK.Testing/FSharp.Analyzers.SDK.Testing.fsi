@@ -2,12 +2,15 @@ module FSharp.Analyzers.SDK.Testing
 
 open System.Threading.Tasks
 open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.Diagnostics
 
 type FSharpProjectOptions with
 
     static member zero: FSharpProjectOptions
 
 type Package = { Name: string; Version: string }
+
+exception CompilerDiagnosticErrors of FSharpDiagnostic array
 
 /// <summary>Creates a classlib project in a temporary folder to gather the needed FSharpProjectOptions.</summary>
 /// <param name="framework">The target framework for the tested code to use. E.g. net6.0, net7.0</param>
