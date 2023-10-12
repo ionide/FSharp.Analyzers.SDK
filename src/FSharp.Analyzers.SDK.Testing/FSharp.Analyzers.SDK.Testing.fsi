@@ -10,7 +10,7 @@ type FSharpProjectOptions with
 
 type Package = { Name: string; Version: string }
 
-exception DiagnosticErrors of FSharpDiagnostic array
+exception CompilerDiagnosticErrors of FSharpDiagnostic array
 
 /// <summary>Creates a classlib project in a temporary folder to gather the needed FSharpProjectOptions.</summary>
 /// <param name="framework">The target framework for the tested code to use. E.g. net6.0, net7.0</param>

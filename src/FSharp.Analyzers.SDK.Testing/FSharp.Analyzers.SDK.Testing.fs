@@ -38,7 +38,7 @@ type Package =
 
     override x.ToString() = $"{x.Name}_{x.Version}"
 
-exception DiagnosticErrors of FSharpDiagnostic array
+exception CompilerDiagnosticErrors of FSharpDiagnostic array
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 
@@ -254,7 +254,7 @@ let getContext (opts: FSharpProjectOptions) source =
             |> Array.filter (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
 
         if not (Array.isEmpty diagErrors) then
-            raise (DiagnosticErrors diagErrors)
+            raise (CompilerDiagnosticErrors diagErrors)
 
         let sourceText = SourceText.ofString source
         Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
