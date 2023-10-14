@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Build.Locator"  />
     <PackageReference Include="Microsoft.Build.Tasks.Core"  ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" ExcludeAssets="runtime" />
-    <PackageReference Include="Thoth.Json.Net" />
+    <PackageReference Include="Sarif.Sdk" />
   </ItemGroup>
 
   <ItemGroup>

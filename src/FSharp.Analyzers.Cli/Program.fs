@@ -3,9 +3,10 @@ open System.IO
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
-open Thoth.Json.Net
 open FSharp.Analyzers.SDK
 open GlobExpressions
+open Microsoft.CodeAnalysis.Sarif
+open Microsoft.CodeAnalysis.Sarif.Writers
 open Ionide.ProjInfo
 
 type Arguments =
@@ -145,55 +146,90 @@ let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
 
     msgs
 
-let encodeRange (range: range) =
-    Encode.object
-        [
-            "startLine", Encode.int range.StartLine
-            "startColumn", Encode.int range.StartColumn
-            "endLine", Encode.int range.EndLine
-            "endColumn", Encode.int range.EndColumn
-        ]
-
-let encodeSeverity =
-    function
-    | Severity.Info -> Encode.string "info"
-    | Severity.Hint -> Encode.string "hint"
-    | Severity.Warning -> Encode.string "warning"
-    | Severity.Error -> Encode.string "error"
-
-let encodeMessage (analyzerMessage: AnalyzerMessage) =
-    let message = analyzerMessage.Message
-
-    Encode.object
-        [
-            "type", Encode.string message.Type
-            "code", Encode.string message.Code
-            "message", Encode.string message.Message
-            "severity", encodeSeverity message.Severity
-            "range", encodeRange message.Range
-            "fileName", Encode.string message.Range.FileName
-            "assembly", Encode.string analyzerMessage.AssemblyPath
-            "analyzerName", Encode.string analyzerMessage.Name
-        ]
-
-let writeReport results report =
-    let sdkVersion =
-        string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
-
-    let json =
-        Encode.object
-            [
-                "analyzerSDKVersion", Encode.string sdkVersion
-                "createdAt", Encode.datetime DateTime.UtcNow
-                "messages", Encode.list (List.map encodeMessage (Option.defaultValue List.empty results))
-            ]
-        |> Encode.toString 4
-
+let writeReport (results: AnalyzerMessage list option) (report: string) =
     try
-        File.WriteAllText(report, json)
+        let driver = ToolComponent()
+        driver.Name <- "Ionide.Analyzers.Cli"
+        driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
+        driver.Version <- string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+        (*  TODO: sarif has the concept of rules.
+            We probably want to extend the analyzer attribute to accept more meta data.
+            {
+              "id": "no-unused-vars",
+              "shortDescription": {
+                "text": "disallow unused variables"
+              },
+              "helpUri": "https://eslint.org/docs/rules/no-unused-vars",
+              "properties": {
+                "category": "Variables"
+              }
+            }
+        *)
+
+        let tool = Tool()
+        tool.Driver <- driver
+        let run = Run()
+        run.Tool <- tool
+
+        use sarifLogger =
+            new SarifLogger(
+                report,
+                logFilePersistenceOptions =
+                    (FilePersistenceOptions.PrettyPrint ||| FilePersistenceOptions.ForceOverwrite),
+                run = run,
+                levels = BaseLogger.ErrorWarningNote,
+                kinds = BaseLogger.Fail,
+                closeWriterOnDispose = true
+            )
+
+        sarifLogger.AnalysisStarted()
+
+        for analyzerResult in (Option.defaultValue List.empty results) do
+            let reportDescriptor = ReportingDescriptor()
+            reportDescriptor.Id <- analyzerResult.Message.Code
+            reportDescriptor.Name <- analyzerResult.Message.Message
+
+            let result = Result()
+            result.RuleId <- analyzerResult.Message.Code
+
+            result.Level <-
+                match analyzerResult.Message.Severity with
+                | Info -> FailureLevel.Note
+                | Hint -> FailureLevel.None
+                | Warning -> FailureLevel.Warning
+                | Error -> FailureLevel.Error
+
+            let msg = Message()
+            msg.Text <- analyzerResult.Message.Message
+            result.Message <- msg
+
+            let physicalLocation = PhysicalLocation()
+
+            physicalLocation.ArtifactLocation <-
+                let al = ArtifactLocation()
+                al.Uri <- Uri(analyzerResult.Message.Range.FileName)
+                al
+
+            physicalLocation.Region <-
+                let r = Region()
+                r.StartLine <- analyzerResult.Message.Range.StartLine
+                r.StartColumn <- analyzerResult.Message.Range.StartColumn
+                r.EndLine <- analyzerResult.Message.Range.EndLine
+                r.EndColumn <- analyzerResult.Message.Range.EndColumn
+                r
+
+            let location: Location = Location()
+            location.PhysicalLocation <- physicalLocation
+            result.Locations <- [| location |]
+
+            sarifLogger.Log(reportDescriptor, result, System.Nullable())
+
+        sarifLogger.AnalysisStopped(RuntimeConditions.None)
+
+        sarifLogger.Dispose()
     with ex ->
         let details = if not verbose then "" else $" %s{ex.Message}"
-        printfn $"Could not write report json to %s{report}%s{details}"
+        printfn $"Could not write sarif to %s{report}%s{details}"
 
 let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
     match msgs with
