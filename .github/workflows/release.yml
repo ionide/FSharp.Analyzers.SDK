@@ -37,7 +37,7 @@ jobs:
         with:
           artifacts: "**/*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: ${{ steps.changelog_reader.outputs.log_entry }}
+          body: ${{ steps.changelog_reader.outputs.changes }}
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
 
       - name: Push packages
