@@ -142,7 +142,7 @@ type AnalyzerMessage =
     {
         /// A message produced by the analyzer.
         Message: Message
-        /// Either the Name property used from the AnalyzerAttribute of the name of the function or member.
+        /// Either the Name property used from the AnalyzerAttribute of the name or the function or member.
         Name: string
         /// Assembly the analyzer was found in.
         AssemblyPath: string

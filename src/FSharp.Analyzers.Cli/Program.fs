@@ -27,7 +27,7 @@ type Arguments =
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
-            | Report _ -> "Write the result messages to a (json) report file."
+            | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
 
 let mutable verbose = false
