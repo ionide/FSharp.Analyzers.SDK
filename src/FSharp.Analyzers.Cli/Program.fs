@@ -5,6 +5,8 @@ open FSharp.Compiler.Text
 open Argu
 open FSharp.Analyzers.SDK
 open GlobExpressions
+open Microsoft.CodeAnalysis.Sarif
+open Microsoft.CodeAnalysis.Sarif.Writers
 open Ionide.ProjInfo
 
 type Arguments =
@@ -13,6 +15,7 @@ type Arguments =
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Exclude_Analyzer of string list
+    | Report of string
     | Verbose
 
     interface IArgParserTemplate with
@@ -24,6 +27,7 @@ type Arguments =
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
+            | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
 
 let mutable verbose = false
@@ -107,7 +111,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 ]
     }
 
-let printMessages failOnWarnings (msgs: Message list) =
+let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
     if verbose then
         printfn ""
 
@@ -115,7 +119,9 @@ let printMessages failOnWarnings (msgs: Message list) =
         printfn "No messages found from the analyzer(s)"
 
     msgs
-    |> Seq.iter (fun m ->
+    |> Seq.iter (fun analyzerMessage ->
+        let m = analyzerMessage.Message
+
         let color =
             match m.Severity with
             | Error -> ConsoleColor.Red
@@ -140,15 +146,97 @@ let printMessages failOnWarnings (msgs: Message list) =
 
     msgs
 
-let calculateExitCode failOnWarnings (msgs: Message list option) : int =
+let writeReport (results: AnalyzerMessage list option) (report: string) =
+    try
+        let driver = ToolComponent()
+        driver.Name <- "Ionide.Analyzers.Cli"
+        driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
+        driver.Version <- string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+        let tool = Tool()
+        tool.Driver <- driver
+        let run = Run()
+        run.Tool <- tool
+
+        use sarifLogger =
+            new SarifLogger(
+                report,
+                logFilePersistenceOptions =
+                    (FilePersistenceOptions.PrettyPrint ||| FilePersistenceOptions.ForceOverwrite),
+                run = run,
+                levels = BaseLogger.ErrorWarningNote,
+                kinds = BaseLogger.Fail,
+                closeWriterOnDispose = true
+            )
+
+        sarifLogger.AnalysisStarted()
+
+        for analyzerResult in (Option.defaultValue List.empty results) do
+            let reportDescriptor = ReportingDescriptor()
+            reportDescriptor.Id <- analyzerResult.Message.Code
+            reportDescriptor.Name <- analyzerResult.Message.Message
+
+            analyzerResult.ShortDescription
+            |> Option.iter (fun shortDescription ->
+                reportDescriptor.ShortDescription <-
+                    MultiformatMessageString(shortDescription, shortDescription, dict [])
+            )
+
+            analyzerResult.HelpUri
+            |> Option.iter (fun helpUri -> reportDescriptor.HelpUri <- Uri(helpUri))
+
+            let result = Result()
+            result.RuleId <- reportDescriptor.Id
+
+            result.Level <-
+                match analyzerResult.Message.Severity with
+                | Info -> FailureLevel.Note
+                | Hint -> FailureLevel.None
+                | Warning -> FailureLevel.Warning
+                | Error -> FailureLevel.Error
+
+            let msg = Message()
+            msg.Text <- analyzerResult.Message.Message
+            result.Message <- msg
+
+            let physicalLocation = PhysicalLocation()
+
+            physicalLocation.ArtifactLocation <-
+                let al = ArtifactLocation()
+                al.Uri <- Uri(analyzerResult.Message.Range.FileName)
+                al
+
+            physicalLocation.Region <-
+                let r = Region()
+                r.StartLine <- analyzerResult.Message.Range.StartLine
+                r.StartColumn <- analyzerResult.Message.Range.StartColumn
+                r.EndLine <- analyzerResult.Message.Range.EndLine
+                r.EndColumn <- analyzerResult.Message.Range.EndColumn
+                r
+
+            let location: Location = Location()
+            location.PhysicalLocation <- physicalLocation
+            result.Locations <- [| location |]
+
+            sarifLogger.Log(reportDescriptor, result, System.Nullable())
+
+        sarifLogger.AnalysisStopped(RuntimeConditions.None)
+
+        sarifLogger.Dispose()
+    with ex ->
+        let details = if not verbose then "" else $" %s{ex.Message}"
+        printfn $"Could not write sarif to %s{report}%s{details}"
+
+let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
         let check =
             msgs
-            |> List.exists (fun n ->
-                n.Severity = Error
-                || (n.Severity = Warning && failOnWarnings |> List.contains n.Code)
+            |> List.exists (fun analyzerMessage ->
+                let message = analyzerMessage.Message
+
+                message.Severity = Error
+                || (message.Severity = Warning && failOnWarnings |> List.contains message.Code)
             )
 
         if check then -2 else 0
@@ -197,6 +285,7 @@ let main argv =
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpts = results.TryGetResult <@ Project @>
+    let report = results.TryGetResult <@ Report @>
 
     let results =
         if analyzers = 0 then
@@ -230,5 +319,7 @@ let main argv =
                 |> Array.choose id
                 |> List.concat
                 |> Some
+
+    report |> Option.iter (writeReport results)
 
     calculateExitCode failOnWarnings results

@@ -16,14 +16,25 @@ type AnalysisResult =
 
 module Client =
 
+    type RegisteredAnalyzer<'TContext when 'TContext :> Context> =
+        {
+            AssemblyPath: string
+            Name: string
+            Analyzer: Analyzer<'TContext>
+            ShortDescription: string option
+            HelpUri: string option
+        }
+
     let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
         mi.GetCustomAttributes true
         |> Seq.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
         |> Option.map unbox<'TAttribute>
 
-    let analyzerFromMember<'TAnalyzerAttribute, 'TContext when 'TAnalyzerAttribute :> AnalyzerAttribute>
+    let analyzerFromMember<'TAnalyzerAttribute, 'TContext
+        when 'TAnalyzerAttribute :> AnalyzerAttribute and 'TContext :> Context>
+        (path: string)
         (mi: MemberInfo)
-        : (string * Analyzer<'TContext>) option
+        : RegisteredAnalyzer<'TContext> option
         =
         let inline unboxAnalyzer v =
             if isNull v then failwith "Analyzer is null" else unbox v
@@ -75,13 +86,30 @@ module Client =
         match isAnalyzer<'TAnalyzerAttribute> mi with
         | Some analyzerAttribute ->
             match getAnalyzerFromMemberInfo mi with
-            | Some analyzer -> Some(analyzerAttribute.Name, analyzer)
+            | Some analyzer ->
+                let name =
+                    if String.IsNullOrWhiteSpace analyzerAttribute.Name then
+                        mi.Name
+                    else
+                        analyzerAttribute.Name
+
+                Some
+                    {
+                        AssemblyPath = path
+                        Name = name
+                        Analyzer = analyzer
+                        ShortDescription = analyzerAttribute.ShortDescription
+                        HelpUri = analyzerAttribute.HelpUri
+                    }
+
             | None -> None
         | None -> None
 
-    let analyzersFromType<'TAnalyzerAttribute, 'TContext when 'TAnalyzerAttribute :> AnalyzerAttribute>
+    let analyzersFromType<'TAnalyzerAttribute, 'TContext
+        when 'TAnalyzerAttribute :> AnalyzerAttribute and 'TContext :> Context>
+        (path: string)
         (t: Type)
-        : (string * Analyzer<'TContext>) list
+        : RegisteredAnalyzer<'TContext> list
         =
         let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
         let bindingFlags = BindingFlags.Public ||| BindingFlags.Static
@@ -95,7 +123,7 @@ module Client =
             |> Seq.collect id
 
         members
-        |> Seq.choose analyzerFromMember<'TAnalyzerAttribute, 'TContext>
+        |> Seq.choose (analyzerFromMember<'TAnalyzerAttribute, 'TContext> path)
         |> Seq.toList
 
 [<Interface>]
@@ -107,7 +135,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     (logger: Logger, excludedAnalyzers: string Set)
     =
     let registeredAnalyzers =
-        ConcurrentDictionary<string, (string * Analyzer<'TContext>) list>()
+        ConcurrentDictionary<string, Client.RegisteredAnalyzer<'TContext> list>()
 
     new() =
         Client(
@@ -169,12 +197,12 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 |> Array.map (fun (path, assembly) ->
                     let analyzers =
                         assembly.GetExportedTypes()
-                        |> Seq.collect Client.analyzersFromType<'TAttribute, 'TContext>
-                        |> Seq.filter (fun (analyzerName, _) ->
-                            let shouldExclude = excludedAnalyzers.Contains(analyzerName)
+                        |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
+                        |> Seq.filter (fun registeredAnalyzer ->
+                            let shouldExclude = excludedAnalyzers.Contains(registeredAnalyzer.Name)
 
                             if shouldExclude then
-                                logger.Verbose $"Excluding %s{analyzerName} from %s{assembly.FullName}"
+                                logger.Verbose $"Excluding %s{registeredAnalyzer.Name} from %s{assembly.FullName}"
 
                             not shouldExclude
                         )
@@ -191,15 +219,29 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
         else
             0, 0
 
-    member x.RunAnalyzers(ctx: 'TContext) : Async<Message list> =
+    member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
         async {
             let analyzers = registeredAnalyzers.Values |> Seq.collect id
 
             let! messagesPerAnalyzer =
                 analyzers
-                |> Seq.map (fun (_analyzerName, analyzer) ->
+                |> Seq.map (fun registeredAnalyzer ->
                     try
-                        analyzer ctx
+                        async {
+                            let! messages = registeredAnalyzer.Analyzer ctx
+
+                            return
+                                messages
+                                |> List.map (fun message ->
+                                    {
+                                        Message = message
+                                        Name = registeredAnalyzer.Name
+                                        AssemblyPath = registeredAnalyzer.AssemblyPath
+                                        ShortDescription = registeredAnalyzer.ShortDescription
+                                        HelpUri = registeredAnalyzer.HelpUri
+                                    }
+                                )
+                        }
                     with error ->
                         async.Return []
                 )
@@ -218,20 +260,20 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             let! results =
                 analyzers
-                |> Seq.map (fun (analyzerName, analyzer) ->
+                |> Seq.map (fun registeredAnalyzer ->
                     async {
                         try
-                            let! result = analyzer ctx
+                            let! result = registeredAnalyzer.Analyzer ctx
 
                             return
                                 {
-                                    AnalyzerName = analyzerName
+                                    AnalyzerName = registeredAnalyzer.Name
                                     Output = Result.Ok result
                                 }
                         with error ->
                             return
                                 {
-                                    AnalyzerName = analyzerName
+                                    AnalyzerName = registeredAnalyzer.Name
                                     Output = Result.Error error
                                 }
                     }

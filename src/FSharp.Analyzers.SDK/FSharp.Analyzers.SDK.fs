@@ -50,19 +50,43 @@ module EntityCache =
 
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type AnalyzerAttribute([<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string) =
+type AnalyzerAttribute(name: string, shortDescription: string, helpUri: string) =
     inherit Attribute()
     member val Name: string = name
 
+    member val ShortDescription: string option =
+        if String.IsNullOrWhiteSpace shortDescription then
+            None
+        else
+            Some shortDescription
+
+    member val HelpUri: string option =
+        if String.IsNullOrWhiteSpace helpUri then
+            None
+        else
+            Some helpUri
+
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type CliAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit AnalyzerAttribute(name)
+type CliAnalyzerAttribute
+    (
+        [<Optional; DefaultParameterValue "Analyzer">] name: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string
+    )
+    =
+    inherit AnalyzerAttribute(name, shortDescription, helpUri)
 
     member _.Name = name
 
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type EditorAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit AnalyzerAttribute(name)
+type EditorAnalyzerAttribute
+    (
+        [<Optional; DefaultParameterValue "Analyzer">] name: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string
+    )
+    =
+    inherit AnalyzerAttribute(name, shortDescription, helpUri)
 
     member _.Name = name
 
@@ -143,8 +167,16 @@ type Message =
 
 type Analyzer<'TContext> = 'TContext -> Async<Message list>
 
-module Utils =
+type AnalyzerMessage =
+    {
+        Message: Message
+        Name: string
+        AssemblyPath: string
+        ShortDescription: string option
+        HelpUri: string option
+    }
 
+module Utils =
     let currentFSharpAnalyzersSDKVersion =
         Assembly.GetExecutingAssembly().GetName().Version
 
@@ -185,7 +217,7 @@ module Utils =
 
     let typeCheckFile
         (fcs: FSharpChecker)
-        (printError: (string -> unit))
+        (printError: string -> unit)
         (options: FSharpProjectOptions)
         (fileName: string)
         (source: SourceOfSource)
