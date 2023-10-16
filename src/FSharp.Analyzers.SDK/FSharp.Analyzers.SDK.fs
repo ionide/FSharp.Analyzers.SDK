@@ -50,19 +50,43 @@ module EntityCache =
 
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type AnalyzerAttribute([<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string) =
+type AnalyzerAttribute(name: string, shortDescription: string, helpUri: string) =
     inherit Attribute()
     member val Name: string = name
 
+    member val ShortDescription: string option =
+        if String.IsNullOrWhiteSpace shortDescription then
+            None
+        else
+            Some shortDescription
+
+    member val HelpUri: string option =
+        if String.IsNullOrWhiteSpace helpUri then
+            None
+        else
+            Some helpUri
+
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type CliAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit AnalyzerAttribute(name)
+type CliAnalyzerAttribute
+    (
+        [<Optional; DefaultParameterValue "Analyzer">] name: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string
+    )
+    =
+    inherit AnalyzerAttribute(name, shortDescription, helpUri)
 
     member _.Name = name
 
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
-type EditorAnalyzerAttribute([<Optional; DefaultParameterValue "Analyzer">] name: string) =
-    inherit AnalyzerAttribute(name)
+type EditorAnalyzerAttribute
+    (
+        [<Optional; DefaultParameterValue "Analyzer">] name: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string,
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string
+    )
+    =
+    inherit AnalyzerAttribute(name, shortDescription, helpUri)
 
     member _.Name = name
 
@@ -145,12 +169,11 @@ type Analyzer<'TContext> = 'TContext -> Async<Message list>
 
 type AnalyzerMessage =
     {
-        /// A message produced by the analyzer.
         Message: Message
-        /// Either the Name property used from the AnalyzerAttribute of the name of the function or member.
         Name: string
-        /// Assembly the analyzer was found in.
         AssemblyPath: string
+        ShortDescription: string option
+        HelpUri: string option
     }
 
 module Utils =

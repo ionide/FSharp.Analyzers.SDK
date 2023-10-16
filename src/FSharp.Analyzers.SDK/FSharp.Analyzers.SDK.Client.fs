@@ -21,6 +21,8 @@ module Client =
             AssemblyPath: string
             Name: string
             Analyzer: Analyzer<'TContext>
+            ShortDescription: string option
+            HelpUri: string option
         }
 
     let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
@@ -96,6 +98,8 @@ module Client =
                         AssemblyPath = path
                         Name = name
                         Analyzer = analyzer
+                        ShortDescription = analyzerAttribute.ShortDescription
+                        HelpUri = analyzerAttribute.HelpUri
                     }
 
             | None -> None
@@ -233,6 +237,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                                         Message = message
                                         Name = registeredAnalyzer.Name
                                         AssemblyPath = registeredAnalyzer.AssemblyPath
+                                        ShortDescription = registeredAnalyzer.ShortDescription
+                                        HelpUri = registeredAnalyzer.HelpUri
                                     }
                                 )
                         }

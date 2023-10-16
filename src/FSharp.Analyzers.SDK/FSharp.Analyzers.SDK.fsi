@@ -10,19 +10,36 @@ open FSharp.Compiler.Text
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
 type AnalyzerAttribute =
-    new: [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string -> AnalyzerAttribute
+    new:
+        [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string ->
+            AnalyzerAttribute
+
     inherit Attribute
     member Name: string
+    member ShortDescription: string option
+    member HelpUri: string option
 
 /// Marks an analyzer for scanning during the console application run.
 type CliAnalyzerAttribute =
-    new: [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string -> CliAnalyzerAttribute
+    new:
+        [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string ->
+            CliAnalyzerAttribute
+
     inherit AnalyzerAttribute
     member Name: string
 
 /// Marks an analyzer for scanning during IDE integration.
 type EditorAnalyzerAttribute =
-    new: [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string -> EditorAnalyzerAttribute
+    new:
+        [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] shortDescription: string *
+        [<Optional; DefaultParameterValue("" :> obj)>] helpUri: string ->
+            EditorAnalyzerAttribute
+
     inherit AnalyzerAttribute
     member Name: string
 
@@ -123,9 +140,16 @@ type Analyzer<'TContext> = 'TContext -> Async<Message list>
 
 type AnalyzerMessage =
     {
+        /// A message produced by the analyzer.
         Message: Message
+        /// Either the Name property used from the AnalyzerAttribute of the name of the function or member.
         Name: string
+        /// Assembly the analyzer was found in.
         AssemblyPath: string
+        /// Short description for the analyzer. Used in the sarif output.
+        ShortDescription: string option
+        /// A link to the documentation of this analyzer. Used in the sarif output.
+        HelpUri: string option
     }
 
 module Utils =

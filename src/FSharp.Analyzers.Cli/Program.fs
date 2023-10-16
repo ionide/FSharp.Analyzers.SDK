@@ -152,20 +152,6 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
         driver.Name <- "Ionide.Analyzers.Cli"
         driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
         driver.Version <- string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
-        (*  TODO: sarif has the concept of rules.
-            We probably want to extend the analyzer attribute to accept more meta data.
-            {
-              "id": "no-unused-vars",
-              "shortDescription": {
-                "text": "disallow unused variables"
-              },
-              "helpUri": "https://eslint.org/docs/rules/no-unused-vars",
-              "properties": {
-                "category": "Variables"
-              }
-            }
-        *)
-
         let tool = Tool()
         tool.Driver <- driver
         let run = Run()
@@ -189,8 +175,17 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
             reportDescriptor.Id <- analyzerResult.Message.Code
             reportDescriptor.Name <- analyzerResult.Message.Message
 
+            analyzerResult.ShortDescription
+            |> Option.iter (fun shortDescription ->
+                reportDescriptor.ShortDescription <-
+                    MultiformatMessageString(shortDescription, shortDescription, dict [])
+            )
+
+            analyzerResult.HelpUri
+            |> Option.iter (fun helpUri -> reportDescriptor.HelpUri <- Uri(helpUri))
+
             let result = Result()
-            result.RuleId <- analyzerResult.Message.Code
+            result.RuleId <- reportDescriptor.Id
 
             result.Level <-
                 match analyzerResult.Message.Severity with
