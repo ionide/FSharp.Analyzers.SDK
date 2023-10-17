@@ -6,13 +6,13 @@ index: 5
 
 # Running analyzers during continuous integration
 
-Similar to unit tests and coding formatting, analyzers are a tool you want to enforce when modifying a code repository.  
+Similar to unit tests and code formatting, analyzers are a tool you want to enforce when modifying a code repository.  
 Especially, in the context of a team, you want to ensure everybody is adhering to the warnings produced by analyzers.
 
 ## Command line options
 
 Use the `--report` command line argument to produce a [sarif](https://sarifweb.azurewebsites.net/) report json.  
-Most *CI/CD* system should be able to process this afterwards to capture the reported information by the analyzers.
+Most *CI/CD* systems should be able to process this afterwards to capture the reported information by the analyzers.
 
 Example usage:
 
