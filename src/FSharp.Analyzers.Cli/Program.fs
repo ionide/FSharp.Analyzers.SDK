@@ -13,6 +13,7 @@ type Arguments =
     | Project of string list
     | Analyzers_Path of string
     | Fail_On_Warnings of string list
+    | Fail_On_All_Warnings of except: string list
     | Ignore_Files of string list
     | Exclude_Analyzer of string list
     | Report of string
@@ -25,10 +26,16 @@ type Arguments =
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
             | Fail_On_Warnings _ ->
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
+            | Fail_On_All_Warnings _ ->
+                "All analyzer codes will trigger tool failure in the presence of warnings, except for the ones listed here."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
+
+type WarningConfig =
+    | FailOnWarnings of string list
+    | FailOnAllWarnings of except: string list
 
 let mutable verbose = false
 
@@ -111,7 +118,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 ]
     }
 
-let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
+let printMessages warningConfig (msgs: AnalyzerMessage list) =
     if verbose then
         printfn ""
 
@@ -123,12 +130,13 @@ let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
         let m = analyzerMessage.Message
 
         let color =
-            match m.Severity with
-            | Error -> ConsoleColor.Red
-            | Warning when failOnWarnings |> List.contains m.Code -> ConsoleColor.Red
-            | Warning -> ConsoleColor.DarkYellow
-            | Info -> ConsoleColor.Blue
-            | Hint -> ConsoleColor.Cyan
+            match m.Severity, warningConfig with
+            | Error, _ -> ConsoleColor.Red
+            | Warning, FailOnWarnings inclusions when inclusions |> List.contains m.Code -> ConsoleColor.Red
+            | Warning, FailOnAllWarnings exclusions when exclusions |> List.contains m.Code |> not -> ConsoleColor.Red
+            | Warning, _ -> ConsoleColor.DarkYellow
+            | Info, _ -> ConsoleColor.Blue
+            | Hint, _ -> ConsoleColor.Cyan
 
         Console.ForegroundColor <- color
 
@@ -226,7 +234,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
         let details = if not verbose then "" else $" %s{ex.Message}"
         printfn $"Could not write sarif to %s{report}%s{details}"
 
-let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
+let calculateExitCode warningConfig (msgs: AnalyzerMessage list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
@@ -235,8 +243,13 @@ let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
             |> List.exists (fun analyzerMessage ->
                 let message = analyzerMessage.Message
 
-                message.Severity = Error
-                || (message.Severity = Warning && failOnWarnings |> List.contains message.Code)
+                match warningConfig with
+                | FailOnWarnings inclusions ->
+                    message.Severity = Error
+                    || (message.Severity = Warning && inclusions |> List.contains message.Code)
+                | FailOnAllWarnings exclusions ->
+                    message.Severity = Error
+                    || (message.Severity = Warning && not (exclusions |> List.contains message.Code))
             )
 
         if check then -2 else 0
@@ -249,8 +262,22 @@ let main argv =
     verbose <- results.Contains <@ Verbose @>
     printInfo "Running in verbose mode"
 
-    let failOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
-    printInfo "Fail On Warnings: [%s]" (failOnWarnings |> String.concat ", ")
+    let warningConfig =
+        match results.TryGetResult(<@ Fail_On_All_Warnings @>) with
+        | Some exceptions ->
+            match exceptions with
+            | [] ->
+                printInfo "Fail On All Warnings"
+                FailOnAllWarnings []
+            | _ ->
+                printInfo "Fail On All Warnings Except: [%s]" (exceptions |> String.concat ", ")
+                FailOnAllWarnings exceptions
+        | None ->
+            match results.TryGetResult(<@ Fail_On_Warnings @>) with
+            | Some inclusions ->
+                printInfo "Fail On Warnings: [%s]" (inclusions |> String.concat ", ")
+                FailOnWarnings inclusions
+            | None -> FailOnWarnings []
 
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
@@ -309,7 +336,7 @@ let main argv =
                                 Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
                         let! results = runProject client toolsPath project ignoreFiles
-                        return results |> Option.map (printMessages failOnWarnings)
+                        return results |> Option.map (printMessages warningConfig)
                     }
 
                 projects
@@ -322,4 +349,4 @@ let main argv =
 
     report |> Option.iter (writeReport results)
 
-    calculateExitCode failOnWarnings results
+    calculateExitCode warningConfig results
