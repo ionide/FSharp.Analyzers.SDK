@@ -274,17 +274,17 @@ let main argv =
         }
 
     AssemblyLoadContext.Default.add_Resolving (fun ctx assemblyName ->
-        if assemblyName.Name = "FSharp.Core" then
-            let msg =
-                $"""Could not load FSharp.Core %A{assemblyName.Version}. The expected assembly version of FSharp.Core is %A{Utils.currentFSharpCoreVersion}.
-Consider adding <PackageReference Update="FSharp.Core" Version="<CorrectVersion>" /> to your .fsproj.
-The correct version can be found over at https://www.nuget.org/packages/FSharp.Analyzers.SDK#dependencies-body-tab.
-"""
-
-            printError msg
+        if assemblyName.Name <> "FSharp.Core" then
+            null
         else
-            printError $"Could not load %s{assemblyName.Name} %A{assemblyName.Version}."
 
+        let msg =
+            $"""Could not load FSharp.Core %A{assemblyName.Version}. The expected assembly version of FSharp.Core is %A{Utils.currentFSharpCoreVersion}.
+        Consider adding <PackageReference Update="FSharp.Core" Version="<CorrectVersion>" /> to your .fsproj.
+        The correct version can be found over at https://www.nuget.org/packages/FSharp.Analyzers.SDK#dependencies-body-tab.
+        """
+
+        printError msg
         exit 1
     )
 
