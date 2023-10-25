@@ -56,15 +56,9 @@ let printInfo (fmt: Printf.TextWriterFormat<'a>) : 'a =
     else
         unbox (mkKn typeof<'a>)
 
-let printError (text: Printf.TextWriterFormat<('a -> unit)>) (arg: 'a) : unit =
+let printError (text: string) : unit =
     Console.ForegroundColor <- ConsoleColor.Red
-    printf "Error : "
-    printfn text arg
-    Console.ForegroundColor <- origForegroundColor
-
-let printError2 (text: string) : unit =
-    Console.ForegroundColor <- ConsoleColor.Red
-    printf "Error : "
+    Console.Write "Error : "
     Console.WriteLine(text)
     Console.ForegroundColor <- origForegroundColor
 
@@ -96,12 +90,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 let fileContent = File.ReadAllText fileName
                 let sourceText = SourceText.ofString fileContent
 
-                Utils.typeCheckFile
-                    fcs
-                    (fun s -> printError "%s" s)
-                    option
-                    fileName
-                    (Utils.SourceOfSource.SourceText sourceText)
+                Utils.typeCheckFile fcs printError option fileName (Utils.SourceOfSource.SourceText sourceText)
                 |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
@@ -277,7 +266,7 @@ let main argv =
 
     let logger =
         { new Logger with
-            member _.Error msg = printError "%s" msg
+            member _.Error msg = printError msg
 
             member _.Verbose msg =
                 if verbose then
@@ -292,9 +281,9 @@ Consider adding <PackageReference Update="FSharp.Core" Version="<CorrectVersion>
 The correct version can be found over at https://www.nuget.org/packages/FSharp.Analyzers.SDK#dependencies-body-tab.
 """
 
-            printError2 msg
+            printError msg
         else
-            printError2 $"Could not load %s{assemblyName.Name} %A{assemblyName.Version}."
+            printError $"Could not load %s{assemblyName.Name} %A{assemblyName.Version}."
 
         exit 1
     )
@@ -318,7 +307,6 @@ The correct version can be found over at https://www.nuget.org/packages/FSharp.A
             | Some [] ->
                 printError
                     "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
-                    ""
 
                 None
             | Some projects ->
