@@ -273,7 +273,7 @@ let main argv =
                     printInfo "%s" msg
         }
 
-    AssemblyLoadContext.Default.add_Resolving (fun ctx assemblyName ->
+    AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
             null
         else
