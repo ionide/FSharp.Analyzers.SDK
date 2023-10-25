@@ -180,6 +180,15 @@ module Utils =
     let currentFSharpAnalyzersSDKVersion =
         Assembly.GetExecutingAssembly().GetName().Version
 
+    let currentFSharpCoreVersion =
+        let currentAssembly = Assembly.GetExecutingAssembly()
+        let references = currentAssembly.GetReferencedAssemblies()
+        let fc = references |> Array.tryFind (fun ra -> ra.Name = "FSharp.Core")
+
+        match fc with
+        | None -> failwith "FSharp.Core could not be found as a reference assembly of the SDK."
+        | Some fc -> fc.Version
+
     let createContext
         (checkProjectResults: FSharpCheckProjectResults)
         (fileName: string)

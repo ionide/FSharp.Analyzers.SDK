@@ -34,6 +34,13 @@ dotnet add package FSharp.Analyzers.SDK
 paket add FSharp.Analyzers.SDK
 ```
 
+The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https://www.nuget.org/packages/FSharp.Compiler.Service/), which has a strict dependency on `FSharp.Core`.  
+It is considered a best practice to use the correct `FSharp.Core` version and not the implicit one from the SDK.
+
+```xml
+<PackageReference Update="FSharp.Core" Version="7.0.400" />
+```
+
 ## First analyzer
 
 An [Analyzer<'TContext>](../reference/fsharp-analyzers-sdk-analyzer-1.html) is a function that takes a `Context` and returns a list of `Message`.  
