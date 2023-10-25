@@ -161,6 +161,7 @@ module Utils =
         | SourceText of ISourceText
 
     val currentFSharpAnalyzersSDKVersion: Version
+    val currentFSharpCoreVersion: Version
 
     val createFCS: documentSource: option<string -> Async<option<ISourceText>>> -> FSharpChecker
 

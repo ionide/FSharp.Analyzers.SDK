@@ -1,5 +1,6 @@
 ﻿open System
 open System.IO
+open System.Runtime.Loader
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
@@ -55,10 +56,16 @@ let printInfo (fmt: Printf.TextWriterFormat<'a>) : 'a =
     else
         unbox (mkKn typeof<'a>)
 
-let printError text arg =
+let printError (text: Printf.TextWriterFormat<('a -> unit)>) (arg: 'a) : unit =
     Console.ForegroundColor <- ConsoleColor.Red
     printf "Error : "
     printfn text arg
+    Console.ForegroundColor <- origForegroundColor
+
+let printError2 (text: string) : unit =
+    Console.ForegroundColor <- ConsoleColor.Red
+    printf "Error : "
+    Console.WriteLine(text)
     Console.ForegroundColor <- origForegroundColor
 
 let loadProject toolsPath projPath =
@@ -276,6 +283,21 @@ let main argv =
                 if verbose then
                     printInfo "%s" msg
         }
+
+    AssemblyLoadContext.Default.add_Resolving (fun ctx assemblyName ->
+        if assemblyName.Name = "FSharp.Core" then
+            let msg =
+                $"""Could not load FSharp.Core %A{assemblyName.Version}. The expected assembly version of FSharp.Core is %A{Utils.currentFSharpCoreVersion}.
+Consider adding <PackageReference Update="FSharp.Core" Version="<CorrectVersion>" /> to your .fsproj.
+The correct version can be found over at https://www.nuget.org/packages/FSharp.Analyzers.SDK#dependencies-body-tab.
+"""
+
+            printError2 msg
+        else
+            printError2 $"Could not load %s{assemblyName.Name} %A{assemblyName.Version}."
+
+        exit 1
+    )
 
     let client =
         Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
