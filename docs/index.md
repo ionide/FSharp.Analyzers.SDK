@@ -20,9 +20,13 @@ dotnet run --project src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --p
 
 You can also set up a run configuration of FSharp.Analyzers.Cli in your favorite IDE using similar arguments. This also allows you to debug FSharp.Analyzers.Cli.
 
+## Using Analyzers
+
+Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/Getting%20Started.html) guide for analyzer users!
+
 ## Writing Analyzers
 
-Checkout our [Getting Started](content/Getting%20Started.html) guide!
+Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/Getting%20Started%20Writing.html) guide for analyzer authors!
 
 ## How to contribute
 
