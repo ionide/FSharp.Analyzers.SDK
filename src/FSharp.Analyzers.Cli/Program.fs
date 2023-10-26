@@ -12,7 +12,7 @@ open Ionide.ProjInfo
 
 type Arguments =
     | Project of string list
-    | Analyzers_Path of string
+    | Analyzers_Path of string list
     | Fail_On_Warnings of string list
     | Ignore_Files of string list
     | Exclude_Analyzer of string list
@@ -252,15 +252,16 @@ let main argv =
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
 
-    let analyzersPath =
-        let path = results.GetResult(<@ Analyzers_Path @>, "packages/Analyzers")
+    let analyzersPaths =
+        results.GetResult(<@ Analyzers_Path @>, [ "packages/Analyzers" ])
+        |> List.map (fun path ->
+            if Path.IsPathRooted path then
+                path
+            else
+                Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
+        )
 
-        if Path.IsPathRooted path then
-            path
-        else
-            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
-
-    printInfo "Loading analyzers from %s" analyzersPath
+    printInfo "Loading analyzers from %s" (String.concat ", " analyzersPaths)
 
     let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
 
@@ -291,7 +292,12 @@ let main argv =
     let client =
         Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
 
-    let dlls, analyzers = client.LoadAnalyzers analyzersPath
+    let dlls, analyzers =
+        ((0, 0), analyzersPaths)
+        ||> List.fold (fun (accDlls, accAnalyzers) analyzersPath ->
+            let dlls, analyzers = client.LoadAnalyzers analyzersPath
+            (accDlls + dlls), (accAnalyzers + analyzers)
+        )
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
