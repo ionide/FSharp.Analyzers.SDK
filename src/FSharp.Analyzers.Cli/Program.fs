@@ -17,6 +17,7 @@ type Arguments =
     | Ignore_Files of string list
     | Exclude_Analyzer of string list
     | Report of string
+    | FSC_Args of string
     | Verbose
 
     interface IArgParserTemplate with
@@ -30,6 +31,7 @@ type Arguments =
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
+            | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
 
 let mutable verbose = false
 
@@ -71,16 +73,18 @@ let loadProject toolsPath projPath =
         return fcsPo
     }
 
-let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+let runProjectAux
+    (client: Client<CliAnalyzerAttribute, CliContext>)
+    (fsharpOptions: FSharpProjectOptions)
+    (ignoreFiles: Glob list)
+    =
     async {
-        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-        let! option = loadProject toolsPath path
-        let! checkProjectResults = fcs.ParseAndCheckProject(option)
+        let! checkProjectResults = fcs.ParseAndCheckProject(fsharpOptions)
 
         let! messagesPerAnalyzer =
-            option.SourceFiles
+            fsharpOptions.SourceFiles
             |> Array.filter (fun file ->
-                match globs |> List.tryFind (fun g -> g.IsMatch file) with
+                match ignoreFiles |> List.tryFind (fun g -> g.IsMatch file) with
                 | Some g ->
                     printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
                     false
@@ -90,7 +94,7 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                 let fileContent = File.ReadAllText fileName
                 let sourceText = SourceText.ofString fileContent
 
-                Utils.typeCheckFile fcs printError option fileName (Utils.SourceOfSource.SourceText sourceText)
+                Utils.typeCheckFile fcs printError fsharpOptions fileName (Utils.SourceOfSource.SourceText sourceText)
                 |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
@@ -106,6 +110,52 @@ let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj
                         yield! messages
                 ]
     }
+
+let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+    async {
+        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
+        let! option = loadProject toolsPath path
+        return! runProjectAux client option globs
+    }
+
+let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
+
+let isFSharpFile (file: string) =
+    Seq.exists (fun (ext: string) -> file.EndsWith ext) fsharpFiles
+
+let runFscArgs (client: Client<CliAnalyzerAttribute, CliContext>) (fscArgs: string) (globs: Glob list) =
+    let fscArgs = fscArgs.Split(';', StringSplitOptions.RemoveEmptyEntries)
+
+    let sourceFiles =
+        fscArgs
+        |> Array.choose (fun (argument: string) ->
+            // We make an absolute path because the sarif report cannot deal properly with relative path.
+            let path = Path.Combine(Directory.GetCurrentDirectory(), argument)
+
+            if not (isFSharpFile path) || not (File.Exists path) then
+                None
+            else
+                Some path
+        )
+
+    let otherOptions = fscArgs |> Array.filter (fun line -> not (isFSharpFile line))
+
+    let projectOptions =
+        {
+            ProjectFileName = "Project"
+            ProjectId = None
+            SourceFiles = sourceFiles
+            OtherOptions = otherOptions
+            ReferencedProjects = [||]
+            IsIncompleteTypeCheckEnvironment = false
+            UseScriptResolutionRules = false
+            LoadTime = DateTime.Now
+            UnresolvedReferences = None
+            OriginalLoadReferences = []
+            Stamp = None
+        }
+
+    runProjectAux client projectOptions globs
 
 let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
     if verbose then
@@ -219,7 +269,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
 
         sarifLogger.Dispose()
     with ex ->
-        let details = if not verbose then "" else $" %s{ex.Message}"
+        let details = if not verbose then "" else $" %A{ex}"
         printfn $"Could not write sarif to %s{report}%s{details}"
 
 let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
@@ -302,20 +352,25 @@ let main argv =
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
     let projOpts = results.TryGetResult <@ Project @>
+    let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
 
     let results =
         if analyzers = 0 then
             Some []
         else
-            match projOpts with
-            | None
-            | Some [] ->
+            match projOpts, fscArgs with
+            | None, None
+            | Some [], None ->
                 printError
                     "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
 
                 None
-            | Some projects ->
+            | Some _, Some _ ->
+                printError "`--project` and `--fsc-args` cannot be combined."
+                exit 1
+            | None, Some fscArgs -> runFscArgs client fscArgs ignoreFiles |> Async.RunSynchronously
+            | Some projects, None ->
                 let runProj (proj: string) =
                     async {
                         let project =
