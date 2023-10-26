@@ -111,14 +111,41 @@ dotnet tool install --global fsharp-analyzers
 fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/bin/Release --verbose
 ```
 
-### Packaging and Distribution
+## Packaging and Distribution
 
 Since analyzers are just .NET core libraries, you can distribute them to the nuget registry just like you would with a normal .NET package.  
+
+In the Roslyn world, analyzers are stored in a special folder inside your nuget package. We recommend you follow this structure by adding some additional MSBuild properties:
+
+```xml
+<PropertyGroup>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <NoPackageAnalysis>true</NoPackageAnalysis>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_AddAnalyzersToOutput</TargetsForTfmSpecificContentInPackage>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+</PropertyGroup>
+
+<Target Name="_AddAnalyzersToOutput">
+    <ItemGroup>
+        <TfmSpecificPackageFile Include="$(OutputPath)\$(AssemblyName).dll" PackagePath="analyzers/dotnet/fs" />
+    </ItemGroup>
+</Target>
+```
+
+`SuppressDependenciesWhenPacking` will prevent NuGet from taking your analyzer dependencies into account when it is being installed in a project. This most common use-case here would be `FSharp.Core`. 
+
+`TargetsForTfmSpecificContentInPackage` will make sure the `_AddAnalyzersToOutput` runs to copy the assembly into the `analyzers/dotnet/fs` folder.
+
+`IncludeBuildOutput` will ensure your `*.nupkg` doesn't have a `lib` folder.
+
 Simply run `dotnet pack --configuration Release` against the analyzer project to get a nuget package and publish it with
 
 ```shell
 dotnet nuget push {NugetPackageFullPath} -s nuget.org -k {NugetApiKey}
 ```
+
+### Third-party dependencies
 
 However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies have to be right *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net6.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
 
