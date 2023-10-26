@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * [Use fixed version of FCS and FSharp.Core](https://github.com/ionide/FSharp.Analyzers.SDK/pull/127) (thanks @nojaf!)
+* [Allow to specify multiple analyzers-paths](https://github.com/ionide/FSharp.Analyzers.SDK/pull/128) (thanks @nojaf!)
 
 ## [0.16.0] - 2023-10-16
 
