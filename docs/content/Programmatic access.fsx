@@ -2,7 +2,7 @@
 ---
 category: end-users
 categoryindex: 1
-index: 3
+index: 4
 ---
 
 # Programmatically running an analyzer
