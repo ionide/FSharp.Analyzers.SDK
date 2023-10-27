@@ -105,7 +105,7 @@ This is effectively the same as adding a target to each `*proj` file which exist
 
 You may need to adjust the `Command` to be compatible with your specific analyzer. Think about how you want warnings to be treated.
 
-As we don't want to list all projects of the solution explicitly when analyzing the solution, we create a second cutom MSBuild target that calls the project-specific target for all projects.  
+As we don't want to list all projects of the solution explicitly when analyzing the solution, we create a second custom MSBuild target that calls the project-specific target for all projects.  
 Add the following custom target to the [Directory.Solution.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-solution-build?view=vs-2022) file to be able to invoke analysis of the whole solution in one simple command:
 
 ```xml
