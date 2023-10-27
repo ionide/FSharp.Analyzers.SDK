@@ -2,7 +2,7 @@
 ---
 category: end-users
 categoryindex: 1
-index: 2
+index: 3
 ---
 
 # Writing an analyzer for both console and editor

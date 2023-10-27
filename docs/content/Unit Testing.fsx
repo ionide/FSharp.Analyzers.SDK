@@ -2,7 +2,7 @@
 ---
 category: end-users
 categoryindex: 1
-index: 4
+index: 5
 ---
 
 # Unit testing an analyzer
