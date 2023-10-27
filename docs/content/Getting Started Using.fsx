@@ -82,11 +82,9 @@ Add the following custom target to the [Directory.Solution.targets](https://lear
     </ItemGroup>
 
     <Target Name="AnalyzeSolution">
-        <Exec Command="dotnet build -c Release $(SolutionFileName)" />
         <MSBuild
                 Projects="@(ProjectsToAnalyze)"
-                Targets="AnalyzeProject"
-                Properties="DesignTimeBuild=True;Configuration=Release;ProvideCommandLineArgs=True;SkipCompilerExecution=True" />
+                Targets="AnalyzeProject" />
     </Target>
 
 </Project>
@@ -128,7 +126,50 @@ dotnet msbuild /t:AnalyzeSolution
 If all this seems a bit complex to you, let us explain some inner details to give you a better understanding:  
 The way the analyzers work is that we will programmatically type-check a project and process the results with our analyzers. In order to do this programmatically we need to construct the [FSharpProjectOptions](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpprojectoptions.html).  
 This is essentially a type that represents all the fsharp compiler arguments. When using --project, we will use [ProjInfo](https://github.com/ionide/proj-info) to invoke a set of MSBuild targets in the project to perform a design-time build.  
-A design-time build is basically an empty invocation of a build. It won't produce assemblies but will have constructed the correct arguments to theoretically invoke the compiler.
+A design-time build is basically an empty invocation of a build. It won't produce assemblies but will have constructed the correct arguments to theoretically invoke the compiler.  
+
+There's an alternative way to do this. Instead of using the `--project` argument, it's possible to use the `--fsc-args` argument to let the CLI tool construct the needed `FSharpProjectOptions`.  
+This also uses MSBuild, but in a more efficient way to provide us with the needed information.
+Here's how the `Directory.Solution.targets` file would look like to make the use of `--fsc-args` possible:
+
+```xml
+<Project>
+
+    <ItemGroup>
+        <ProjectsToAnalyze Include="src\**\*.fsproj" />
+    </ItemGroup>
+
+    <Target Name="AnalyzeSolution">
+        <Exec Command="dotnet build -c Release $(SolutionFileName)" />
+        <MSBuild
+                Projects="@(ProjectsToAnalyze)"
+                Targets="AnalyzeProject"
+                Properties="DesignTimeBuild=True;Configuration=Release;ProvideCommandLineArgs=True;SkipCompilerExecution=True" />
+    </Target>
+
+</Project>
+```
+
+And here's the `Directory.Build.targets`:
+```xml
+<Project>
+
+    <Target
+        Name="AnalyzeProject" 
+        DependsOnTargets="Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
+        
+        <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)" />
+        <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
+        <Exec
+            ContinueOnError="true"
+            Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)\analyzers\dotnet\fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 GRA-STRING-002 GRA-STRING-003 GRA-UNIONCASE-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
+            <Output TaskParameter="ExitCode" PropertyName="LastExitCode" />
+        </Exec>
+        <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
+
+    </Target>
+
+</Project>
 *)
 
 (**
