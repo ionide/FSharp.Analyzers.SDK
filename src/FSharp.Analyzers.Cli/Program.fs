@@ -11,7 +11,7 @@ open Microsoft.CodeAnalysis.Sarif.Writers
 open Ionide.ProjInfo
 
 type Arguments =
-    | [<Unique>] Project of string list
+    | Project of string list
     | [<Unique>] Analyzers_Path of string list
     | [<Unique>] Fail_On_Warnings of string list
     | [<Unique>] Treat_As_Info of string list
@@ -446,7 +446,7 @@ let main argv =
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
-    let projOpts = results.TryGetResult <@ Project @>
+    let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
 
@@ -455,17 +455,15 @@ let main argv =
             Some []
         else
             match projOpts, fscArgs with
-            | None, None
-            | Some [], None ->
-                printError
-                    "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory.%s"
+            | [], None ->
+                printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory."
 
                 None
-            | Some _, Some _ ->
+            | _ :: _, Some _ ->
                 printError "`--project` and `--fsc-args` cannot be combined."
                 exit 1
-            | None, Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
-            | Some projects, None ->
+            | [], Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
+            | projects, None ->
                 let runProj (proj: string) =
                     async {
                         let project =
