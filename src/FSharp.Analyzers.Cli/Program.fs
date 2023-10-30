@@ -11,14 +11,18 @@ open Microsoft.CodeAnalysis.Sarif.Writers
 open Ionide.ProjInfo
 
 type Arguments =
-    | Project of string list
-    | Analyzers_Path of string list
-    | Fail_On_Warnings of string list
-    | Ignore_Files of string list
-    | Exclude_Analyzer of string list
-    | Report of string
-    | FSC_Args of string
-    | Verbose
+    | [<Unique>] Project of string list
+    | [<Unique>] Analyzers_Path of string list
+    | [<Unique>] Fail_On_Warnings of string list
+    | [<Unique>] Treat_As_Info of string list
+    | [<Unique>] Treat_As_Hint of string list
+    | [<Unique>] Treat_As_Warning of string list
+    | [<Unique>] Treat_As_Error of string list
+    | [<Unique>] Ignore_Files of string list
+    | [<Unique>] Exclude_Analyzer of string list
+    | [<Unique>] Report of string
+    | [<Unique>] FSC_Args of string
+    | [<Unique>] Verbose
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -27,11 +31,67 @@ type Arguments =
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
             | Fail_On_Warnings _ ->
                 "List of analyzer codes that should trigger tool failures in the presence of warnings."
+            | Treat_As_Info _ ->
+                "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
+            | Treat_As_Hint _ ->
+                "List of analyzer codes that should be treated as severity Hint by the tool. Regardless of the original severity."
+            | Treat_As_Warning _ ->
+                "List of analyzer codes that should be treated as severity Warning by the tool. Regardless of the original severity."
+            | Treat_As_Error _ ->
+                "List of analyzer codes that should be treated as severity Error by the tool. Regardless of the original severity."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
+
+type SeverityMappings =
+    {
+        FailOnWarnings: string list
+        TreatAsInfo: string list
+        TreatAsHint: string list
+        TreatAsWarning: string list
+        TreatAsError: string list
+    }
+
+    member x.IsValid() =
+        let allCodes =
+            [
+                x.FailOnWarnings
+                x.TreatAsInfo
+                x.TreatAsHint
+                x.TreatAsWarning
+                x.TreatAsError
+            ]
+            |> List.concat
+
+        let distinctLength = allCodes |> List.distinct |> List.length
+        allCodes.Length = distinctLength
+
+let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK.AnalyzerMessage) =
+    let targetSeverity =
+        if mappings.TreatAsInfo |> List.contains msg.Message.Code then
+            Info
+        else if mappings.TreatAsHint |> List.contains msg.Message.Code then
+            Hint
+        else if mappings.TreatAsWarning |> List.contains msg.Message.Code then
+            Warning
+        else if mappings.TreatAsError |> List.contains msg.Message.Code then
+            Error
+        else if
+            mappings.FailOnWarnings |> List.contains msg.Message.Code
+            && msg.Message.Severity = Warning
+        then
+            Error
+        else
+            msg.Message.Severity
+
+    { msg with
+        Message =
+            { msg.Message with
+                Severity = targetSeverity
+            }
+    }
 
 let mutable verbose = false
 
@@ -77,6 +137,7 @@ let runProjectAux
     (client: Client<CliAnalyzerAttribute, CliContext>)
     (fsharpOptions: FSharpProjectOptions)
     (ignoreFiles: Glob list)
+    (mappings: SeverityMappings)
     =
     async {
         let! checkProjectResults = fcs.ParseAndCheckProject(fsharpOptions)
@@ -107,15 +168,22 @@ let runProjectAux
             Some
                 [
                     for messages in messagesPerAnalyzer do
-                        yield! messages
+                        let mappedMessages = messages |> List.map (mapMessageToSeverity mappings)
+                        yield! mappedMessages
                 ]
     }
 
-let runProject (client: Client<CliAnalyzerAttribute, CliContext>) toolsPath proj (globs: Glob list) =
+let runProject
+    (client: Client<CliAnalyzerAttribute, CliContext>)
+    toolsPath
+    proj
+    (globs: Glob list)
+    (mappings: SeverityMappings)
+    =
     async {
         let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
         let! option = loadProject toolsPath path
-        return! runProjectAux client option globs
+        return! runProjectAux client option globs mappings
     }
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
@@ -123,7 +191,12 @@ let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 let isFSharpFile (file: string) =
     Seq.exists (fun (ext: string) -> file.EndsWith ext) fsharpFiles
 
-let runFscArgs (client: Client<CliAnalyzerAttribute, CliContext>) (fscArgs: string) (globs: Glob list) =
+let runFscArgs
+    (client: Client<CliAnalyzerAttribute, CliContext>)
+    (fscArgs: string)
+    (globs: Glob list)
+    (mappings: SeverityMappings)
+    =
     let fscArgs = fscArgs.Split(';', StringSplitOptions.RemoveEmptyEntries)
 
     let sourceFiles =
@@ -155,9 +228,9 @@ let runFscArgs (client: Client<CliAnalyzerAttribute, CliContext>) (fscArgs: stri
             Stamp = None
         }
 
-    runProjectAux client projectOptions globs
+    runProjectAux client projectOptions globs mappings
 
-let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
+let printMessages (msgs: AnalyzerMessage list) =
     if verbose then
         printfn ""
 
@@ -171,7 +244,6 @@ let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
         let color =
             match m.Severity with
             | Error -> ConsoleColor.Red
-            | Warning when failOnWarnings |> List.contains m.Code -> ConsoleColor.Red
             | Warning -> ConsoleColor.DarkYellow
             | Info -> ConsoleColor.Blue
             | Hint -> ConsoleColor.Cyan
@@ -190,7 +262,7 @@ let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
         Console.ForegroundColor <- origForegroundColor
     )
 
-    msgs
+    ()
 
 let writeReport (results: AnalyzerMessage list option) (report: string) =
     try
@@ -278,7 +350,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
         let details = if not verbose then "" else $" %A{ex}"
         printfn $"Could not write sarif to %s{report}%s{details}"
 
-let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
+let calculateExitCode (msgs: AnalyzerMessage list option) : int =
     match msgs with
     | None -> -1
     | Some msgs ->
@@ -288,7 +360,6 @@ let calculateExitCode failOnWarnings (msgs: AnalyzerMessage list option) : int =
                 let message = analyzerMessage.Message
 
                 message.Severity = Error
-                || (message.Severity = Warning && failOnWarnings |> List.contains message.Code)
             )
 
         if check then -2 else 0
@@ -301,8 +372,26 @@ let main argv =
     verbose <- results.Contains <@ Verbose @>
     printInfo "Running in verbose mode"
 
-    let failOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
-    printInfo "Fail On Warnings: [%s]" (failOnWarnings |> String.concat ", ")
+    let severityMapping =
+        {
+            FailOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
+            TreatAsHint = results.GetResult(<@ Treat_As_Hint @>, [])
+            TreatAsInfo = results.GetResult(<@ Treat_As_Info @>, [])
+            TreatAsWarning = results.GetResult(<@ Treat_As_Warning @>, [])
+            TreatAsError = results.GetResult(<@ Treat_As_Error @>, [])
+        }
+
+    printInfo "Fail On Warnings: [%s]" (severityMapping.FailOnWarnings |> String.concat ", ")
+    printInfo "Treat as Hints: [%s]" (severityMapping.TreatAsHint |> String.concat ", ")
+    printInfo "Treat as Info: [%s]" (severityMapping.TreatAsInfo |> String.concat ", ")
+    printInfo "Treat as Warning: [%s]" (severityMapping.TreatAsWarning |> String.concat ", ")
+    printInfo "Treat as Error: [%s]" (severityMapping.TreatAsError |> String.concat ", ")
+
+    if not (severityMapping.IsValid()) then
+        printError
+            "An analyzer code may only be listed once in the <fail-on-warnings> and <treat-as-severity> arguments."
+
+        exit 1
 
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
@@ -375,7 +464,7 @@ let main argv =
             | Some _, Some _ ->
                 printError "`--project` and `--fsc-args` cannot be combined."
                 exit 1
-            | None, Some fscArgs -> runFscArgs client fscArgs ignoreFiles |> Async.RunSynchronously
+            | None, Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
             | Some projects, None ->
                 let runProj (proj: string) =
                     async {
@@ -385,8 +474,8 @@ let main argv =
                             else
                                 Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
 
-                        let! results = runProject client toolsPath project ignoreFiles
-                        return results |> Option.map (printMessages failOnWarnings)
+                        let! results = runProject client toolsPath project ignoreFiles severityMapping
+                        return results
                     }
 
                 projects
@@ -397,6 +486,7 @@ let main argv =
                 |> List.concat
                 |> Some
 
+    results |> Option.iter printMessages
     report |> Option.iter (writeReport results)
 
-    calculateExitCode failOnWarnings results
+    calculateExitCode results
