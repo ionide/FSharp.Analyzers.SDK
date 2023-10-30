@@ -194,6 +194,12 @@ let printMessages failOnWarnings (msgs: AnalyzerMessage list) =
 
 let writeReport (results: AnalyzerMessage list option) (report: string) =
     try
+        // Construct full path to ensure path separators are normalized.
+        let report = Path.GetFullPath report
+        // Ensure the parent directory exists
+        let reportFile = FileInfo(report)
+        reportFile.Directory.Create()
+
         let driver = ToolComponent()
         driver.Name <- "Ionide.Analyzers.Cli"
         driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
