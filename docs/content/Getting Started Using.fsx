@@ -64,6 +64,14 @@ At last, you can run the analyzer from the project folder:
 dotnet msbuild /t:AnalyzeProject
 ```
 
+In case the output tells you there were no analyzers found and you have multiple targets defined in your `TargetFrameworks` property, you might have run into a situation in which there are multiple `$(PkgG-Research_FSharp_Analyzers)` variables and MSBuild doesn't know which one to use.  
+It should help to run the target with a defined target framework. Choosing the lowest is likely the safest thing to do.  
+For example, if you target `net6.0;net7.0`, run the target with:
+
+```shell
+dotnet msbuild /t:AnalyzeProject /p:TargetFramework=net6.0
+```
+
 ## Using analyzers in a solution
 
 Adding the custom target from above to all `.fsproj` files of a solution doesn't scale very well.  
