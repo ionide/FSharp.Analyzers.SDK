@@ -81,15 +81,17 @@ This adds the package reference to all `.fsproj` files that are in a subfolder o
 </ItemGroup>
 ```
 
-Likewise we add the following custom target to the [Directory.Build.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022) file.  
+Likewise we add the following custom target to the [Directory.Build.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022) file.
 This is effectively the same as adding a target to each `*proj` file which exists in a subfolder.
 ```xml
 <Project>
 
+    <!-- Contract: only one TFM.
+         This actually calls the analyzer CLI -->
     <Target
-        Name="AnalyzeProject">
-        
-        <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)" />
+        Name="_AnalyzeProjectInner">
+
+        <Message Importance="Normal" Text="fsc arguments: @(FscCommandLineArgs)" />
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
             ContinueOnError="true"
@@ -98,6 +100,29 @@ This is effectively the same as adding a target to each `*proj` file which exist
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
 
+    </Target>
+
+    <Target
+        Name="AnalyzeProject" >
+
+        <!-- TFMs but no TF -> multitarget, analyzing for each TFM -->
+        <ItemGroup Condition="'$(TargetFrameworks)' != ''
+                            and '$(TargetFramework)' == ''" >
+            <_TFMItems Include="$(TargetFrameworks)" />
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)"
+                AdditionalProperties="TargetFramework=%(_TFMItems.Identity);"
+                UndefineProperties="TargetFrameworks" />
+        </ItemGroup>
+
+        <!-- TF but no TFMs -> single analysis -->
+        <ItemGroup Condition="'$(TargetFramework)' != ''">
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)" />
+        </ItemGroup>
+
+        <!-- Now fire off those analyses -->
+        <MSBuild Projects="@(_SingleTfmAnalysis)"
+            Targets="_AnalyzeProjectInner"
+            BuildInParallel="true" />
     </Target>
 
 </Project>
@@ -154,6 +179,7 @@ Here's how the `Directory.Solution.targets` file would look like to make the use
         <MSBuild
                 Projects="@(ProjectsToAnalyze)"
                 Targets="AnalyzeProject"
+                BuildInParallel="true"
                 Properties="DesignTimeBuild=True;Configuration=Release;ProvideCommandLineArgs=True;SkipCompilerExecution=True" />
     </Target>
 
@@ -163,12 +189,11 @@ Here's how the `Directory.Solution.targets` file would look like to make the use
 And here's the `Directory.Build.targets`:
 ```xml
 <Project>
-
-    <Target
-        Name="AnalyzeProject" 
+    <!-- Contract: only one TFM.
+         This actually calls the analyzer CLI -->
+    <Target Name="_AnalyzeProjectInner"
         DependsOnTargets="Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
-        
-        <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)" />
+        <Message Importance="Normal" Text="fsc arguments: @(FscCommandLineArgs)" />
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
             ContinueOnError="true"
@@ -176,7 +201,29 @@ And here's the `Directory.Build.targets`:
             <Output TaskParameter="ExitCode" PropertyName="LastExitCode" />
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
+    </Target>
 
+    <Target
+        Name="AnalyzeProject" >
+
+        <!-- TFMs but no TF -> multitarget, analyzing for each TFM -->
+        <ItemGroup Condition="'$(TargetFrameworks)' != ''
+                            and '$(TargetFramework)' == ''" >
+            <_TFMItems Include="$(TargetFrameworks)" />
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)"
+                AdditionalProperties="TargetFramework=%(_TFMItems.Identity);"
+                UndefineProperties="TargetFrameworks" />
+        </ItemGroup>
+
+        <!-- TF but no TFMs -> single analysis -->
+        <ItemGroup Condition="'$(TargetFramework)' != ''">
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)" />
+        </ItemGroup>
+
+        <!-- Now fire off those analyses -->
+        <MSBuild Projects="@(_SingleTfmAnalysis)"
+            Targets="_AnalyzeProjectInner"
+            BuildInParallel="true" />
     </Target>
 
 </Project>
