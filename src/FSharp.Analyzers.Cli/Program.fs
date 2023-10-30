@@ -12,7 +12,7 @@ open Ionide.ProjInfo
 
 type Arguments =
     | Project of string list
-    | [<Unique>] Analyzers_Path of string list
+    | Analyzers_Path of string list
     | [<Unique>] Fail_On_Warnings of string list
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
@@ -398,7 +398,11 @@ let main argv =
     let ignoreFiles = ignoreFiles |> List.map Glob
 
     let analyzersPaths =
-        results.GetResult(<@ Analyzers_Path @>, [ "packages/Analyzers" ])
+        results.GetResults(<@ Analyzers_Path @>)
+        |> List.concat
+        |> function
+            | [] -> [ "packages/Analyzers" ]
+            | paths -> paths
         |> List.map (fun path ->
             if Path.IsPathRooted path then
                 path
