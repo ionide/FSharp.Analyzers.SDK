@@ -186,7 +186,10 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 |> Array.filter (fun (name, analyzerAssembly) ->
                     let version = findFSharpAnalyzerSDKVersion analyzerAssembly
 
-                    if version = Utils.currentFSharpAnalyzersSDKVersion then
+                    if
+                        version.Major = Utils.currentFSharpAnalyzersSDKVersion.Major
+                        && version.Minor = Utils.currentFSharpAnalyzersSDKVersion.Minor
+                    then
                         true
                     else
                         logger.Error
