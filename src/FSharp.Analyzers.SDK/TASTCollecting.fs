@@ -1,16 +1,18 @@
 namespace FSharp.Analyzers.SDK
 
+open FSharp.Compiler.Symbols
+open FSharp.Compiler.Text
+open FSharp.Compiler.Symbols.FSharpExprPatterns
+
 module TASTCollecting =
 
-    open FSharp.Compiler.Symbols
-    open FSharp.Compiler.Text
-    open FSharp.Compiler.Symbols.FSharpExprPatterns
+    type TypedTreeCollectorBase() =
+        abstract WalkCall: range -> FSharpMemberOrFunctionOrValue -> FSharpExpr list -> unit
+        default _.WalkCall _ _ _ = ()
+        abstract WalkNewRecord: range -> FSharpType -> unit
+        default _.WalkNewRecord _ _ = ()
 
-    type Handler =
-        | CallHandler of (range -> FSharpMemberOrFunctionOrValue -> FSharpExpr list -> unit)
-        | NewRecordHandler of (range -> FSharpType -> unit)
-
-    let rec visitExpr (handler: Handler) (e: FSharpExpr) =
+    let rec visitExpr (handler: TypedTreeCollectorBase) (e: FSharpExpr) =
 
         match e with
         | AddressOf lvalueExpr -> visitExpr handler lvalueExpr
@@ -21,10 +23,7 @@ module TASTCollecting =
             visitExpr handler funcExpr
             visitExprs handler argExprs
         | Call(objExprOpt, memberOrFunc, _typeArgs1, _typeArgs2, argExprs) ->
-            match handler with
-            | CallHandler f -> f e.Range memberOrFunc argExprs
-            | _ -> ()
-
+            handler.WalkCall e.Range memberOrFunc argExprs
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
         | Coerce(_targetType, inpExpr) -> visitExpr handler inpExpr
@@ -53,10 +52,7 @@ module TASTCollecting =
         | NewDelegate(_delegateType, delegateBodyExpr) -> visitExpr handler delegateBodyExpr
         | NewObject(_objType, _typeArgs, argExprs) -> visitExprs handler argExprs
         | NewRecord(recordType, argExprs) ->
-            match handler with
-            | NewRecordHandler f -> f e.Range recordType
-            | _ -> ()
-
+            handler.WalkNewRecord e.Range recordType
             visitExprs handler argExprs
         | NewTuple(_tupleType, argExprs) -> visitExprs handler argExprs
         | NewUnionCase(_unionType, _unionCase, argExprs) -> visitExprs handler argExprs
@@ -136,3 +132,6 @@ module TASTCollecting =
                 with ex ->
                     printfn $"unhandled expression at {e.Range.FileName}:{e.Range.ToString()}"
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
+
+    let walkTast (walker: TypedTreeCollectorBase) (decl: FSharpImplementationFileDeclaration) : unit =
+        visitDeclaration walker decl
