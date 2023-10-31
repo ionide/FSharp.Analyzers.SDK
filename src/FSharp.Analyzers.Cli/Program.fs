@@ -13,7 +13,6 @@ open Ionide.ProjInfo
 type Arguments =
     | Project of string list
     | Analyzers_Path of string list
-    | [<Unique>] Fail_On_Warnings of string list
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
@@ -29,8 +28,6 @@ type Arguments =
             match s with
             | Project _ -> "Path to your .fsproj file."
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
-            | Fail_On_Warnings _ ->
-                "List of analyzer codes that should trigger tool failures in the presence of warnings."
             | Treat_As_Info _ ->
                 "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
             | Treat_As_Hint _ ->
@@ -47,7 +44,6 @@ type Arguments =
 
 type SeverityMappings =
     {
-        FailOnWarnings: Set<string>
         TreatAsInfo: Set<string>
         TreatAsHint: Set<string>
         TreatAsWarning: Set<string>
@@ -55,18 +51,11 @@ type SeverityMappings =
     }
 
     member x.IsValid() =
-        let allCodes =
-            [
-                x.FailOnWarnings
-                x.TreatAsInfo
-                x.TreatAsHint
-                x.TreatAsWarning
-                x.TreatAsError
-            ]
+        let allCodes = [ x.TreatAsInfo; x.TreatAsHint; x.TreatAsWarning; x.TreatAsError ]
 
-        let distinctLength = allCodes |> Set.unionMany |> Set.count
-        let summedLength = allCodes |> List.sumBy Set.count
-        summedLength = distinctLength
+        let unionCount = allCodes |> Set.unionMany |> Set.count
+        let summedCount = allCodes |> List.sumBy Set.count
+        summedCount = unionCount
 
 let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK.AnalyzerMessage) =
     let targetSeverity =
@@ -77,11 +66,6 @@ let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK
         else if mappings.TreatAsWarning |> Set.contains msg.Message.Code then
             Warning
         else if mappings.TreatAsError |> Set.contains msg.Message.Code then
-            Error
-        else if
-            mappings.FailOnWarnings |> Set.contains msg.Message.Code
-            && msg.Message.Severity = Warning
-        then
             Error
         else
             msg.Message.Severity
@@ -374,22 +358,19 @@ let main argv =
 
     let severityMapping =
         {
-            FailOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, []) |> Set.ofList
             TreatAsHint = results.GetResult(<@ Treat_As_Hint @>, []) |> Set.ofList
             TreatAsInfo = results.GetResult(<@ Treat_As_Info @>, []) |> Set.ofList
             TreatAsWarning = results.GetResult(<@ Treat_As_Warning @>, []) |> Set.ofList
             TreatAsError = results.GetResult(<@ Treat_As_Error @>, []) |> Set.ofList
         }
 
-    printInfo "Fail On Warnings: [%s]" (severityMapping.FailOnWarnings |> String.concat ", ")
     printInfo "Treat as Hints: [%s]" (severityMapping.TreatAsHint |> String.concat ", ")
     printInfo "Treat as Info: [%s]" (severityMapping.TreatAsInfo |> String.concat ", ")
     printInfo "Treat as Warning: [%s]" (severityMapping.TreatAsWarning |> String.concat ", ")
     printInfo "Treat as Error: [%s]" (severityMapping.TreatAsError |> String.concat ", ")
 
     if not (severityMapping.IsValid()) then
-        printError
-            "An analyzer code may only be listed once in the <fail-on-warnings> and <treat-as-severity> arguments."
+        printError "An analyzer code may only be listed once in the <treat-as-severity> arguments."
 
         exit 1
 
