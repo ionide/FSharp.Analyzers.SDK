@@ -29,5 +29,10 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
   </PropertyGroup>
+  
+  <PropertyGroup>
+    <FsDocsLogoSource>images/logo.png</FsDocsLogoSource>
+    <FsDocsFaviconSource>images/favicon.png</FsDocsFaviconSource>
+  </PropertyGroup>
 
 </Project>
