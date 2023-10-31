@@ -1,3 +1,30 @@
 <Project>
-    
+    <Import Project="../build/FSharp.Analyzers.Build.targets"/>
+
+    <Target Name="AnalyzeFSharpProject">
+        <!-- TFMs but no TF -> multitarget, analyzing for each TFM -->
+        <ItemGroup>
+            <_TFMItems Include="$(TargetFrameworks)"/>
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)"
+                                AdditionalProperties="TargetFramework=%(_TFMItems.Identity);"
+                                UndefineProperties="TargetFrameworks"/>
+        </ItemGroup>
+        <MSBuild Projects="@(_SingleTfmAnalysis)"
+                 Targets="_AnalyzeFSharpProject"
+                 BuildInParallel="true"/>
+    </Target>
+
+    <Target Name="AnalyzeFSharpProjectUsingFscArgs">
+        <!-- TFMs but no TF -> multitarget, analyzing for each TFM -->
+        <ItemGroup>
+            <_TFMItems Include="$(TargetFrameworks)"/>
+            <_SingleTfmAnalysis Include="$(MSBuildProjectFullPath)"
+                                AdditionalProperties="TargetFramework=%(_TFMItems.Identity);"
+                                UndefineProperties="TargetFrameworks"/>
+        </ItemGroup>
+        <MSBuild Projects="@(_SingleTfmAnalysis)"
+                 Targets="_AnalyzeFSharpProjectUsingFscArgs"
+                 Properties="DesignTimeBuild=True;ProvideCommandLineArgs=True;SkipCompilerExecution=True"
+                 BuildInParallel="true"/>
+    </Target>
 </Project>

@@ -1,25 +1,29 @@
 <Project>
-    <Target Name="AnalyzeFSharpProject">
+    <Target Name="_AnalyzeFSharpProject">
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
                 ContinueOnError="true"
-                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzerOtherFlags)">
+                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzersOtherFlags)">
             <Output TaskParameter="ExitCode" PropertyName="LastExitCode"/>
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)"/>
     </Target>
 
+    <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
+
     <Target
-            Name="AnalyzeFSharpProjectUsingFscArgs"
+            Name="_AnalyzeFSharpProjectUsingFscArgs"
             DependsOnTargets="Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
 
         <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)"/>
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
                 ContinueOnError="true"
-                Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; $(FSharpAnalyzerOtherFlags)">
+                Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; $(FSharpAnalyzersOtherFlags)">
             <Output TaskParameter="ExitCode" PropertyName="LastExitCode"/>
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)"/>
     </Target>
+    
+    <Target Name="AnalyzeFSharpProjectUsingFscArgs" DependsOnTargets="_AnalyzeFSharpProjectUsingFscArgs" />
 </Project>
