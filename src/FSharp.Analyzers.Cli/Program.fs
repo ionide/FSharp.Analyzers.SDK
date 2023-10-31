@@ -47,11 +47,11 @@ type Arguments =
 
 type SeverityMappings =
     {
-        FailOnWarnings: string list
-        TreatAsInfo: string list
-        TreatAsHint: string list
-        TreatAsWarning: string list
-        TreatAsError: string list
+        FailOnWarnings: Set<string>
+        TreatAsInfo: Set<string>
+        TreatAsHint: Set<string>
+        TreatAsWarning: Set<string>
+        TreatAsError: Set<string>
     }
 
     member x.IsValid() =
@@ -63,23 +63,23 @@ type SeverityMappings =
                 x.TreatAsWarning
                 x.TreatAsError
             ]
-            |> List.concat
 
-        let distinctLength = allCodes |> List.distinct |> List.length
-        allCodes.Length = distinctLength
+        let distinctLength = allCodes |> Set.unionMany |> Set.count
+        let summedLength = allCodes |> List.sumBy Set.count
+        summedLength = distinctLength
 
 let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK.AnalyzerMessage) =
     let targetSeverity =
-        if mappings.TreatAsInfo |> List.contains msg.Message.Code then
+        if mappings.TreatAsInfo |> Set.contains msg.Message.Code then
             Info
-        else if mappings.TreatAsHint |> List.contains msg.Message.Code then
+        else if mappings.TreatAsHint |> Set.contains msg.Message.Code then
             Hint
-        else if mappings.TreatAsWarning |> List.contains msg.Message.Code then
+        else if mappings.TreatAsWarning |> Set.contains msg.Message.Code then
             Warning
-        else if mappings.TreatAsError |> List.contains msg.Message.Code then
+        else if mappings.TreatAsError |> Set.contains msg.Message.Code then
             Error
         else if
-            mappings.FailOnWarnings |> List.contains msg.Message.Code
+            mappings.FailOnWarnings |> Set.contains msg.Message.Code
             && msg.Message.Severity = Warning
         then
             Error
@@ -374,11 +374,11 @@ let main argv =
 
     let severityMapping =
         {
-            FailOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, [])
-            TreatAsHint = results.GetResult(<@ Treat_As_Hint @>, [])
-            TreatAsInfo = results.GetResult(<@ Treat_As_Info @>, [])
-            TreatAsWarning = results.GetResult(<@ Treat_As_Warning @>, [])
-            TreatAsError = results.GetResult(<@ Treat_As_Error @>, [])
+            FailOnWarnings = results.GetResult(<@ Fail_On_Warnings @>, []) |> Set.ofList
+            TreatAsHint = results.GetResult(<@ Treat_As_Hint @>, []) |> Set.ofList
+            TreatAsInfo = results.GetResult(<@ Treat_As_Info @>, []) |> Set.ofList
+            TreatAsWarning = results.GetResult(<@ Treat_As_Warning @>, []) |> Set.ofList
+            TreatAsError = results.GetResult(<@ Treat_As_Error @>, []) |> Set.ofList
         }
 
     printInfo "Fail On Warnings: [%s]" (severityMapping.FailOnWarnings |> String.concat ", ")
