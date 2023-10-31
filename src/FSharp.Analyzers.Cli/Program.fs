@@ -460,7 +460,7 @@ let main argv =
         else
             match projOpts, fscArgs with
             | [], None ->
-                printError "No project given. Use `--project PATH_TO_FSPROJ`. Pass path relative to current directory."
+                printError "No project given. Use `--project PATH_TO_FSPROJ`."
 
                 None
             | _ :: _, Some _ ->
