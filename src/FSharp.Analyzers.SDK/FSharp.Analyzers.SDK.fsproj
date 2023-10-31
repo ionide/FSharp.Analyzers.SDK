@@ -9,7 +9,9 @@
     <Copyright>Copyright 2019 Lambda Factory</Copyright>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ASTCollecting.fsi" />
     <Compile Include="ASTCollecting.fs" />
+    <Compile Include="TASTCollecting.fsi" />
     <Compile Include="TASTCollecting.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
