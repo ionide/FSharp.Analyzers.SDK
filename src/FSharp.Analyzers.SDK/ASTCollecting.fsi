@@ -12,6 +12,10 @@ module ASTCollecting =
         abstract WalkSynModuleOrNamespace: SynModuleOrNamespace -> unit
         default WalkSynModuleOrNamespace: m: FSharp.Compiler.Syntax.SynModuleOrNamespace -> unit
 
+        /// Overwriting this member hooks up a custom operation for a module or namespace syntax element in a signature file.
+        abstract WalkSynModuleOrNamespaceSig: SynModuleOrNamespaceSig -> unit
+        default WalkSynModuleOrNamespaceSig: m: FSharp.Compiler.Syntax.SynModuleOrNamespaceSig -> unit
+
         /// Overwriting this member hooks up a custom operation for an attribute.
         abstract WalkAttribute: SynAttribute -> unit
         default WalkAttribute: a: FSharp.Compiler.Syntax.SynAttribute -> unit
@@ -19,6 +23,10 @@ module ASTCollecting =
         /// Overwriting this member hooks up a custom operation for declarations inside a module.
         abstract WalkSynModuleDecl: SynModuleDecl -> unit
         default WalkSynModuleDecl: m: FSharp.Compiler.Syntax.SynModuleDecl -> unit
+
+        /// Overwriting this member hooks up a custom operation for declarations inside a module or namespace in a signature file.
+        abstract WalkSynModuleSigDecl: SynModuleSigDecl -> unit
+        default WalkSynModuleSigDecl: m: FSharp.Compiler.Syntax.SynModuleSigDecl -> unit
 
         /// Overwriting this member hooks up a custom operation for syntax expressions.
         abstract WalkExpr: SynExpr -> unit

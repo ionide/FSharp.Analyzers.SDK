@@ -38,10 +38,14 @@ module ASTCollecting =
     type SyntaxCollectorBase() =
         abstract WalkSynModuleOrNamespace: SynModuleOrNamespace -> unit
         default _.WalkSynModuleOrNamespace m = ()
+        abstract WalkSynModuleOrNamespaceSig: SynModuleOrNamespaceSig -> unit
+        default _.WalkSynModuleOrNamespaceSig m = ()
         abstract WalkAttribute: SynAttribute -> unit
         default _.WalkAttribute a = ()
         abstract WalkSynModuleDecl: SynModuleDecl -> unit
         default _.WalkSynModuleDecl m = ()
+        abstract WalkSynModuleSigDecl: SynModuleSigDecl -> unit
+        default _.WalkSynModuleSigDecl m = ()
         abstract WalkExpr: SynExpr -> unit
         default _.WalkExpr s = ()
         abstract WalkTypar: SynTypar -> unit
@@ -98,10 +102,20 @@ module ASTCollecting =
         let rec walkImplFileInput (ParsedImplFileInput(contents = moduleOrNamespaceList)) =
             List.iter walkSynModuleOrNamespace moduleOrNamespaceList
 
+        and walkSigFileInput (ParsedSigFileInput(contents = moduleOrNamespaceList)) =
+            List.iter walkSynModuleOrNamespaceSig moduleOrNamespaceList
+
         and walkSynModuleOrNamespace (SynModuleOrNamespace(decls = decls; attribs = AllAttrs attrs; range = r) as s) =
             walker.WalkSynModuleOrNamespace s
             List.iter walkAttribute attrs
             List.iter walkSynModuleDecl decls
+
+        and walkSynModuleOrNamespaceSig
+            (SynModuleOrNamespaceSig(decls = decls; attribs = AllAttrs attrs; range = _r) as s)
+            =
+            walker.WalkSynModuleOrNamespaceSig s
+            List.iter walkAttribute attrs
+            List.iter walkSynModuleSigDecl decls
 
         and walkAttribute (attr: SynAttribute) = walkExpr attr.ArgExpr
 
@@ -565,6 +579,19 @@ module ASTCollecting =
             | SynModuleDecl.Open(longDotId, r) -> ()
             | SynModuleDecl.HashDirective(range = r) -> ()
 
+        and walkSynModuleSigDecl (decl: SynModuleSigDecl) =
+            walker.WalkSynModuleSigDecl decl
+
+            match decl with
+            | SynModuleSigDecl.ModuleAbbrev _ -> ()
+            | SynModuleSigDecl.NestedModule _ -> ()
+            | SynModuleSigDecl.Val(s, _range) -> walker.WalkValSig s
+            | SynModuleSigDecl.Types _ -> ()
+            | SynModuleSigDecl.Exception _ -> ()
+            | SynModuleSigDecl.Open _ -> ()
+            | SynModuleSigDecl.HashDirective _ -> ()
+            | SynModuleSigDecl.NamespaceFragment _ -> ()
+
         match input with
         | ParsedInput.ImplFile input -> walkImplFileInput input
-        | _ -> ()
+        | ParsedInput.SigFile input -> walkSigFileInput input
