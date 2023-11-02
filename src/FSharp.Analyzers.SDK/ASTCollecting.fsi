@@ -1,16 +1,7 @@
 namespace FSharp.Analyzers.SDK
 
-#nowarn "1182"
-
 module ASTCollecting =
     open FSharp.Compiler.Syntax
-    /// A pattern that collects all attributes from a `SynAttributes` into a single flat list
-    val (|AllAttrs|): attrs: SynAttributes -> SynAttribute list
-    /// An recursive pattern that collect all sequential expressions to avoid StackOverflowException
-    val (|Sequentials|_|): e: SynExpr -> SynExpr list option
-    val (|ConstructorPats|): SynArgPats -> SynPat list
-    /// A pattern that collects all patterns from a `SynSimplePats` into a single flat list
-    val (|AllSimplePats|): pats: SynSimplePats -> SynSimplePat list
 
     type SyntaxCollectorBase =
         new: unit -> SyntaxCollectorBase
