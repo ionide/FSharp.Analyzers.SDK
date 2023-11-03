@@ -119,7 +119,8 @@ To enable a wide range of analyzers, both context types give access to very deta
 Among this information is the full untyped abstract syntax tree (AST) and the typed abstract syntax tree (TAST).
 As you can deduce from the example above, processing these trees is a very common task in an analyzer. But writing your own tree traversal code can be daunting and can also get quite repetitive over many analyzers.  
 That's why the SDK offers the `ASTCollecting` and `TASTCollecting` modules. In there, you'll find facility types and functions to make your analyzers author life easier.
-For both trees, a type is defined, `SyntaxCollectorBase` and `TypedTreeCollectorBase` respectively, with members you can override to have easy access to the tree elements you want to process.  
+For both trees, a type is defined, [SyntaxCollectorBase](../reference/fsharp-analyzers-sdk-astcollecting-syntaxcollectorbase.html) and [TypedTreeCollectorBase](../reference/fsharp-analyzers-sdk-tastcollecting-typedtreecollectorbase.html) respectively, 
+with members you can override to have easy access to the tree elements you want to process.  
 Just pass an instance with your overriden members to the `walkAst` or `walkTast` function.  
 
 The `allOpenStatements` function from above, rewritten to make use of `walkAst`, could look like this:
