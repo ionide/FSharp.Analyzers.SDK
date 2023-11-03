@@ -17,6 +17,7 @@ With a little orchestration it is possible to easily write two analyzer function
 (** *)
 
 open FSharp.Analyzers.SDK
+open FSharp.Analyzers.SDK.ASTCollecting
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open FSharp.Compiler.Syntax
@@ -38,30 +39,24 @@ let private topologicallySortedOpenStatementsAnalyzer
             let (|LongIdentAsString|) (lid: SynLongIdent) =
                 lid.LongIdent |> List.map (fun ident -> ident.idText)
 
-            let rec visitSynModuleSigDecl (decl: SynModuleSigDecl) =
-                match decl with
-                | SynModuleSigDecl.Open(
-                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
-                    allOpenStatements.Add(value, mOpen)
-                | _ -> ()
+            let walker =
+                { new SyntaxCollectorBase() with
+                    override _.WalkSynModuleSigDecl(decl: SynModuleSigDecl) =
+                        match decl with
+                        | SynModuleSigDecl.Open(
+                            target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
+                            allOpenStatements.Add(value, mOpen)
+                        | _ -> ()
 
-            let rec visitSynModuleDecl (decl: SynModuleDecl) =
-                match decl with
-                | SynModuleDecl.Open(
-                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
-                    allOpenStatements.Add(value, mOpen)
-                | _ -> ()
+                    override _.WalkSynModuleDecl(decl: SynModuleDecl) =
+                        match decl with
+                        | SynModuleDecl.Open(
+                            target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
+                            allOpenStatements.Add(value, mOpen)
+                        | _ -> ()
+                }
 
-            match untypedTree with
-            | ParsedInput.SigFile(ParsedSigFileInput(contents = contents)) ->
-                for SynModuleOrNamespaceSig(decls = decls) in contents do
-                    for decl in decls do
-                        visitSynModuleSigDecl decl
-
-            | ParsedInput.ImplFile(ParsedImplFileInput(contents = contents)) ->
-                for SynModuleOrNamespace(decls = decls) in contents do
-                    for decl in decls do
-                        visitSynModuleDecl decl
+            ASTCollecting.walkAst walker untypedTree
 
             allOpenStatements |> Seq.toList
 
@@ -123,39 +118,9 @@ For both trees, a type is defined, [SyntaxCollectorBase](../reference/fsharp-ana
 with members you can override to have easy access to the tree elements you want to process.  
 Just pass an instance with your overriden members to the `walkAst` or `walkTast` function.  
 
-The `allOpenStatements` function from above, rewritten to make use of `walkAst`, could look like this:
-*)
-
-let allOpenStatementsWithWalker untypedTree =
-    let allOpenStatements = ResizeArray<string list * range>()
-
-    let (|LongIdentAsString|) (lid: SynLongIdent) =
-        lid.LongIdent |> List.map (fun ident -> ident.idText)
-
-    let walker =
-        { new ASTCollecting.SyntaxCollectorBase() with
-            override _.WalkSynModuleSigDecl(decl: SynModuleSigDecl) =
-                match decl with
-                | SynModuleSigDecl.Open(
-                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
-                    allOpenStatements.Add(value, mOpen)
-                | _ -> ()
-
-            override _.WalkSynModuleDecl(decl: SynModuleDecl) =
-                match decl with
-                | SynModuleDecl.Open(
-                    target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
-                    allOpenStatements.Add(value, mOpen)
-                | _ -> ()
-        }
-
-    ASTCollecting.walkAst walker untypedTree
-
-    allOpenStatements |> Seq.toList
-
-(**
-
-Because we want to process the `SynModuleSigDecl` and `SynModuleDecl` elements of the AST, we just override the two appropriate members of the `SyntaxCollectorBase` type in an [object expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/object-expressions) and pass the instance to `walkAst`.  
+The open-statement analyzer from above uses the AST for it's analysis.  
+Because we want to process the `SynModuleSigDecl` and `SynModuleDecl` elements of the AST, we just override the two appropriate members of the `SyntaxCollectorBase` type 
+in an [object expression](https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/object-expressions) and pass the instance to `walkAst`.  
 Much simpler and shorter than doing the traversal ourselves.
 
 [Previous]({{fsdocs-previous-page-link}})
