@@ -1,0 +1,30 @@
+/* Navigation links at the end of a page */
+#content > p:last-of-type {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-300);
+
+    &:has(a + a) {
+        justify-content: space-between;
+    }
+
+    > a {
+        text-decoration: none;
+        background: var(--menu-icon-hover-background);
+        color: var(--code-background);
+        padding: var(--spacing-50) var(--spacing-100);
+        margin: 0;
+        display: inline-block;
+        box-shadow: 0 1px 1px var(--shadow-color--main);
+        transition: transform 200ms;
+
+        &:hover {
+            background-color: var(--menu-icon-hover-background);
+            transform: translateY(1px);
+        }
+
+        &:focus {
+            background-color: var(--nav-category);
+        }
+    }
+}
