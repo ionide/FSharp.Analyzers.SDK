@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.18.0] - 2023-11-03
 
 ### Added
 * [Allow remapping of all severity levels](https://github.com/ionide/FSharp.Analyzers.SDK/pull/138) (thanks @dawedawe!)
+* [Add tree processing infrastructure](https://github.com/ionide/FSharp.Analyzers.SDK/pull/140) (thanks @dawedawe!)
 
 ## [0.17.1] - 2023-10-30
 
