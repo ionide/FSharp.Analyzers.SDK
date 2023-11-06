@@ -12,26 +12,26 @@ module TASTCollecting =
 
         /// Overwriting this member hooks up a custom operation for a call of a member or function.
         abstract WalkCall:
-            exprRange: range ->
             objExprOpt: FSharpExpr option ->
             memberOrFunc: FSharpMemberOrFunctionOrValue ->
             objExprTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
+            exprRange: range ->
                 unit
 
         default WalkCall:
-            exprRange: range ->
             objExprOpt: FSharpExpr option ->
             memberOrFunc: FSharpMemberOrFunctionOrValue ->
             objTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
+            exprRange: range ->
                 unit
 
         /// Overwriting this member hooks up a custom operation for the creation of a new record instance.
-        abstract WalkNewRecord: exprRange: range -> recordType: FSharpType -> argExprs: FSharpExpr list -> unit
-        default WalkNewRecord: exprRange: range -> recordType: FSharpType -> argExprs: FSharpExpr list -> unit
+        abstract WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+        default WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
 
     /// Traverses the whole TAST and calls the appropriate members of the given TypedTreeCollectorBase
     /// to process the tree elements.

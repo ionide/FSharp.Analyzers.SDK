@@ -8,17 +8,17 @@ module TASTCollecting =
 
     type TypedTreeCollectorBase() =
         abstract WalkCall:
-            exprRange: range ->
             objExprOpt: FSharpExpr option ->
             memberOrFunc: FSharpMemberOrFunctionOrValue ->
             objExprTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
+            exprRange: range ->
                 unit
 
         default _.WalkCall _ _ _ _ _ _ = ()
 
-        abstract WalkNewRecord: exprRange: range -> recordType: FSharpType -> argExprs: FSharpExpr list -> unit
+        abstract WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
         default _.WalkNewRecord _ _ _ = ()
 
     let rec visitExpr (handler: TypedTreeCollectorBase) (e: FSharpExpr) =
@@ -32,7 +32,7 @@ module TASTCollecting =
             visitExpr handler funcExpr
             visitExprs handler argExprs
         | Call(objExprOpt, memberOrFunc, objExprTypeArgs, memberOrFuncTypeArgs, argExprs) ->
-            handler.WalkCall e.Range objExprOpt memberOrFunc objExprTypeArgs memberOrFuncTypeArgs argExprs
+            handler.WalkCall objExprOpt memberOrFunc objExprTypeArgs memberOrFuncTypeArgs argExprs e.Range
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
         | Coerce(_targetType, inpExpr) -> visitExpr handler inpExpr
@@ -61,7 +61,7 @@ module TASTCollecting =
         | NewDelegate(_delegateType, delegateBodyExpr) -> visitExpr handler delegateBodyExpr
         | NewObject(_objType, _typeArgs, argExprs) -> visitExprs handler argExprs
         | NewRecord(recordType, argExprs) ->
-            handler.WalkNewRecord e.Range recordType argExprs
+            handler.WalkNewRecord recordType argExprs e.Range
             visitExprs handler argExprs
         | NewTuple(_tupleType, argExprs) -> visitExprs handler argExprs
         | NewUnionCase(_unionType, _unionCase, argExprs) -> visitExprs handler argExprs
