@@ -7,10 +7,19 @@ open FSharp.Compiler.Symbols.FSharpExprPatterns
 module TASTCollecting =
 
     type TypedTreeCollectorBase() =
-        abstract WalkCall: range -> FSharpMemberOrFunctionOrValue -> FSharpExpr list -> unit
-        default _.WalkCall _ _ _ = ()
-        abstract WalkNewRecord: range -> FSharpType -> unit
-        default _.WalkNewRecord _ _ = ()
+        abstract WalkCall:
+            exprRange: range ->
+            objExprOpt: FSharpExpr option ->
+            memberOrFunc: FSharpMemberOrFunctionOrValue ->
+            objExprTypeArgs: FSharpType list ->
+            memberOrFuncTypeArgs: FSharpType list ->
+            argExprs: FSharpExpr list ->
+                unit
+
+        default _.WalkCall _ _ _ _ _ _ = ()
+
+        abstract WalkNewRecord: exprRange: range -> recordType: FSharpType -> argExprs: FSharpExpr list -> unit
+        default _.WalkNewRecord _ _ _ = ()
 
     let rec visitExpr (handler: TypedTreeCollectorBase) (e: FSharpExpr) =
 
@@ -22,8 +31,8 @@ module TASTCollecting =
         | Application(funcExpr, _typeArgs, argExprs) ->
             visitExpr handler funcExpr
             visitExprs handler argExprs
-        | Call(objExprOpt, memberOrFunc, _typeArgs1, _typeArgs2, argExprs) ->
-            handler.WalkCall e.Range memberOrFunc argExprs
+        | Call(objExprOpt, memberOrFunc, objExprTypeArgs, memberOrFuncTypeArgs, argExprs) ->
+            handler.WalkCall e.Range objExprOpt memberOrFunc objExprTypeArgs memberOrFuncTypeArgs argExprs
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
         | Coerce(_targetType, inpExpr) -> visitExpr handler inpExpr
@@ -52,7 +61,7 @@ module TASTCollecting =
         | NewDelegate(_delegateType, delegateBodyExpr) -> visitExpr handler delegateBodyExpr
         | NewObject(_objType, _typeArgs, argExprs) -> visitExprs handler argExprs
         | NewRecord(recordType, argExprs) ->
-            handler.WalkNewRecord e.Range recordType
+            handler.WalkNewRecord e.Range recordType argExprs
             visitExprs handler argExprs
         | NewTuple(_tupleType, argExprs) -> visitExprs handler argExprs
         | NewUnionCase(_unionType, _unionCase, argExprs) -> visitExprs handler argExprs

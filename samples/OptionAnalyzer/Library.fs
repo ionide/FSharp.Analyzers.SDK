@@ -17,7 +17,7 @@ let optionValueAnalyzer: Analyzer<CliContext> =
 
             let walker =
                 { new TypedTreeCollectorBase() with
-                    override _.WalkCall range m _ =
+                    override _.WalkCall range _ m _ _ _ =
                         let name = String.Join(".", m.DeclaringEntity.Value.FullName, m.DisplayName)
 
                         if name = "Microsoft.FSharp.Core.FSharpOption`1.Value" then
