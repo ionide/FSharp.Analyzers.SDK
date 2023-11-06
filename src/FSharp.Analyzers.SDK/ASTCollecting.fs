@@ -37,65 +37,65 @@ module ASTCollecting =
 
     type SyntaxCollectorBase() =
         abstract WalkSynModuleOrNamespace: SynModuleOrNamespace -> unit
-        default _.WalkSynModuleOrNamespace m = ()
+        default _.WalkSynModuleOrNamespace moduleOrNamespace = ()
         abstract WalkSynModuleOrNamespaceSig: SynModuleOrNamespaceSig -> unit
-        default _.WalkSynModuleOrNamespaceSig m = ()
+        default _.WalkSynModuleOrNamespaceSig moduleOrNamespaceSig = ()
         abstract WalkAttribute: SynAttribute -> unit
-        default _.WalkAttribute a = ()
+        default _.WalkAttribute attribute = ()
         abstract WalkSynModuleDecl: SynModuleDecl -> unit
-        default _.WalkSynModuleDecl m = ()
+        default _.WalkSynModuleDecl moduleDecl = ()
         abstract WalkSynModuleSigDecl: SynModuleSigDecl -> unit
-        default _.WalkSynModuleSigDecl m = ()
+        default _.WalkSynModuleSigDecl moduleSigDecl = ()
         abstract WalkExpr: SynExpr -> unit
-        default _.WalkExpr s = ()
+        default _.WalkExpr expr = ()
         abstract WalkTypar: SynTypar -> unit
-        default _.WalkTypar s = ()
+        default _.WalkTypar typar = ()
         abstract WalkTyparDecl: SynTyparDecl -> unit
-        default _.WalkTyparDecl s = ()
+        default _.WalkTyparDecl typarDecl = ()
         abstract WalkTypeConstraint: SynTypeConstraint -> unit
-        default _.WalkTypeConstraint s = ()
+        default _.WalkTypeConstraint typeConstraint = ()
         abstract WalkType: SynType -> unit
-        default _.WalkType s = ()
+        default _.WalkType ``type`` = ()
         abstract WalkMemberSig: SynMemberSig -> unit
-        default _.WalkMemberSig s = ()
+        default _.WalkMemberSig memberSig = ()
         abstract WalkPat: SynPat -> unit
-        default _.WalkPat s = ()
+        default _.WalkPat pat = ()
         abstract WalkValTyparDecls: SynValTyparDecls -> unit
-        default _.WalkValTyparDecls s = ()
+        default _.WalkValTyparDecls valTyparDecls = ()
         abstract WalkBinding: SynBinding -> unit
-        default _.WalkBinding s = ()
+        default _.WalkBinding binding = ()
         abstract WalkSimplePat: SynSimplePat -> unit
-        default _.WalkSimplePat s = ()
+        default _.WalkSimplePat simplePat = ()
         abstract WalkInterfaceImpl: SynInterfaceImpl -> unit
-        default _.WalkInterfaceImpl s = ()
+        default _.WalkInterfaceImpl interfaceImpl = ()
         abstract WalkClause: SynMatchClause -> unit
-        default _.WalkClause s = ()
+        default _.WalkClause matchClause = ()
         abstract WalkInterpolatedStringPart: SynInterpolatedStringPart -> unit
-        default _.WalkInterpolatedStringPart s = ()
+        default _.WalkInterpolatedStringPart interpolatedStringPart = ()
         abstract WalkMeasure: SynMeasure -> unit
-        default _.WalkMeasure s = ()
+        default _.WalkMeasure measure = ()
         abstract WalkComponentInfo: SynComponentInfo -> unit
-        default _.WalkComponentInfo s = ()
+        default _.WalkComponentInfo componentInfo = ()
         abstract WalkTypeDefnSigRepr: SynTypeDefnSigRepr -> unit
-        default _.WalkTypeDefnSigRepr s = ()
+        default _.WalkTypeDefnSigRepr typeDefnSigRepr = ()
         abstract WalkUnionCaseType: SynUnionCaseKind -> unit
-        default _.WalkUnionCaseType s = ()
+        default _.WalkUnionCaseType unionCaseKind = ()
         abstract WalkEnumCase: SynEnumCase -> unit
-        default _.WalkEnumCase s = ()
+        default _.WalkEnumCase enumCase = ()
         abstract WalkField: SynField -> unit
-        default _.WalkField s = ()
+        default _.WalkField field = ()
         abstract WalkTypeDefnSimple: SynTypeDefnSimpleRepr -> unit
-        default _.WalkTypeDefnSimple s = ()
+        default _.WalkTypeDefnSimple typeDefnSimpleRepr = ()
         abstract WalkValSig: SynValSig -> unit
-        default _.WalkValSig s = ()
+        default _.WalkValSig valSig = ()
         abstract WalkMember: SynMemberDefn -> unit
-        default _.WalkMember s = ()
+        default _.WalkMember memberDefn = ()
         abstract WalkUnionCase: SynUnionCase -> unit
-        default _.WalkUnionCase s = ()
+        default _.WalkUnionCase unionCase = ()
         abstract WalkTypeDefnRepr: SynTypeDefnRepr -> unit
-        default _.WalkTypeDefnRepr s = ()
+        default _.WalkTypeDefnRepr typeDefnRepr = ()
         abstract WalkTypeDefn: SynTypeDefn -> unit
-        default _.WalkTypeDefn s = ()
+        default _.WalkTypeDefn typeDefn = ()
 
     let walkAst (walker: SyntaxCollectorBase) (input: ParsedInput) : unit =
 
