@@ -27,7 +27,7 @@ let optionValueAnalyzer: Analyzer<CliContext> =
 
             match ctx.TypedTree with
             | None -> ()
-            | Some typedTree -> typedTree.Declarations |> List.iter (walkTast walker)
+            | Some typedTree -> walkTast walker typedTree
 
             return
                 state

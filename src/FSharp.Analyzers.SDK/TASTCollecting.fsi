@@ -20,4 +20,4 @@ module TASTCollecting =
 
     /// Traverses the whole TAST and calls the appropriate members of the given TypedTreeCollectorBase
     /// to process the tree elements.
-    val walkTast: walker: TypedTreeCollectorBase -> decl: FSharpImplementationFileDeclaration -> unit
+    val walkTast: walker: TypedTreeCollectorBase -> tast: FSharpImplementationFileContents -> unit

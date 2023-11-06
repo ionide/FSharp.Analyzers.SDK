@@ -133,5 +133,5 @@ module TASTCollecting =
                     printfn $"unhandled expression at {e.Range.FileName}:{e.Range.ToString()}"
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
-    let walkTast (walker: TypedTreeCollectorBase) (decl: FSharpImplementationFileDeclaration) : unit =
-        visitDeclaration walker decl
+    let walkTast (walker: TypedTreeCollectorBase) (tast: FSharpImplementationFileContents) : unit =
+        tast.Declarations |> List.iter (visitDeclaration walker)
