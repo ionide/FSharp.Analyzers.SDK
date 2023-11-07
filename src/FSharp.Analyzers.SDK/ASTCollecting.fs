@@ -575,7 +575,8 @@ module ASTCollecting =
             | SynModuleDecl.Types(types, r) -> List.iter walkTypeDefn types
             | SynModuleDecl.Attributes(attributes = AllAttrs attrs; range = r) -> List.iter walkAttribute attrs
             | SynModuleDecl.ModuleAbbrev(ident, longId, r) -> ()
-            | SynModuleDecl.Exception(range = r) -> ()
+            | SynModuleDecl.Exception(exnDefn = SynExceptionDefn(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
+                walkUnionCase unionCase
             | SynModuleDecl.Open(longDotId, r) -> ()
             | SynModuleDecl.HashDirective(range = r) -> ()
 
