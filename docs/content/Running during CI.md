@@ -35,6 +35,9 @@ If you are using [GitHub Actions](https://docs.github.com/en/code-security/codeq
         sarif_file: analysis.sarif
 ```
 
+You might need to give workflows in your repository the `Read and write permissions` for the sarif upload to succeed.  
+Go to `Settings` -> `Actions` -> `General` and check the `Workflow permissions` section.
+
 Sample:
 
 ![Example](https://user-images.githubusercontent.com/2621499/275484611-e38461f8-3689-4bf0-8ab8-11a6318e01aa.png)
