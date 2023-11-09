@@ -303,7 +303,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
             result.Level <-
                 match analyzerResult.Message.Severity with
                 | Info -> FailureLevel.Note
-                | Hint -> FailureLevel.None
+                | Hint -> FailureLevel.Note
                 | Warning -> FailureLevel.Warning
                 | Error -> FailureLevel.Error
 
