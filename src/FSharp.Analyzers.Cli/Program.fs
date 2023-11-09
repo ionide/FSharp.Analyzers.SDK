@@ -112,6 +112,11 @@ let loadProject toolsPath projPath =
     async {
         let loader = WorkspaceLoader.Create(toolsPath)
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
+
+        if parsed.IsEmpty then
+            printError $"Failed to load project '{projPath}'"
+            exit 1
+
         let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
 
         return fcsPo
