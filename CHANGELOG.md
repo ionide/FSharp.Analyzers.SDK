@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 * [--project value should be tested if path exists](https://github.com/ionide/FSharp.Analyzers.SDK/issues/141) (thanks @dawedawe!)
+* [Provide better DX when project cracking failed](https://github.com/ionide/FSharp.Analyzers.SDK/issues/126) (thanks @dawedawe!)
 
 ## [0.19.0] - 2023-11-08
 
