@@ -112,6 +112,11 @@ let loadProject toolsPath projPath =
     async {
         let loader = WorkspaceLoader.Create(toolsPath)
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
+
+        if parsed.IsEmpty then
+            printError $"Failed to load project '{projPath}'"
+            exit 1
+
         let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
 
         return fcsPo
@@ -449,20 +454,13 @@ let main argv =
                 exit 1
             | [], Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
             | projects, None ->
-                let runProj (proj: string) =
-                    async {
-                        let project =
-                            if Path.IsPathRooted proj then
-                                proj
-                            else
-                                Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, proj))
-
-                        let! results = runProject client toolsPath project ignoreFiles severityMapping
-                        return results
-                    }
+                for projPath in projects do
+                    if not (File.Exists(projPath)) then
+                        printError $"Invalid `--project` argument. File does not exist: '{projPath}'"
+                        exit 1
 
                 projects
-                |> List.map runProj
+                |> List.map (fun projPath -> runProject client toolsPath projPath ignoreFiles severityMapping)
                 |> Async.Sequential
                 |> Async.RunSynchronously
                 |> Array.choose id
