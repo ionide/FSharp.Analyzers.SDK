@@ -13,6 +13,7 @@ open Ionide.ProjInfo
 type Arguments =
     | Project of string list
     | Analyzers_Path of string list
+    | [<EqualsAssignment; AltCommandLine("-p")>] Property of string * string
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
@@ -28,6 +29,7 @@ type Arguments =
             match s with
             | Project _ -> "Path to your .fsproj file."
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
+            | Property _ -> "A key=value pair of an MSBuild property."
             | Treat_As_Info _ ->
                 "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
             | Treat_As_Hint _ ->
@@ -108,9 +110,9 @@ let printError (text: string) : unit =
     Console.WriteLine(text)
     Console.ForegroundColor <- origForegroundColor
 
-let loadProject toolsPath projPath =
+let loadProject toolsPath properties projPath =
     async {
-        let loader = WorkspaceLoader.Create(toolsPath)
+        let loader = WorkspaceLoader.Create(toolsPath, properties)
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
 
         if parsed.IsEmpty then
@@ -165,13 +167,14 @@ let runProjectAux
 let runProject
     (client: Client<CliAnalyzerAttribute, CliContext>)
     toolsPath
+    properties
     proj
     (globs: Glob list)
     (mappings: SeverityMappings)
     =
     async {
         let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-        let! option = loadProject toolsPath path
+        let! option = loadProject toolsPath properties path
         return! runProjectAux client option globs mappings
     }
 
@@ -436,6 +439,7 @@ let main argv =
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
+    let properties = results.GetResults <@ Property @>
     let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
@@ -460,7 +464,9 @@ let main argv =
                         exit 1
 
                 projects
-                |> List.map (fun projPath -> runProject client toolsPath projPath ignoreFiles severityMapping)
+                |> List.map (fun projPath ->
+                    runProject client toolsPath properties projPath ignoreFiles severityMapping
+                )
                 |> Async.Sequential
                 |> Async.RunSynchronously
                 |> Array.choose id
