@@ -15,6 +15,7 @@ type Arguments =
     | Project of string list
     | Analyzers_Path of string list
     | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
+    | [<Unique; AltCommandLine("-c")>] Configuration of string
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
@@ -31,6 +32,7 @@ type Arguments =
             | Project _ -> "Path to your .fsproj file."
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
             | Property _ -> "A key=value pair of an MSBuild property."
+            | Configuration _ -> "The configuration to use, e.g. Debug or Release."
             | Treat_As_Info _ ->
                 "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
             | Treat_As_Hint _ ->
@@ -416,7 +418,15 @@ let main argv =
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
-    let properties = results.GetResults <@ Property @> |> expandMultiProperties
+    let configuration = results.TryGetResult <@ Configuration @>
+
+    let properties =
+        results.GetResults <@ Property @>
+        |> expandMultiProperties
+        |> fun props ->
+            configuration
+            |> Option.map (fun c -> List.append props [ "Configuration", c ])
+            |> Option.defaultValue props
 
     if verbose then
         properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
