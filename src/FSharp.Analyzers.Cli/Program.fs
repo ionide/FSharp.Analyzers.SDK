@@ -13,7 +13,7 @@ open Ionide.ProjInfo
 type Arguments =
     | Project of string list
     | Analyzers_Path of string list
-    | [<EqualsAssignment; AltCommandLine("-p")>] Property of string * string
+    | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
