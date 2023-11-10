@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
 open System.Runtime.Loader
+open System.Runtime.InteropServices
 open System.Text.RegularExpressions
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
@@ -392,7 +393,36 @@ let expandMultiProperties (properties: (string * string) list) =
     )
     |> List.concat
 
+let validateRuntimeOsArchCombination (runtime, arch, os) =
+    match runtime, os, arch with
+    | Some _, Some _, _ ->
+        printError "Specifying both the `-r|--runtime` and `-os` options is not supported."
+        exit 1
+    | Some _, _, Some _ ->
+        printError "Specifying both the `-r|--runtime` and `-a|--arch` options is not supported."
+        exit 1
+    | _ -> ()
+
 let getProperties (results: ParseResults<Arguments>) =
+    let runtime = results.TryGetResult <@ Runtime @>
+    let arch = results.TryGetResult <@ Arch @>
+    let os = results.TryGetResult <@ Os @>
+    validateRuntimeOsArchCombination (runtime, os, arch)
+
+    let runtimeProp =
+        let rid = RuntimeInformation.RuntimeIdentifier // assuming we always get something like 'linux-x64'
+
+        match runtime, os, arch with
+        | Some r, _, _ -> Some r
+        | None, Some o, Some a -> Some $"{o}-{a}"
+        | None, Some o, None ->
+            let archOfRid = rid.Substring(rid.LastIndexOf('-') + 1)
+            Some $"{o}-{archOfRid}"
+        | None, None, Some a ->
+            let osOfRid = rid.Substring(0, rid.LastIndexOf('-'))
+            Some $"{osOfRid}-{a}"
+        | _ -> None
+
     results.GetResults <@ Property @>
     |> expandMultiProperties
     |> fun props ->
@@ -403,16 +433,8 @@ let getProperties (results: ParseResults<Arguments>) =
             | (Some x) -> yield ("Configuration", x)
             | _ -> ()
 
-            match results.TryGetResult <@ Runtime @> with
+            match runtimeProp with
             | (Some x) -> yield ("RuntimeIdentifier", x)
-            | _ -> ()
-
-            match results.TryGetResult <@ Arch @> with
-            | (Some x) -> yield ("Platform", x)
-            | _ -> ()
-
-            match results.TryGetResult <@ Os @> with
-            | (Some x) -> yield ("OS", x)
             | _ -> ()
         ]
 
