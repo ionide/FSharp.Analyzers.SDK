@@ -16,6 +16,9 @@ type Arguments =
     | Analyzers_Path of string list
     | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
     | [<Unique; AltCommandLine("-c")>] Configuration of string
+    | [<Unique; AltCommandLine("-r")>] Runtime of string
+    | [<Unique; AltCommandLine("-a")>] Arch of string
+    | [<Unique>] Os of string
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
@@ -33,6 +36,9 @@ type Arguments =
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
             | Property _ -> "A key=value pair of an MSBuild property."
             | Configuration _ -> "The configuration to use, e.g. Debug or Release."
+            | Runtime _ -> "The runtime identifier (RID)."
+            | Arch _ -> "The target architecture."
+            | Os _ -> "The target operating system."
             | Treat_As_Info _ ->
                 "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
             | Treat_As_Hint _ ->
@@ -386,6 +392,30 @@ let expandMultiProperties (properties: (string * string) list) =
     )
     |> List.concat
 
+let getProperties (results: ParseResults<Arguments>) =
+    results.GetResults <@ Property @>
+    |> expandMultiProperties
+    |> fun props ->
+        [
+            yield! props
+
+            match results.TryGetResult <@ Configuration @> with
+            | (Some x) -> yield ("Configuration", x)
+            | _ -> ()
+
+            match results.TryGetResult <@ Runtime @> with
+            | (Some x) -> yield ("RuntimeIdentifier", x)
+            | _ -> ()
+
+            match results.TryGetResult <@ Arch @> with
+            | (Some x) -> yield ("Platform", x)
+            | _ -> ()
+
+            match results.TryGetResult <@ Os @> with
+            | (Some x) -> yield ("OS", x)
+            | _ -> ()
+        ]
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -418,15 +448,7 @@ let main argv =
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
-    let configuration = results.TryGetResult <@ Configuration @>
-
-    let properties =
-        results.GetResults <@ Property @>
-        |> expandMultiProperties
-        |> fun props ->
-            configuration
-            |> Option.map (fun c -> List.append props [ "Configuration", c ])
-            |> Option.defaultValue props
+    let properties = getProperties results
 
     if verbose then
         properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
