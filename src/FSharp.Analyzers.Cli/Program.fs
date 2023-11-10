@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
 open System.Runtime.Loader
+open System.Text.RegularExpressions
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
@@ -356,6 +357,33 @@ let calculateExitCode (msgs: AnalyzerMessage list option) : int =
 
         if check then -2 else 0
 
+/// If multiple MSBuild properties are given in one -p flag like -p:prop1="val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// argu will think it means prop1 has the value: "val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// so this function expands the value into multiple key-value properties
+let expandMultiProperties (properties: (string * string) list) =
+    properties
+    |> List.map (fun (k, v) ->
+        if not (v.Contains('=')) then // no multi properties given to expand
+            [ (k, v) ]
+        else
+            let regex = Regex(";([a-z,A-Z,0-9,_,-]*)=")
+            let splits = regex.Split(v)
+
+            [
+                yield (k, splits[0])
+
+                for pair in splits.[1..] |> Seq.chunkBySize 2 do
+                    match pair with
+                    | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
+                        printError $"Missing property value for '{k}'"
+                        exit 1
+                    | [| k; v |] -> yield (k, v)
+                    | _ -> ()
+
+            ]
+    )
+    |> List.concat
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -382,9 +410,16 @@ let main argv =
 
         exit 1
 
+    let projOpts = results.GetResults <@ Project @> |> List.concat
+    let fscArgs = results.TryGetResult <@ FSC_Args @>
+    let report = results.TryGetResult <@ Report @>
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
+    let properties = results.GetResults <@ Property @> |> expandMultiProperties
+
+    if verbose then
+        properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
 
     let analyzersPaths =
         results.GetResults(<@ Analyzers_Path @>)
@@ -438,11 +473,6 @@ let main argv =
         )
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
-
-    let properties = results.GetResults <@ Property @>
-    let projOpts = results.GetResults <@ Project @> |> List.concat
-    let fscArgs = results.TryGetResult <@ FSC_Args @>
-    let report = results.TryGetResult <@ Report @>
 
     let results =
         if analyzers = 0 then
