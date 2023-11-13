@@ -586,7 +586,7 @@ module ASTCollecting =
             match decl with
             | SynModuleSigDecl.ModuleAbbrev _ -> ()
             | SynModuleSigDecl.NestedModule _ -> ()
-            | SynModuleSigDecl.Val(s, _range) -> walker.WalkValSig s
+            | SynModuleSigDecl.Val(s, _range) -> walkValSig s
             | SynModuleSigDecl.Types _ -> ()
             | SynModuleSigDecl.Exception _ -> ()
             | SynModuleSigDecl.Open _ -> ()
