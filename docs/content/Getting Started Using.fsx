@@ -45,7 +45,7 @@ Add the following target to the `.fsproj` file for easy invocation of the analyz
     <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
     <Exec
         ContinueOnError="true"
-        Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)\analyzers\dotnet\fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
+        Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
         <Output TaskParameter="ExitCode" PropertyName="LastExitCode" />
     </Exec>
     <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
@@ -56,7 +56,7 @@ You may need to adjust the `Command` to be compatible with your specific analyze
 
 To locate the analyzer DLLs in the filesystem, we use the variable `$(PkgG-Research_FSharp_Analyzers)`. It's produced by NuGet and normalized to be usable by [MSBuild](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#generatepathproperty).
 In general, a `Pkg` prefix is added and dots in the package ID are replaced by underscores. But make sure to look at the [nuget.g.props](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restore-outputs) file in the `obj` folder for the exact string.  
-The `\analyzers\dotnet\fs` subpath is a convention analyzer authors should follow when creating their packages.
+The `/analyzers/dotnet/fs` subpath is a convention analyzer authors should follow when creating their packages.
 
 At last, you can run the analyzer from the project folder:
 
@@ -89,11 +89,10 @@ This is effectively the same as adding a target to each `*proj` file which exist
     <Target
         Name="AnalyzeProject">
         
-        <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)" />
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
             ContinueOnError="true"
-            Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)\analyzers\dotnet\fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
+            Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
             <Output TaskParameter="ExitCode" PropertyName="LastExitCode" />
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
@@ -112,7 +111,7 @@ Add the following custom target to the [Directory.Solution.targets](https://lear
 <Project>
 
     <ItemGroup>
-        <ProjectsToAnalyze Include="src\**\*.fsproj" />
+        <ProjectsToAnalyze Include="src/**/*.fsproj" />
     </ItemGroup>
 
     <Target Name="AnalyzeSolution">
@@ -146,7 +145,7 @@ Here's how the `Directory.Solution.targets` file would look like to make the use
 <Project>
 
     <ItemGroup>
-        <ProjectsToAnalyze Include="src\**\*.fsproj" />
+        <ProjectsToAnalyze Include="src/**/*.fsproj" />
     </ItemGroup>
 
     <Target Name="AnalyzeSolution">
@@ -172,7 +171,7 @@ And here's the `Directory.Build.targets`:
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
             ContinueOnError="true"
-            Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)\analyzers\dotnet\fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
+            Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; --analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --exclude-analyzer PartialAppAnalyzer --fail-on-warnings GRA-STRING-001 --verbose --report &quot;$(MSBuildProjectName)-analysis.sarif&quot;">
             <Output TaskParameter="ExitCode" PropertyName="LastExitCode" />
         </Exec>
         <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)" />
