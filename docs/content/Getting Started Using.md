@@ -1,4 +1,3 @@
-(**
 ---
 category: end-users
 categoryindex: 1
@@ -143,10 +142,4 @@ dotnet msbuild /t:AnalyzeSolution
 
 Note: we passed the `--code-root` flag so that the `*.sarif` report files will report file paths relative to this root. This can be imported for certain editors to function properly. 
 
-*)
-
-(**
-
 [Next]({{fsdocs-next-page-link}})
-
-*)
