@@ -1,5 +1,5 @@
 <Project>
-    <Target Name="_AnalyzeFSharpProject" DependsOnTargets="SetFSharpAnalyzersOtherFlags">
+    <Target Name="_AnalyzeFSharpProject">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <Exec
                 ContinueOnError="true"
@@ -19,7 +19,7 @@
     
     <Target
             Name="_AnalyzeFSharpProjectUsingFscArgs"
-            DependsOnTargets="_SetDesignTimePropertiesForFSharpAnalyzers;Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile;SetFSharpAnalyzersOtherFlags">
+            DependsOnTargets="_SetDesignTimePropertiesForFSharpAnalyzers;Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
 
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <Message Importance="low" Text="FSC arguments: @(FscCommandLineArgs)"/>
