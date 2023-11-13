@@ -255,6 +255,8 @@ let printMessages (msgs: AnalyzerMessage list) =
 
 let writeReport (results: AnalyzerMessage list option) (report: string) =
     try
+        let pwd = Directory.GetCurrentDirectory() |> Uri
+
         // Construct full path to ensure path separators are normalized.
         let report = Path.GetFullPath report
         // Ensure the parent directory exists
@@ -315,15 +317,15 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
 
             physicalLocation.ArtifactLocation <-
                 let al = ArtifactLocation()
-                al.Uri <- Uri(analyzerResult.Message.Range.FileName)
+                al.Uri <- pwd.MakeRelativeUri(Uri(analyzerResult.Message.Range.FileName))
                 al
 
             physicalLocation.Region <-
                 let r = Region()
                 r.StartLine <- analyzerResult.Message.Range.StartLine
-                r.StartColumn <- analyzerResult.Message.Range.StartColumn
+                r.StartColumn <- analyzerResult.Message.Range.StartColumn + 1
                 r.EndLine <- analyzerResult.Message.Range.EndLine
-                r.EndColumn <- analyzerResult.Message.Range.EndColumn
+                r.EndColumn <- analyzerResult.Message.Range.EndColumn + 1
                 r
 
             let location: Location = Location()
