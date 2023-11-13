@@ -1,6 +1,8 @@
 ﻿open System
 open System.IO
 open System.Runtime.Loader
+open System.Runtime.InteropServices
+open System.Text.RegularExpressions
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
@@ -13,6 +15,11 @@ open Ionide.ProjInfo
 type Arguments =
     | Project of string list
     | Analyzers_Path of string list
+    | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
+    | [<Unique; AltCommandLine("-c")>] Configuration of string
+    | [<Unique; AltCommandLine("-r")>] Runtime of string
+    | [<Unique; AltCommandLine("-a")>] Arch of string
+    | [<Unique>] Os of string
     | [<Unique>] Treat_As_Info of string list
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
@@ -29,6 +36,11 @@ type Arguments =
             match s with
             | Project _ -> "Path to your .fsproj file."
             | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
+            | Property _ -> "A key=value pair of an MSBuild property."
+            | Configuration _ -> "The configuration to use, e.g. Debug or Release."
+            | Runtime _ -> "The runtime identifier (RID)."
+            | Arch _ -> "The target architecture."
+            | Os _ -> "The target operating system."
             | Treat_As_Info _ ->
                 "List of analyzer codes that should be treated as severity Info by the tool. Regardless of the original severity."
             | Treat_As_Hint _ ->
@@ -111,9 +123,9 @@ let printError (text: string) : unit =
     Console.WriteLine(text)
     Console.ForegroundColor <- origForegroundColor
 
-let loadProject toolsPath projPath =
+let loadProject toolsPath properties projPath =
     async {
-        let loader = WorkspaceLoader.Create(toolsPath)
+        let loader = WorkspaceLoader.Create(toolsPath, properties)
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
 
         if parsed.IsEmpty then
@@ -168,13 +180,14 @@ let runProjectAux
 let runProject
     (client: Client<CliAnalyzerAttribute, CliContext>)
     toolsPath
+    properties
     proj
     (globs: Glob list)
     (mappings: SeverityMappings)
     =
     async {
         let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-        let! option = loadProject toolsPath path
+        let! option = loadProject toolsPath properties path
         return! runProjectAux client option globs mappings
     }
 
@@ -361,6 +374,78 @@ let calculateExitCode (msgs: AnalyzerMessage list option) : int =
 
         if check then -2 else 0
 
+/// If multiple MSBuild properties are given in one -p flag like -p:prop1="val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// argu will think it means prop1 has the value: "val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// so this function expands the value into multiple key-value properties
+let expandMultiProperties (properties: (string * string) list) =
+    properties
+    |> List.map (fun (k, v) ->
+        if not (v.Contains('=')) then // no multi properties given to expand
+            [ (k, v) ]
+        else
+            let regex = Regex(";([a-z,A-Z,0-9,_,-]*)=")
+            let splits = regex.Split(v)
+
+            [
+                yield (k, splits[0])
+
+                for pair in splits.[1..] |> Seq.chunkBySize 2 do
+                    match pair with
+                    | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
+                        printError $"Missing property value for '{k}'"
+                        exit 1
+                    | [| k; v |] -> yield (k, v)
+                    | _ -> ()
+
+            ]
+    )
+    |> List.concat
+
+let validateRuntimeOsArchCombination (runtime, arch, os) =
+    match runtime, os, arch with
+    | Some _, Some _, _ ->
+        printError "Specifying both the `-r|--runtime` and `-os` options is not supported."
+        exit 1
+    | Some _, _, Some _ ->
+        printError "Specifying both the `-r|--runtime` and `-a|--arch` options is not supported."
+        exit 1
+    | _ -> ()
+
+let getProperties (results: ParseResults<Arguments>) =
+    let runtime = results.TryGetResult <@ Runtime @>
+    let arch = results.TryGetResult <@ Arch @>
+    let os = results.TryGetResult <@ Os @>
+    validateRuntimeOsArchCombination (runtime, os, arch)
+
+    let runtimeProp =
+        let rid = RuntimeInformation.RuntimeIdentifier // assuming we always get something like 'linux-x64'
+
+        match runtime, os, arch with
+        | Some r, _, _ -> Some r
+        | None, Some o, Some a -> Some $"{o}-{a}"
+        | None, Some o, None ->
+            let archOfRid = rid.Substring(rid.LastIndexOf('-') + 1)
+            Some $"{o}-{archOfRid}"
+        | None, None, Some a ->
+            let osOfRid = rid.Substring(0, rid.LastIndexOf('-'))
+            Some $"{osOfRid}-{a}"
+        | _ -> None
+
+    results.GetResults <@ Property @>
+    |> expandMultiProperties
+    |> fun props ->
+        [
+            yield! props
+
+            match results.TryGetResult <@ Configuration @> with
+            | (Some x) -> yield ("Configuration", x)
+            | _ -> ()
+
+            match runtimeProp with
+            | (Some x) -> yield ("RuntimeIdentifier", x)
+            | _ -> ()
+        ]
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -387,9 +472,21 @@ let main argv =
 
         exit 1
 
+    let projOpts = results.GetResults <@ Project @> |> List.concat
+    let fscArgs = results.TryGetResult <@ FSC_Args @>
+    let report = results.TryGetResult <@ Report @>
+    let codeRoot = results.TryGetResult <@ Code_Root @>
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
+    let properties = getProperties results
+
+    if Option.isSome fscArgs && not properties.IsEmpty then
+        printError "fsc-args can't be combined with MSBuild properties."
+        exit 1
+
+    if verbose then
+        properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
 
     let analyzersPaths =
         results.GetResults(<@ Analyzers_Path @>)
@@ -444,11 +541,6 @@ let main argv =
 
     printInfo "Registered %d analyzers from %d dlls" analyzers dlls
 
-    let projOpts = results.GetResults <@ Project @> |> List.concat
-    let fscArgs = results.TryGetResult <@ FSC_Args @>
-    let report = results.TryGetResult <@ Report @>
-    let codeRoot = results.TryGetResult <@ Code_Root @>
-
     let results =
         if analyzers = 0 then
             Some []
@@ -469,7 +561,9 @@ let main argv =
                         exit 1
 
                 projects
-                |> List.map (fun projPath -> runProject client toolsPath projPath ignoreFiles severityMapping)
+                |> List.map (fun projPath ->
+                    runProject client toolsPath properties projPath ignoreFiles severityMapping
+                )
                 |> Async.Sequential
                 |> Async.RunSynchronously
                 |> Array.choose id
