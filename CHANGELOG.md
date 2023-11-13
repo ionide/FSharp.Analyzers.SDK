@@ -13,10 +13,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * [Hint is mapped as note in sarif export](https://github.com/ionide/FSharp.Analyzers.SDK/pull/148) (thanks @nojaf!)
 * [Properly walk SynModuleSigDecl.Val](https://github.com/ionide/FSharp.Analyzers.SDK/pull/156) (thanks @nojaf!)
 * [Sarif file should not report absolute file paths](https://github.com/ionide/FSharp.Analyzers.SDK/issues/154) (thanks @nojaf!)
-* [Add a -p flag to allow passing MSBuild properties through to the MSBuild evaluation portion of checking.](https://github.com/ionide/FSharp.Analyzers.SDK/issues/84) (thanks @dawedawe!)
 
 ### Added
 * [Add code-root flag](https://github.com/ionide/FSharp.Analyzers.SDK/pull/157) (thanks @nojaf!)
+* [Add a -p flag to allow passing MSBuild properties through to the MSBuild evaluation portion of checking.](https://github.com/ionide/FSharp.Analyzers.SDK/issues/84) (thanks @dawedawe!)
 
 ## [0.19.0] - 2023-11-08
 
