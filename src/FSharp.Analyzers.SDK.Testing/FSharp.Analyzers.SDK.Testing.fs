@@ -213,8 +213,8 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
             return FSharpProjectOptions.zero
     }
 
-let getContext (opts: FSharpProjectOptions) source =
-    let fileName = "A.fs"
+let getContextFor (opts: FSharpProjectOptions) isSignature source =
+    let fileName = if isSignature then "A.fsi" else "A.fs"
     let files = Map.ofArray [| (fileName, SourceText.ofString source) |]
 
     let documentSource fileName =
@@ -259,6 +259,9 @@ let getContext (opts: FSharpProjectOptions) source =
         let sourceText = SourceText.ofString source
         Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
     | None -> failwith "typechecking file failed"
+
+let getContext (opts: FSharpProjectOptions) source = getContextFor opts false source
+let getContextForSignature (opts: FSharpProjectOptions) source = getContextFor opts true source
 
 module Assert =
 

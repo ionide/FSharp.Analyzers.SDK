@@ -19,6 +19,7 @@ exception CompilerDiagnosticErrors of FSharpDiagnostic array
 val mkOptionsFromProject: framework: string -> additionalPkgs: Package list -> Task<FSharpProjectOptions>
 
 val getContext: opts: FSharpProjectOptions -> source: string -> CliContext
+val getContextForSignature: opts: FSharpProjectOptions -> source: string -> CliContext
 
 module Assert =
 
