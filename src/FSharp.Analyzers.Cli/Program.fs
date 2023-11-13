@@ -28,6 +28,7 @@ type Arguments =
     | [<Unique>] Exclude_Analyzer of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
+    | [<Unique>] Code_Root of string
     | [<Unique>] Verbose
 
     interface IArgParserTemplate with
@@ -53,6 +54,8 @@ type Arguments =
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
+            | Code_Root _ ->
+                "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
 
 type SeverityMappings =
     {
@@ -266,8 +269,13 @@ let printMessages (msgs: AnalyzerMessage list) =
 
     ()
 
-let writeReport (results: AnalyzerMessage list option) (report: string) =
+let writeReport (results: AnalyzerMessage list option) (codeRoot: string option) (report: string) =
     try
+        let codeRoot =
+            match codeRoot with
+            | None -> Directory.GetCurrentDirectory() |> Uri
+            | Some root -> Path.GetFullPath root |> Uri
+
         // Construct full path to ensure path separators are normalized.
         let report = Path.GetFullPath report
         // Ensure the parent directory exists
@@ -316,7 +324,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
             result.Level <-
                 match analyzerResult.Message.Severity with
                 | Info -> FailureLevel.Note
-                | Hint -> FailureLevel.None
+                | Hint -> FailureLevel.Note
                 | Warning -> FailureLevel.Warning
                 | Error -> FailureLevel.Error
 
@@ -328,15 +336,15 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
 
             physicalLocation.ArtifactLocation <-
                 let al = ArtifactLocation()
-                al.Uri <- Uri(analyzerResult.Message.Range.FileName)
+                al.Uri <- codeRoot.MakeRelativeUri(Uri(analyzerResult.Message.Range.FileName))
                 al
 
             physicalLocation.Region <-
                 let r = Region()
                 r.StartLine <- analyzerResult.Message.Range.StartLine
-                r.StartColumn <- analyzerResult.Message.Range.StartColumn
+                r.StartColumn <- analyzerResult.Message.Range.StartColumn + 1
                 r.EndLine <- analyzerResult.Message.Range.EndLine
-                r.EndColumn <- analyzerResult.Message.Range.EndColumn
+                r.EndColumn <- analyzerResult.Message.Range.EndColumn + 1
                 r
 
             let location: Location = Location()
@@ -467,6 +475,7 @@ let main argv =
     let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
+    let codeRoot = results.TryGetResult <@ Code_Root @>
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
     printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
     let ignoreFiles = ignoreFiles |> List.map Glob
@@ -562,6 +571,6 @@ let main argv =
                 |> Some
 
     results |> Option.iter printMessages
-    report |> Option.iter (writeReport results)
+    report |> Option.iter (writeReport results codeRoot)
 
     calculateExitCode results
