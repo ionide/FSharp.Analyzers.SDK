@@ -472,6 +472,10 @@ let main argv =
     let ignoreFiles = ignoreFiles |> List.map Glob
     let properties = getProperties results
 
+    if Option.isSome fscArgs && not properties.IsEmpty then
+        printError "fsc-args can't be combined with MSBuild properties."
+        exit 1
+
     if verbose then
         properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
 
