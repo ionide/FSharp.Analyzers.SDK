@@ -34,7 +34,7 @@ At the time of writing, the [G-Research analyzers](https://github.com/g-research
 With the package downloaded, we can run the CLI tool:
 
 ```shell
-dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.1.6\analyzers\dotnet\fs\ --verbose
+dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.3.0\analyzers\dotnet\fs\ --verbose
 ```
 
 ### Using an MSBuild target
@@ -55,13 +55,13 @@ Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to add speci
 
 ```xml
 <PropertyGroup>
-    <FSharpAnalyzersOtherFlags>--analyzers-path $(PkgG-Research_FSharp_Analyzers) --report $(MSBuildProjectName)-$(TargetFramework).sarif --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
 </PropertyGroup>
 ```
 
 To locate the analyzer DLLs in the filesystem, we use the variable `$(PkgG-Research_FSharp_Analyzers)`. It's produced by NuGet and normalized to be usable by [MSBuild](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#generatepathproperty).
 In general, a `Pkg` prefix is added and dots in the package ID are replaced by underscores. But make sure to look at the [nuget.g.props](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restore-outputs) file in the `obj` folder for the exact string.  
-The `\analyzers\dotnet\fs` subpath is a convention analyzer authors should follow when creating their packages.
+The `/analyzers/dotnet/fs` subpath is a convention analyzer authors should follow when creating their packages.
 
 At last, you can run the analyzer from the project folder:
 
@@ -107,7 +107,7 @@ This is effectively the same as adding a property to each `*proj` file which exi
     <PropertyGroup>
         <SarifOutput Condition="$(SarifOutput) == ''">./</SarifOutput>
         <CodeRoot Condition="$(CodeRoot) == ''">.</CodeRoot>
-        <FSharpAnalyzersOtherFlags>--analyzers-path $(PkgIonide_Analyzers) --report $(SarifOutput)$(MSBuildProjectName)-$(TargetFramework).sarif --code-root $(CodeRoot) --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
+        <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(SarifOutput)$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --code-root $(CodeRoot) --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
     </PropertyGroup>
 </Project>
 ```
@@ -121,7 +121,7 @@ Add the following custom target to the [Directory.Solution.targets](https://lear
 ```xml
 <Project>
     <ItemGroup>
-        <ProjectsToAnalyze Include="src\**\*.fsproj" />
+        <ProjectsToAnalyze Include="src/**/*.fsproj" />
     </ItemGroup>
 
     <Target Name="AnalyzeSolution">
@@ -140,6 +140,8 @@ At last, you can run the analyzer from the solution folder:
 ```shell
 dotnet msbuild /t:AnalyzeSolution
 ```
+
+Note: we passed the `--code-root` flag so that the `*.sarif` report files will report file paths relative to this root. This can be imported for certain editors to function properly. 
 
 *)
 
