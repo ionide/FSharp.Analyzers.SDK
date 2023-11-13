@@ -1,28 +1,33 @@
 <Project>
-    <Target Name="_AnalyzeFSharpProject">
-        <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
+    <Target Name="_AnalyzeFSharpProject" DependsOnTargets="SetFSharpAnalyzersOtherFlags">
+        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <Exec
                 ContinueOnError="true"
-                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzersOtherFlags)">
-            <Output TaskParameter="ExitCode" PropertyName="LastExitCode"/>
-        </Exec>
-        <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)"/>
+                IgnoreExitCode="true"
+                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzersOtherFlags)" />
     </Target>
 
     <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
 
+    <Target Name="_SetDesignTimePropertiesForFSharpAnalyzers" BeforeTargets="Restore">
+        <PropertyGroup>
+            <DesignTimeBuild>true</DesignTimeBuild>
+            <ProvideCommandLineArgs>true</ProvideCommandLineArgs>
+            <SkipCompilerExecution>true</SkipCompilerExecution>
+        </PropertyGroup>
+    </Target>
+    
     <Target
             Name="_AnalyzeFSharpProjectUsingFscArgs"
-            DependsOnTargets="Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
+            DependsOnTargets="_SetDesignTimePropertiesForFSharpAnalyzers;Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile;SetFSharpAnalyzersOtherFlags">
 
-        <Message Importance="normal" Text="fsc arguments: @(FscCommandLineArgs)"/>
+        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+        <Message Importance="low" Text="FSC arguments: @(FscCommandLineArgs)"/>
         <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
         <Exec
                 ContinueOnError="true"
-                Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; $(FSharpAnalyzersOtherFlags)">
-            <Output TaskParameter="ExitCode" PropertyName="LastExitCode"/>
-        </Exec>
-        <Error Condition="'$(LastExitCode)' == '-2'" Text="Problems were found $(MSBuildProjectFile)"/>
+                IgnoreExitCode="true"
+                Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; $(FSharpAnalyzersOtherFlags)" />
     </Target>
     
     <Target Name="AnalyzeFSharpProjectUsingFscArgs" DependsOnTargets="_AnalyzeFSharpProjectUsingFscArgs" />
