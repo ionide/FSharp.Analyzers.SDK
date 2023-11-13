@@ -43,7 +43,7 @@ type Arguments =
             | Verbose -> "Verbose logging."
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
-                "Root of the current code repository, used in sarif report to the relative file path. The current working directory is used by default."
+                "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
 
 type SeverityMappings =
     {
