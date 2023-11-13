@@ -12,6 +12,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * [Provide better DX when project cracking failed](https://github.com/ionide/FSharp.Analyzers.SDK/issues/126) (thanks @dawedawe!)
 * [Hint is mapped as note in sarif export](https://github.com/ionide/FSharp.Analyzers.SDK/pull/148) (thanks @nojaf!)
 * [Properly walk SynModuleSigDecl.Val](https://github.com/ionide/FSharp.Analyzers.SDK/pull/156) (thanks @nojaf!)
+* [Sarif file should not report absolute file paths](https://github.com/ionide/FSharp.Analyzers.SDK/issues/154) (thanks @nojaf!)
 
 ## [0.19.0] - 2023-11-08
 
