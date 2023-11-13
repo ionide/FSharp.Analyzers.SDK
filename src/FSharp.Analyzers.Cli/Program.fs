@@ -21,6 +21,7 @@ type Arguments =
     | [<Unique>] Exclude_Analyzer of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
+    | [<Unique>] Code_Root of string
     | [<Unique>] Verbose
 
     interface IArgParserTemplate with
@@ -41,6 +42,8 @@ type Arguments =
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbose -> "Verbose logging."
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
+            | Code_Root _ ->
+                "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
 
 type SeverityMappings =
     {
@@ -253,9 +256,12 @@ let printMessages (msgs: AnalyzerMessage list) =
 
     ()
 
-let writeReport (results: AnalyzerMessage list option) (report: string) =
+let writeReport (results: AnalyzerMessage list option) (codeRoot: string option) (report: string) =
     try
-        let pwd = Directory.GetCurrentDirectory() |> Uri
+        let codeRoot =
+            match codeRoot with
+            | None -> Directory.GetCurrentDirectory() |> Uri
+            | Some root -> Path.GetFullPath root |> Uri
 
         // Construct full path to ensure path separators are normalized.
         let report = Path.GetFullPath report
@@ -317,7 +323,7 @@ let writeReport (results: AnalyzerMessage list option) (report: string) =
 
             physicalLocation.ArtifactLocation <-
                 let al = ArtifactLocation()
-                al.Uri <- pwd.MakeRelativeUri(Uri(analyzerResult.Message.Range.FileName))
+                al.Uri <- codeRoot.MakeRelativeUri(Uri(analyzerResult.Message.Range.FileName))
                 al
 
             physicalLocation.Region <-
@@ -441,6 +447,7 @@ let main argv =
     let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
+    let codeRoot = results.TryGetResult <@ Code_Root @>
 
     let results =
         if analyzers = 0 then
@@ -470,6 +477,6 @@ let main argv =
                 |> Some
 
     results |> Option.iter printMessages
-    report |> Option.iter (writeReport results)
+    report |> Option.iter (writeReport results codeRoot)
 
     calculateExitCode results
