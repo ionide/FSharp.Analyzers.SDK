@@ -604,7 +604,8 @@ module ASTCollecting =
             | SynModuleSigDecl.NestedModule _ -> ()
             | SynModuleSigDecl.Val(s, _range) -> walkValSig s
             | SynModuleSigDecl.Types(types, _) -> List.iter walkTypeDefnSig types
-            | SynModuleSigDecl.Exception _ -> ()
+            | SynModuleSigDecl.Exception(exnSig = SynExceptionSig(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
+                walkUnionCase unionCase
             | SynModuleSigDecl.Open _ -> ()
             | SynModuleSigDecl.HashDirective _ -> ()
             | SynModuleSigDecl.NamespaceFragment _ -> ()
