@@ -44,11 +44,11 @@ Luckily, we can use an MSBuild custom target to take care of the path constructi
 Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your `fsproj`:
 
 ```xml
-<PackageReference Include="FSharp.Analyzers.Build" Version="0.1.0" PrivateAssets="all" />
+<PackageReference Include="FSharp.Analyzers.Build" Version="0.2.0" PrivateAssets="all" />
 ```
 
-This imports two targets to your project file: `AnalyzeFSharpProject` and `AnalyzeFSharpProjectUsingFscArgs`.  
-These will allow us to easily run the analyzers for our project.  
+This imports a new target to your project file: `AnalyzeFSharpProject`.  
+And will allow us to easily run the analyzers for our project.  
 
 Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to specify our settings in a property called `FSharpAnalyzersOtherFlags`:
 
@@ -69,17 +69,6 @@ dotnet msbuild /t:AnalyzeFSharpProject
 ```
 
 Note: if your project has multiple `TargetFrameworks` the tool will be invoked for each target framework.
-
-### Analyze FSharp project using FscArgs
-
-So 🤔, what is the difference between `AnalyzeFSharpProject` and `AnalyzeFSharpProjectUsingFscArgs`?
-
-The way the analyzers work is that we will programmatically type-check a project and process the results with our analyzers. In order to do this programmatically we need to construct the [FSharpProjectOptions](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpprojectoptions.html).  
-This is essentially a type that represents all the fsharp compiler arguments. When using `--project`, we will use [ProjInfo](https://github.com/ionide/proj-info) to invoke a set of MSBuild targets in the project to perform a design-time build.  
-A design-time build is basically an empty invocation of a build. It won't produce assemblies but will have constructed the correct arguments to theoretically invoke the compiler.  
-
-There's an alternative way to do this. Instead of using the `--project` argument, it's possible to use the `--fsc-args` argument to let the CLI tool construct the needed `FSharpProjectOptions`.  
-The `AnalyzeFSharpProjectUsingFscArgs` uses MSBuild to construct the raw `fsc` arguments. This can potentially be faster (due to MSBuild caching) and more accurate.
 
 ## Using analyzers in a solution
 
@@ -124,11 +113,6 @@ Add the following custom target to the [Directory.Solution.targets](https://lear
     </ItemGroup>
 
     <Target Name="AnalyzeSolution">
-        <!-- 
-        If you use `AnalyzeFSharpProjectUsingFscArgs`, it is recommended to build the solution upfront.
-        You can use the `Exec` tag to achieve this.
-        <Exec Command="dotnet build -c Release $(SolutionFileName)" />
-        -->
         <MSBuild Projects="@(ProjectsToAnalyze)" Targets="AnalyzeFSharpProject" />
     </Target>
 </Project>
