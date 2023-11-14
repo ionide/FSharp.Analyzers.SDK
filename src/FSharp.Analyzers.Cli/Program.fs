@@ -202,6 +202,11 @@ let runFscArgs
     (globs: Glob list)
     (mappings: SeverityMappings)
     =
+    if String.IsNullOrWhiteSpace fscArgs then
+        printError "Empty --fsc-args were passed!"
+        exit 1
+    else
+
     let fscArgs = fscArgs.Split(';', StringSplitOptions.RemoveEmptyEntries)
 
     let sourceFiles =
