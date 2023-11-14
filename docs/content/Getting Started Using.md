@@ -50,7 +50,7 @@ Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Bui
 This imports two targets to your project file: `AnalyzeFSharpProject` and `AnalyzeFSharpProjectUsingFscArgs`.  
 These will allow us to easily run the analyzers for our project.  
 
-Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to add specify our settings in a property called `FSharpAnalyzersOtherFlags`:
+Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to specify our settings in a property called `FSharpAnalyzersOtherFlags`:
 
 ```xml
 <PropertyGroup>
@@ -68,7 +68,7 @@ At last, you can run the analyzer from the project folder:
 dotnet msbuild /t:AnalyzeFSharpProject
 ```
 
-Note: if your project has multiple `TargetFrameworks` the tool will be invoke for each target framework.
+Note: if your project has multiple `TargetFrameworks` the tool will be invoked for each target framework.
 
 ### Analyze FSharp project using FscArgs
 
@@ -79,7 +79,7 @@ This is essentially a type that represents all the fsharp compiler arguments. Wh
 A design-time build is basically an empty invocation of a build. It won't produce assemblies but will have constructed the correct arguments to theoretically invoke the compiler.  
 
 There's an alternative way to do this. Instead of using the `--project` argument, it's possible to use the `--fsc-args` argument to let the CLI tool construct the needed `FSharpProjectOptions`.  
-The `AnalyzeFSharpProjectUsingFscArgs` uses MSBuild to construct the raw `fsc` arguments. This potentially be faster (due to MSBuild caching) and more accurate.
+The `AnalyzeFSharpProjectUsingFscArgs` uses MSBuild to construct the raw `fsc` arguments. This can potentially be faster (due to MSBuild caching) and more accurate.
 
 ## Using analyzers in a solution
 
