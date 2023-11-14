@@ -96,6 +96,8 @@ module ASTCollecting =
         default _.WalkTypeDefnRepr typeDefnRepr = ()
         abstract WalkTypeDefn: SynTypeDefn -> unit
         default _.WalkTypeDefn typeDefn = ()
+        abstract WalkTypeDefnSig: typeDefn: SynTypeDefnSig -> unit
+        default _.WalkTypeDefnSig typeDefn = ()
 
     let walkAst (walker: SyntaxCollectorBase) (input: ParsedInput) : unit =
 
@@ -562,6 +564,20 @@ module ASTCollecting =
             Option.iter walkMember implicitCtor
             List.iter walkMember members
 
+        and walkTypeDefnSig (SynTypeDefnSig(info, repr, members, r, _) as s) =
+            walker.WalkTypeDefnSig s
+
+            let isTypeExtensionOrAlias =
+                match repr with
+                | SynTypeDefnSigRepr.ObjectModel(kind = SynTypeDefnKind.Augmentation _)
+                | SynTypeDefnSigRepr.ObjectModel(kind = SynTypeDefnKind.Abbrev)
+                | SynTypeDefnSigRepr.Simple(repr = SynTypeDefnSimpleRepr.TypeAbbrev _) -> true
+                | _ -> false
+
+            walkComponentInfo isTypeExtensionOrAlias info
+            walkTypeDefnSigRepr repr
+            List.iter walkMemberSig members
+
         and walkSynModuleDecl (decl: SynModuleDecl) =
             walker.WalkSynModuleDecl decl
 
@@ -587,7 +603,7 @@ module ASTCollecting =
             | SynModuleSigDecl.ModuleAbbrev _ -> ()
             | SynModuleSigDecl.NestedModule _ -> ()
             | SynModuleSigDecl.Val(s, _range) -> walkValSig s
-            | SynModuleSigDecl.Types _ -> ()
+            | SynModuleSigDecl.Types(types, _) -> List.iter walkTypeDefnSig types
             | SynModuleSigDecl.Exception _ -> ()
             | SynModuleSigDecl.Open _ -> ()
             | SynModuleSigDecl.HashDirective _ -> ()
