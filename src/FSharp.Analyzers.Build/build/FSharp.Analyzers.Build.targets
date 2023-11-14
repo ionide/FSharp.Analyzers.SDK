@@ -1,0 +1,34 @@
+<Project>
+    <Target Name="_AnalyzeFSharpProject">
+        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+        <Exec
+                ContinueOnError="true"
+                IgnoreExitCode="true"
+                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzersOtherFlags)" />
+    </Target>
+
+    <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
+
+    <Target Name="_SetDesignTimePropertiesForFSharpAnalyzers" BeforeTargets="Restore">
+        <PropertyGroup>
+            <DesignTimeBuild>true</DesignTimeBuild>
+            <ProvideCommandLineArgs>true</ProvideCommandLineArgs>
+            <SkipCompilerExecution>true</SkipCompilerExecution>
+        </PropertyGroup>
+    </Target>
+    
+    <Target
+            Name="_AnalyzeFSharpProjectUsingFscArgs"
+            DependsOnTargets="_SetDesignTimePropertiesForFSharpAnalyzers;Restore;ResolveAssemblyReferencesDesignTime;ResolveProjectReferencesDesignTime;ResolvePackageDependenciesDesignTime;FindReferenceAssembliesForReferences;_GenerateCompileDependencyCache;_ComputeNonExistentFileProperty;BeforeBuild;BeforeCompile;CoreCompile">
+
+        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+        <Message Importance="low" Text="FSC arguments: @(FscCommandLineArgs)"/>
+        <Message Importance="High" Text="Analyzing $(MSBuildProjectFile)"/>
+        <Exec
+                ContinueOnError="true"
+                IgnoreExitCode="true"
+                Command="dotnet fsharp-analyzers --fsc-args &quot;@(FscCommandLineArgs)&quot; $(FSharpAnalyzersOtherFlags)" />
+    </Target>
+    
+    <Target Name="AnalyzeFSharpProjectUsingFscArgs" DependsOnTargets="_AnalyzeFSharpProjectUsingFscArgs" />
+</Project>
