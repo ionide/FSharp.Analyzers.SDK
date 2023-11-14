@@ -601,7 +601,9 @@ module ASTCollecting =
 
             match decl with
             | SynModuleSigDecl.ModuleAbbrev _ -> ()
-            | SynModuleSigDecl.NestedModule _ -> ()
+            | SynModuleSigDecl.NestedModule(moduleInfo = info; moduleDecls = decls) ->
+                walkComponentInfo false info
+                List.iter walkSynModuleSigDecl decls
             | SynModuleSigDecl.Val(s, _range) -> walkValSig s
             | SynModuleSigDecl.Types(types, _) -> List.iter walkTypeDefnSig types
             | SynModuleSigDecl.Exception(exnSig = SynExceptionSig(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
