@@ -121,9 +121,10 @@ module ASTCollecting =
 
         and walkAttribute (attr: SynAttribute) = walkExpr attr.ArgExpr
 
-        and walkTyparDecl (SynTyparDecl(attributes = AllAttrs attrs; Item2 = typar)) =
+        and walkTyparDecl (SynTyparDecl(attributes = AllAttrs attrs; typar = typar; intersectionConstraints = ts)) =
             List.iter walkAttribute attrs
             walkTypar typar
+            List.iter walkType ts
 
         and walkTyparDecls (typars: SynTyparDecls) =
             typars.TyparDecls |> List.iter walkTyparDecl
@@ -180,7 +181,6 @@ module ASTCollecting =
             | SynPat.Record(_, r) -> ()
             | SynPat.Null r -> ()
             | SynPat.OptionalVal(_, r) -> ()
-            | SynPat.DeprecatedCharRange(_, _, r) -> ()
             | SynPat.InstanceMember(_, _, _, accessibility, r) -> ()
             | SynPat.FromParseError(_, r) -> ()
             | SynPat.As(lpat, rpat, r) ->
@@ -251,6 +251,9 @@ module ASTCollecting =
                 walkType lhs
                 walkType rhs
             | SynType.FromParseError r -> ()
+            | SynType.Intersection(typar, types, _, _) ->
+                Option.iter walkTypar typar
+                List.iter walkType types
 
         and walkClause (SynMatchClause(pat, e1, e2, r, _, _) as s) =
             walker.WalkClause s
@@ -365,30 +368,30 @@ module ASTCollecting =
                 walkType t
                 walkMemberSig sign
                 walkExpr e
-            | SynExpr.Const(SynConst.Measure(_, _, m), r) -> walkMeasure m
+            | SynExpr.Const(SynConst.Measure(synMeasure = m), _) -> walkMeasure m
             | SynExpr.Const(_, r) -> ()
             | SynExpr.AnonRecd(isStruct, copyInfo, recordFields, r, trivia) -> ()
             | SynExpr.Sequential(seqPoint, isTrueSeq, expr1, expr2, r) -> ()
             | SynExpr.Ident _ -> ()
             | SynExpr.LongIdent(isOptional, longDotId, altNameRefCell, r) -> ()
-            | SynExpr.Set(_, _, r) -> ()
+            | SynExpr.Set(range = r) -> ()
             | SynExpr.Null r -> ()
             | SynExpr.ImplicitZero r -> ()
             | SynExpr.MatchBang(range = r) -> ()
-            | SynExpr.LibraryOnlyILAssembly(_, _, _, _, r) -> ()
-            | SynExpr.LibraryOnlyStaticOptimization(_, _, _, r) -> ()
+            | SynExpr.LibraryOnlyILAssembly(range = r) -> ()
+            | SynExpr.LibraryOnlyStaticOptimization(range = r) -> ()
             | SynExpr.LibraryOnlyUnionCaseFieldGet(expr, longId, _, r) -> ()
-            | SynExpr.LibraryOnlyUnionCaseFieldSet(_, longId, _, _, r) -> ()
+            | SynExpr.LibraryOnlyUnionCaseFieldSet(longId = longId; range = r) -> ()
             | SynExpr.ArbitraryAfterError(debugStr, r) -> ()
             | SynExpr.FromParseError(expr, r) -> ()
-            | SynExpr.DiscardAfterMissingQualificationAfterDot(_, _, r) -> ()
+            | SynExpr.DiscardAfterMissingQualificationAfterDot(range = r) -> ()
             | SynExpr.Fixed(expr, r) -> ()
             | SynExpr.InterpolatedString(parts, kind, r) ->
 
                 for part in parts do
                     walkInterpolatedStringPart part
             | SynExpr.IndexFromEnd(itemExpr, r) -> walkExpr itemExpr
-            | SynExpr.IndexRange(e1, _, e2, _, _, r) ->
+            | SynExpr.IndexRange(expr1 = e1; expr2 = e2; range = r) ->
                 Option.iter walkExpr e1
                 Option.iter walkExpr e2
             | SynExpr.DebugPoint(innerExpr = expr) -> walkExpr expr
@@ -396,21 +399,27 @@ module ASTCollecting =
                 walkExpr e1
                 walkExpr e2
             | SynExpr.Typar(t, r) -> walkTypar t
+            | SynExpr.DotLambda(expr = e) -> walkExpr e
+            | SynExpr.WhileBang(whileExpr = whileExpr; doExpr = doExpr) ->
+                walkExpr whileExpr
+                walkExpr doExpr
 
         and walkMeasure s =
             walker.WalkMeasure s
 
             match s with
-            | SynMeasure.Product(m1, m2, r)
-            | SynMeasure.Divide(m1, m2, r) ->
+            | SynMeasure.Product(measure1 = m1; measure2 = m2) ->
                 walkMeasure m1
                 walkMeasure m2
-            | SynMeasure.Named(longIdent, r) -> ()
-            | SynMeasure.Seq(ms, r) -> List.iter walkMeasure ms
-            | SynMeasure.Power(m, _, r) -> walkMeasure m
-            | SynMeasure.Var(ty, r) -> walkTypar ty
-            | SynMeasure.Paren(m, r) -> walkMeasure m
-            | SynMeasure.One
+            | SynMeasure.Divide(measure1 = m1; measure2 = m2) ->
+                Option.iter walkMeasure m1
+                walkMeasure m2
+            | SynMeasure.Named _ -> ()
+            | SynMeasure.Seq(ms, _) -> List.iter walkMeasure ms
+            | SynMeasure.Power(measure = m) -> walkMeasure m
+            | SynMeasure.Var(ty, _) -> walkTypar ty
+            | SynMeasure.Paren(m, _) -> walkMeasure m
+            | SynMeasure.One _
             | SynMeasure.Anon _ -> ()
 
         and walkSimplePat s =

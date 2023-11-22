@@ -44,9 +44,7 @@ type EditorAnalyzerAttribute =
     member Name: string
 
 /// Marker interface which both the CliContext and EditorContext implement
-type Context =
-    interface
-    end
+type Context = interface end
 
 /// All the relevant compiler information for a given file.
 /// Contains the source text, untyped and typed tree information.
