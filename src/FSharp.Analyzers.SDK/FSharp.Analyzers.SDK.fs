@@ -90,9 +90,7 @@ type EditorAnalyzerAttribute
 
     member _.Name = name
 
-type Context =
-    interface
-    end
+type Context = interface end
 
 type CliContext =
     {

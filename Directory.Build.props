@@ -7,6 +7,9 @@
     <DisableImplicitLibraryPacksFolder>true</DisableImplicitLibraryPacksFolder>
     <ChangelogFile>$(MSBuildThisFileDirectory)CHANGELOG.md</ChangelogFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <WarnOn>$(WarnOn);1182</WarnOn> <!-- Unused variables,https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/compiler-options#opt-in-warnings -->
+    <WarnOn>$(WarnOn);3390</WarnOn><!-- Malformed XML doc comments -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelOptimization --test:ParallelIlxGen</OtherFlags>
   </PropertyGroup>
 
