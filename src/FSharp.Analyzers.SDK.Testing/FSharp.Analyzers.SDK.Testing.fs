@@ -165,7 +165,7 @@ let createProject (binLogPath: string) (tmpProjectDir: string) (framework: strin
                     .Wrap("dotnet")
                     .WithEnvironmentVariables(roDic)
                     .WithWorkingDirectory(tmpProjectDir)
-                    .WithArguments($"build -bl:{binLogPath}")
+                    .WithArguments($"build -bl:\"{binLogPath}\"")
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                     .WithValidation(CommandResultValidation.ZeroExitCode)
