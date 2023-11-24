@@ -23,15 +23,39 @@ dotnet fsharp-analyzers /
   --report ./analysis.sarif
 ```
 
-### GitHub Actions
+### Code root
+
+Use the `--code-root` flag to specify the root directory where all reported problems should be relative to.
+Typically, this should correspond to your source control (git) repository. Some tooling may require this setting to be accurate for easy navigation to the reported problems.
+
+Example when using MSBuild:
+
+```xml
+<PropertyGroup>
+    <CodeRoot>$([System.IO.Path]::GetDirectoryName($(DirectoryBuildTargetsPath)))</CodeRoot>
+    <SarifOutput>$(CodeRoot)/reports/</SarifOutput>
+    <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot;</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>$(FSharpAnalyzersOtherFlags) --code-root &quot;$(CodeRoot)&quot;</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>$(FSharpAnalyzersOtherFlags) --report &quot;$(SarifOutput)$(MSBuildProjectName)-$(TargetFramework).sarif&quot;</FSharpAnalyzersOtherFlags>
+</PropertyGroup>
+```
+
+## GitHub Actions
 
 If you are using [GitHub Actions](https://docs.github.com/en/code-security/codeql-cli/using-the-advanced-functionality-of-the-codeql-cli/sarif-output) you can easily send the *sarif file* to [CodeQL](https://codeql.github.com/).
 
 ```yml
+    - name: Run Analyzers
+      run: dotnet msbuild /t:AnalyzeFSharpProject /p:Configuration=Release
+      # This is important, you want to continue your Action even if you found problems.
+      # As you always want the report to upload
+      continue-on-error: true
+
     # checkout code, build, run analyzers, ...
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v2
       with:
+        # You can also specify the path to a folder for `sarif_file`
         sarif_file: analysis.sarif
 ```
 
