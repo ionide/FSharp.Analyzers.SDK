@@ -315,7 +315,7 @@ module ASTCollecting =
                 walkExpr nextPath e
                 walkType nextPath t
             | SynExpr.Tuple(exprs = es)
-            | Sequentials es -> List.iter (walkExpr nextPath) es //TODO??
+            | Sequentials es -> List.iter (walkExpr nextPath) es
             | SynExpr.ArrayOrList(_, es, _) -> List.iter (walkExpr nextPath) es
             | SynExpr.App(funcExpr = e1; argExpr = e2)
             | SynExpr.TryFinally(tryExpr = e1; finallyExpr = e2)
