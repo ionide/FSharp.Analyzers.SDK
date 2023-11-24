@@ -23,9 +23,9 @@ dotnet tool install fsharp-analyzers
 Next, add the `PackageReference` pointing to your favorite analyzers to the `.fsproj` file of the project you want to analyze:
 
 ```xml
-<PackageReference Include="G-Research.FSharp.Analyzers" Version="0.3.0">
+<PackageReference Include="G-Research.FSharp.Analyzers" Version="0.4.0">
     <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>build</IncludeAssets>
+    <IncludeAssets>analyzers</IncludeAssets>
 </PackageReference>
 ```
 
@@ -33,7 +33,7 @@ At the time of writing, the [G-Research analyzers](https://github.com/g-research
 With the package downloaded, we can run the CLI tool:
 
 ```shell
-dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.3.0\analyzers\dotnet\fs\ --verbose
+dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.4.0\analyzers\dotnet\fs\ --verbose
 ```
 
 ### Using an MSBuild target
@@ -44,7 +44,10 @@ Luckily, we can use an MSBuild custom target to take care of the path constructi
 Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your `fsproj`:
 
 ```xml
-<PackageReference Include="FSharp.Analyzers.Build" Version="0.2.0" PrivateAssets="all" />
+<PackageReference Include="FSharp.Analyzers.Build" Version="0.2.0">
+    <PrivateAssets>all</PrivateAssets>
+    <IncludeAssets>build</IncludeAssets>
+</PackageReference>
 ```
 
 This imports a new target to your project file: `AnalyzeFSharpProject`.  
@@ -80,10 +83,13 @@ This adds the package reference to all `.fsproj` files that are in a subfolder o
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="FSharp.Analyzers.Build" Version="0.1.0" PrivateAssets="all" />
-    <PackageReference Include="G-Research.FSharp.Analyzers" Version="0.1.6">
+    <PackageReference Include="FSharp.Analyzers.Build" Version="0.2.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>build</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="G-Research.FSharp.Analyzers" Version="0.1.6">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>analyzers</IncludeAssets>
     </PackageReference>
 </ItemGroup>
 ```
@@ -101,10 +107,20 @@ This is effectively the same as adding a property to each `*proj` file which exi
 ```
 
 ⚠️ We are adding the `FSharpAnalyzersOtherFlags` property to our **Directory.Build.targets** and **not to** any **Directory.Build.props** file!  
-MSBuild will first evaluate `Directory.Build.props` which has no access to the generated nuget.g.props. `$(PkgIonide_Analyzers)` won't be known at this point. `Directory.Build.targets` is evaluated after the project file and has access to `Pkg` generated properties.
+MSBuild will first evaluate `Directory.Build.props` which has no access to the generated nuget.g.props. `$(PkgG-Research_FSharp_Analyzers)` won't be known at this point. `Directory.Build.targets` is evaluated after the project file and has access to `Pkg` generated properties.
 
-As we don't want to list all projects of the solution explicitly when analyzing the solution, we create a second custom MSBuild target that calls the project-specific target for all projects.  
-Add the following custom target to the [Directory.Solution.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-solution-build?view=vs-2022) file to be able to invoke analysis of the whole solution in one simple command:
+### All projects in the solution
+
+We can run the `AnalyzeFSharpProject` target against all projects in a solution
+
+```shell
+dotnet msbuild YourSolution.sln /t:AnalyzeFSharpProject
+```
+
+### Select specific projects
+
+As we don't want to targt all projects of the solution, we create a second custom MSBuild target that calls the project-specific target for all relevant projects.  
+Add the following custom target to the [Directory.Solution.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-solution-build?view=vs-2022) file to be able to invoke analysis from all selected projects in one simple command:
 
 ```xml
 <Project>
@@ -125,5 +141,49 @@ dotnet msbuild /t:AnalyzeSolution
 ```
 
 Note: we passed the `--code-root` flag so that the `*.sarif` report files will report file paths relative to this root. This can be imported for certain editors to function properly. 
+
+## MSBuild tips and tricks
+
+MSBuild can be overwhelming for the uninitiated. Here are some tricks we've seen in the wild:
+
+### Use well-known properties
+
+Checkout the [MSBuild reserved and well-known properties](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-reserved-and-well-known-properties?view=vs-2022) to use existing variables like `$(MSBuildProjectFile)`.
+
+### Wrap path arguments in quotes
+
+As MSBuild is all XML, you can use `&quot;` to wrap evaluated values in quotes:
+
+```xml
+<PropertyGroup>
+    <WithQuotes>&quot;$(SolutionDir)&quot;</WithQuotes>
+</PropertyGroup>
+```
+
+### Extend `<FSharpAnalyzersOtherFlags>` in multiple lines
+
+You can extend the value of `$(FSharpAnalyzersOtherFlags)` by setting it again in multiple lines:
+
+```xml
+<PropertyGroup>
+    <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot;</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>$(FSharpAnalyzersOtherFlags) --analyzers-path &quot;$(PkgIonide_Analyzers)/analyzers/dotnet/fs&quot;</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>$(FSharpAnalyzersOtherFlags) --configuration $(Configuration)</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>$(FSharpAnalyzersOtherFlags) --exclude-analyzer PartialAppAnalyzer</FSharpAnalyzersOtherFlags>
+</PropertyGroup>
+```
+
+### Verify parameters are present
+
+It can be a bit confusing to find out if a variable contains the value you think it does.
+We often add a dummy target to a project to print out some values:
+
+```xml
+<Target Name="Dump">
+    <Message Importance="high" Text="$(CodeRoot)" />
+</Target>
+```
+
+Run `dotnet msbuild YourProject.fsproj /t:Dump` and verify that `CodeRoot` has a value or not.
 
 [Next]({{fsdocs-next-page-link}})
