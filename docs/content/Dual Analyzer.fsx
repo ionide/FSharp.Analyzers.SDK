@@ -41,14 +41,14 @@ let private topologicallySortedOpenStatementsAnalyzer
 
             let walker =
                 { new SyntaxCollectorBase() with
-                    override _.WalkSynModuleSigDecl(decl: SynModuleSigDecl) =
+                    override _.WalkSynModuleSigDecl(_, decl: SynModuleSigDecl) =
                         match decl with
                         | SynModuleSigDecl.Open(
                             target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
                             allOpenStatements.Add(value, mOpen)
                         | _ -> ()
 
-                    override _.WalkSynModuleDecl(decl: SynModuleDecl) =
+                    override _.WalkSynModuleDecl(_, decl: SynModuleDecl) =
                         match decl with
                         | SynModuleDecl.Open(
                             target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
