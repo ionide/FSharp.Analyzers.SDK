@@ -9,6 +9,7 @@
     <PackAsTool>true</PackAsTool>
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
+    <Description>A dotnet CLI tool for running F# analyzers</Description>
   </PropertyGroup>
 
   <ItemGroup>
