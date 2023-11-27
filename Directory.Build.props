@@ -28,7 +28,7 @@
     <PackageReference Include="Ionide.KeepAChangelog.Tasks" PrivateAssets="All" />
   </ItemGroup>
 
-  <PropertyGroup Condition="'$(IsPackable)' == 'true'">
+  <PropertyGroup>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>F#;analyzers;compiler;tooling;editor;</PackageTags>
   </PropertyGroup>
