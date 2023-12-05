@@ -9,7 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * [Add path to ASTCollecting](https://github.com/ionide/FSharp.Analyzers.SDK/pull/171) (thanks @nojaf!)
-* [Console printing enhancements](https://github.com/ionide/FSharp.Analyzers.SDK/pull/TOFILL) (thanks @smoothdeveloper!)
+* [Console printing enhancements](https://github.com/ionide/FSharp.Analyzers.SDK/pull/174) (thanks @smoothdeveloper!)
 
 ## [0.21.0] - 2023-11-22
 
