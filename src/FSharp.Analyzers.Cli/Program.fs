@@ -240,6 +240,11 @@ let runFscArgs
 
     runProjectAux client projectOptions globs mappings
 
+let switchConsoleColor newColor = 
+    let savedColor = Console.ForegroundColor
+    Console.ForegroundColor <- newColor
+    { new IDisposable with member x.Dispose() = Console.ForegroundColor <- savedColor }
+
 let printMessages (msgs: AnalyzerMessage list) =
     if verbose then
         printfn ""
@@ -250,26 +255,38 @@ let printMessages (msgs: AnalyzerMessage list) =
     msgs
     |> Seq.iter (fun analyzerMessage ->
         let m = analyzerMessage.Message
+        do
+            use _ = switchConsoleColor ConsoleColor.Gray
+            printf 
+                "%s(%d,%d) "
+                m.Range.FileName
+                m.Range.StartLine
+                m.Range.StartColumn
 
-        let color =
-            match m.Severity with
-            | Error -> ConsoleColor.Red
-            | Warning -> ConsoleColor.DarkYellow
-            | Info -> ConsoleColor.Blue
-            | Hint -> ConsoleColor.Cyan
+        do
+            let color =
+                match m.Severity with
+                | Error -> ConsoleColor.Red
+                | Warning -> ConsoleColor.DarkYellow
+                | Info -> ConsoleColor.Blue
+                | Hint -> ConsoleColor.Cyan
+            use _ = switchConsoleColor color
+            printf
+                "%s %s "
+                (m.Severity.ToString())
+                m.Code
 
-        Console.ForegroundColor <- color
+        do
+            use _ = switchConsoleColor ConsoleColor.Gray
+            printf 
+                "%s"
+                m.Message
 
-        printfn
-            "%s(%d,%d): %s %s - %s"
-            m.Range.FileName
-            m.Range.StartLine
-            m.Range.StartColumn
-            (m.Severity.ToString())
-            m.Code
-            m.Message
-
-        Console.ForegroundColor <- origForegroundColor
+        match analyzerMessage.HelpUri with
+        | Some helpUri ->
+          use _ = switchConsoleColor ConsoleColor.Cyan
+          printfn $" %s{helpUri}"
+        | None -> printfn ""
     )
 
     ()
