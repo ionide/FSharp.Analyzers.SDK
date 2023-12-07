@@ -240,10 +240,13 @@ let runFscArgs
 
     runProjectAux client projectOptions globs mappings
 
-let switchConsoleColor newColor = 
+let switchConsoleColor newColor =
     let savedColor = Console.ForegroundColor
     Console.ForegroundColor <- newColor
-    { new IDisposable with member x.Dispose() = Console.ForegroundColor <- savedColor }
+
+    { new IDisposable with
+        member x.Dispose() = Console.ForegroundColor <- savedColor
+    }
 
 let printMessages (msgs: AnalyzerMessage list) =
     if verbose then
@@ -255,13 +258,10 @@ let printMessages (msgs: AnalyzerMessage list) =
     msgs
     |> Seq.iter (fun analyzerMessage ->
         let m = analyzerMessage.Message
+
         do
             use _ = switchConsoleColor ConsoleColor.Gray
-            printf 
-                "%s(%d,%d) "
-                m.Range.FileName
-                m.Range.StartLine
-                m.Range.StartColumn
+            printf "%s(%d,%d) " m.Range.FileName m.Range.StartLine m.Range.StartColumn
 
         do
             let color =
@@ -270,22 +270,18 @@ let printMessages (msgs: AnalyzerMessage list) =
                 | Warning -> ConsoleColor.DarkYellow
                 | Info -> ConsoleColor.Blue
                 | Hint -> ConsoleColor.Cyan
+
             use _ = switchConsoleColor color
-            printf
-                "%s %s "
-                (m.Severity.ToString())
-                m.Code
+            printf "%s %s " (m.Severity.ToString()) m.Code
 
         do
             use _ = switchConsoleColor ConsoleColor.Gray
-            printf 
-                "%s"
-                m.Message
+            printf "%s" m.Message
 
         match analyzerMessage.HelpUri with
         | Some helpUri ->
-          use _ = switchConsoleColor ConsoleColor.Cyan
-          printfn $" %s{helpUri}"
+            use _ = switchConsoleColor ConsoleColor.Cyan
+            printfn $" %s{helpUri}"
         | None -> printfn ""
     )
 
