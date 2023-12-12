@@ -12,7 +12,7 @@ open Microsoft.CodeAnalysis.Sarif
 open Microsoft.CodeAnalysis.Sarif.Writers
 open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
-open Console.ExampleFormatters.Custom
+open FSharp.Analyzers.Cli.CustomLogging
 
 type Arguments =
     | Project of string list
@@ -182,7 +182,7 @@ let runProject
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 
 let isFSharpFile (file: string) =
-    Seq.exists (fun (ext: string) -> file.EndsWith ext) fsharpFiles
+    Set.exists (fun (ext: string) -> file.EndsWith(ext, StringComparison.Ordinal)) fsharpFiles
 
 let runFscArgs
     (client: Client<CliAnalyzerAttribute, CliContext>)
@@ -229,22 +229,35 @@ let runFscArgs
     runProjectAux client projectOptions globs mappings
 
 let printMessages (msgs: AnalyzerMessage list) =
+
+    let severityToLogLevel =
+        Map.ofArray
+            [|
+                Error, LogLevel.Error
+                Warning, LogLevel.Warning
+                Info, LogLevel.Information
+                Hint, LogLevel.Trace
+            |]
+
     if List.isEmpty msgs then
         logger.LogInformation("No messages found from the analyzer(s)")
+
+    use factory =
+        LoggerFactory.Create(fun builder ->
+            builder
+                .AddCustomFormatter(fun options -> options.UseAnalyzersMsgStyle <- true)
+                .SetMinimumLevel(LogLevel.Trace)
+            |> ignore
+        )
+
+    let msgLogger = factory.CreateLogger("")
 
     msgs
     |> Seq.iter (fun analyzerMessage ->
         let m = analyzerMessage.Message
 
-        let msgLogLevel =
-            match m.Severity with
-            | Error -> LogLevel.Error
-            | Warning -> LogLevel.Warning
-            | Info -> LogLevel.Information
-            | Hint -> LogLevel.Trace
-
-        logger.Log(
-            msgLogLevel,
+        msgLogger.Log(
+            severityToLogLevel[m.Severity],
             "{0}({1},{2}): {3} {4} - {5}",
             m.Range.FileName,
             m.Range.StartLine,
@@ -273,7 +286,7 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
         let driver = ToolComponent()
         driver.Name <- "Ionide.Analyzers.Cli"
         driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
-        driver.Version <- string (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+        driver.Version <- string<Version> (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
         let tool = Tool()
         tool.Driver <- driver
         let run = Run()
@@ -460,7 +473,7 @@ let main argv =
     use factory =
         LoggerFactory.Create(fun builder ->
             builder
-                .AddCustomFormatter(fun options -> options.CustomPrefix <- "")
+                .AddCustomFormatter(fun options -> options.UseAnalyzersMsgStyle <- false)
                 .SetMinimumLevel(logLevel)
             |> ignore
         )

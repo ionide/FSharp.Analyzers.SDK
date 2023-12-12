@@ -28,7 +28,7 @@ module Client =
 
     let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
         mi.GetCustomAttributes true
-        |> Seq.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
+        |> Array.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
         |> Option.map unbox<'TAttribute>
 
     let analyzerFromMember<'TAnalyzerAttribute, 'TContext
@@ -217,7 +217,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
 
-            Seq.length analyzers, analyzers |> Seq.collect snd |> Seq.length
+            Array.length analyzers, analyzers |> Seq.collect snd |> Seq.length
         else
             0, 0
 

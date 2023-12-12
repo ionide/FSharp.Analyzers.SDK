@@ -1,4 +1,4 @@
-namespace Console.ExampleFormatters.Custom
+module FSharp.Analyzers.Cli.CustomLogging
 
 open System
 open System.IO
@@ -11,13 +11,16 @@ open Microsoft.Extensions.Options
 type CustomOptions() =
     inherit ConsoleFormatterOptions()
 
-    member val CustomPrefix = "" with get, set
+    /// if true: no LogLevel as prefix, colored output according to LogLevel
+    /// if false: LogLevel as prefix, no colored output
+    member val UseAnalyzersMsgStyle = false with get, set
 
 type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
     inherit ConsoleFormatter("customName")
 
     let mutable optionsReloadToken: IDisposable = null
     let mutable formatterOptions = options.CurrentValue
+    let origColor = Console.ForegroundColor
 
     do optionsReloadToken <- options.OnChange(fun x -> this.ReloadLoggerOptions(x))
 
@@ -31,11 +34,37 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
         )
         =
         let message = logEntry.Formatter.Invoke(logEntry.State, logEntry.Exception)
-        this.CustomLogic(textWriter)
-        textWriter.WriteLine(message)
 
-    member private _.CustomLogic(textWriter: TextWriter) =
-        textWriter.Write(formatterOptions.CustomPrefix)
+        if formatterOptions.UseAnalyzersMsgStyle then
+            this.SetColor(textWriter, logEntry.LogLevel)
+            textWriter.WriteLine(message)
+            this.ResetColor()
+        else
+            this.WritePrefix(textWriter, logEntry.LogLevel)
+            textWriter.WriteLine(message)
+
+    member private _.WritePrefix(textWriter: TextWriter, logLevel: LogLevel) =
+        match logLevel with
+        | LogLevel.Trace -> textWriter.Write("trace: ")
+        | LogLevel.Debug -> textWriter.Write("debug: ")
+        | LogLevel.Information -> textWriter.Write("info: ")
+        | LogLevel.Warning -> textWriter.Write("warn: ")
+        | LogLevel.Error -> textWriter.Write("error: ")
+        | LogLevel.Critical -> textWriter.Write("critical: ")
+        | _ -> ()
+
+    member private _.SetColor(textWriter: TextWriter, logLevel: LogLevel) =
+        let color =
+            match logLevel with
+            | LogLevel.Error -> "\x1B[1m\x1B[31m" // ConsoleColor.Red
+            | LogLevel.Warning -> "\x1B[33m" // ConsoleColor.DarkYellow
+            | LogLevel.Information -> "\x1B[1m\x1B[34m" // ConsoleColor.Blue
+            | LogLevel.Trace -> "\x1B[1m\x1B[36m" // ConsoleColor.Cyan
+            | _ -> "\x1B[37m" // ConsoleColor.Gray
+
+        textWriter.Write(color)
+
+    member private _.ResetColor() = Console.ForegroundColor <- origColor
 
     interface IDisposable with
         member _.Dispose() = optionsReloadToken.Dispose()
