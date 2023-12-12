@@ -55,7 +55,7 @@ type Arguments =
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbosity _ ->
-                "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]"
+                "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]."
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
