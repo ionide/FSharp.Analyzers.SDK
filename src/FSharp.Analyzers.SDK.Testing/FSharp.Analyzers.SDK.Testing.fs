@@ -4,6 +4,7 @@ module FSharp.Analyzers.SDK.Testing
 #nowarn "57"
 
 open Microsoft.Build.Logging.StructuredLogger
+open Microsoft.Extensions.Logging
 open CliWrap
 open System
 open System.IO
@@ -245,9 +246,14 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
     if Array.isEmpty allSymbolUses then
         failwith "no symboluses"
 
-    let printError s = printf $"{s}"
-
-    match Utils.typeCheckFile fcs printError opts fileName (Utils.SourceOfSource.DiscreteSource source) with
+    match
+        Utils.typeCheckFile
+            fcs
+            Abstractions.NullLogger.Instance
+            opts
+            fileName
+            (Utils.SourceOfSource.DiscreteSource source)
+    with
     | Some(parseFileResults, checkFileResults) ->
         let diagErrors =
             checkFileResults.Diagnostics

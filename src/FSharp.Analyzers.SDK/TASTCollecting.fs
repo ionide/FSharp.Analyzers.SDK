@@ -1,10 +1,13 @@
 namespace FSharp.Analyzers.SDK
 
+open Microsoft.Extensions.Logging
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.Text
 open FSharp.Compiler.Symbols.FSharpExprPatterns
 
 module TASTCollecting =
+
+    let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
     type TypedTreeCollectorBase() =
         abstract WalkCall:
@@ -139,7 +142,9 @@ module TASTCollecting =
                 try
                     visitExpr f e
                 with ex ->
-                    printfn $"unhandled expression at {e.Range.FileName}:{e.Range.ToString()}"
+                    logger.LogDebug("unhandled expression at {0}:{1}", e.Range.FileName, e.Range.ToString())
+                    logger.LogDebug("{0}", ex.Message)
+                    logger.LogDebug("{0}", ex.StackTrace)
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
     let walkTast (walker: TypedTreeCollectorBase) (tast: FSharpImplementationFileContents) : unit =

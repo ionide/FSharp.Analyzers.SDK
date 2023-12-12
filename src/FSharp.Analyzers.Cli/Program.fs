@@ -10,7 +10,9 @@ open FSharp.Analyzers.SDK
 open GlobExpressions
 open Microsoft.CodeAnalysis.Sarif
 open Microsoft.CodeAnalysis.Sarif.Writers
+open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
+open Console.ExampleFormatters.Custom
 
 type Arguments =
     | Project of string list
@@ -29,7 +31,7 @@ type Arguments =
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
     | [<Unique>] Code_Root of string
-    | [<Unique>] Verbose
+    | [<Unique; AltCommandLine("-v")>] Verbosity of string
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -52,7 +54,8 @@ type Arguments =
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
             | Report _ -> "Write the result messages to a (sarif) report file."
-            | Verbose -> "Verbose logging."
+            | Verbosity _ ->
+                "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]"
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
@@ -92,7 +95,7 @@ let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK
             }
     }
 
-let mutable verbose = false
+let mutable logLevel = LogLevel.Warning
 
 let fcs = Utils.createFCS None
 
@@ -106,22 +109,7 @@ let rec mkKn (ty: Type) =
     else
         box ()
 
-let origForegroundColor = Console.ForegroundColor
-
-let printInfo (fmt: Printf.TextWriterFormat<'a>) : 'a =
-    if verbose then
-        Console.ForegroundColor <- ConsoleColor.DarkGray
-        printf "Info : "
-        Console.ForegroundColor <- origForegroundColor
-        printfn fmt
-    else
-        unbox (mkKn typeof<'a>)
-
-let printError (text: string) : unit =
-    Console.ForegroundColor <- ConsoleColor.Red
-    Console.Write "Error : "
-    Console.WriteLine(text)
-    Console.ForegroundColor <- origForegroundColor
+let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
 let loadProject toolsPath properties projPath =
     async {
@@ -129,7 +117,7 @@ let loadProject toolsPath properties projPath =
         let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
 
         if parsed.IsEmpty then
-            printError $"Failed to load project '{projPath}'"
+            logger.LogError("Failed to load project '{0}'", projPath)
             exit 1
 
         let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
@@ -151,7 +139,7 @@ let runProjectAux
             |> Array.filter (fun file ->
                 match ignoreFiles |> List.tryFind (fun g -> g.IsMatch file) with
                 | Some g ->
-                    printInfo $"Ignoring file %s{file} for pattern %s{g.Pattern}"
+                    logger.LogInformation("Ignoring file {0} for pattern {1}", file, g.Pattern)
                     false
                 | None -> true
             )
@@ -159,11 +147,11 @@ let runProjectAux
                 let fileContent = File.ReadAllText fileName
                 let sourceText = SourceText.ofString fileContent
 
-                Utils.typeCheckFile fcs printError fsharpOptions fileName (Utils.SourceOfSource.SourceText sourceText)
+                Utils.typeCheckFile fcs logger fsharpOptions fileName (Utils.SourceOfSource.SourceText sourceText)
                 |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
-                printInfo "Running analyzers for %s" ctx.FileName
+                logger.LogInformation("Running analyzers for {0}", ctx.FileName)
                 client.RunAnalyzers ctx
             )
             |> Async.Parallel
@@ -203,7 +191,7 @@ let runFscArgs
     (mappings: SeverityMappings)
     =
     if String.IsNullOrWhiteSpace fscArgs then
-        printError "Empty --fsc-args were passed!"
+        logger.LogError("Empty --fsc-args were passed!")
         exit 1
     else
 
@@ -241,35 +229,30 @@ let runFscArgs
     runProjectAux client projectOptions globs mappings
 
 let printMessages (msgs: AnalyzerMessage list) =
-    if verbose then
-        printfn ""
-
-    if verbose && List.isEmpty msgs then
-        printfn "No messages found from the analyzer(s)"
+    if List.isEmpty msgs then
+        logger.LogInformation("No messages found from the analyzer(s)")
 
     msgs
     |> Seq.iter (fun analyzerMessage ->
         let m = analyzerMessage.Message
 
-        let color =
+        let msgLogLevel =
             match m.Severity with
-            | Error -> ConsoleColor.Red
-            | Warning -> ConsoleColor.DarkYellow
-            | Info -> ConsoleColor.Blue
-            | Hint -> ConsoleColor.Cyan
+            | Error -> LogLevel.Error
+            | Warning -> LogLevel.Warning
+            | Info -> LogLevel.Information
+            | Hint -> LogLevel.Trace
 
-        Console.ForegroundColor <- color
-
-        printfn
-            "%s(%d,%d): %s %s - %s"
-            m.Range.FileName
-            m.Range.StartLine
-            m.Range.StartColumn
-            (m.Severity.ToString())
-            m.Code
+        logger.Log(
+            msgLogLevel,
+            "{0}({1},{2}): {3} {4} - {5}",
+            m.Range.FileName,
+            m.Range.StartLine,
+            m.Range.StartColumn,
+            (m.Severity.ToString()),
+            m.Code,
             m.Message
-
-        Console.ForegroundColor <- origForegroundColor
+        )
     )
 
     ()
@@ -362,8 +345,8 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
 
         sarifLogger.Dispose()
     with ex ->
-        let details = if not verbose then "" else $" %A{ex}"
-        printfn $"Could not write sarif to %s{report}%s{details}"
+        logger.LogError("Could not write sarif to {report}")
+        logger.LogInformation("{0}", ex)
 
 let calculateExitCode (msgs: AnalyzerMessage list option) : int =
     match msgs with
@@ -397,7 +380,7 @@ let expandMultiProperties (properties: (string * string) list) =
                 for pair in splits.[1..] |> Seq.chunkBySize 2 do
                     match pair with
                     | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
-                        printError $"Missing property value for '{k}'"
+                        logger.LogError("Missing property value for '{0}'", k)
                         exit 1
                     | [| k; v |] -> yield (k, v)
                     | _ -> ()
@@ -409,10 +392,10 @@ let expandMultiProperties (properties: (string * string) list) =
 let validateRuntimeOsArchCombination (runtime, arch, os) =
     match runtime, os, arch with
     | Some _, Some _, _ ->
-        printError "Specifying both the `-r|--runtime` and `-os` options is not supported."
+        logger.LogError("Specifying both the `-r|--runtime` and `-os` options is not supported.")
         exit 1
     | Some _, _, Some _ ->
-        printError "Specifying both the `-r|--runtime` and `-a|--arch` options is not supported."
+        logger.LogError("Specifying both the `-r|--runtime` and `-a|--arch` options is not supported.")
         exit 1
     | _ -> ()
 
@@ -456,8 +439,35 @@ let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
 
     let results = parser.ParseCommandLine argv
-    verbose <- results.Contains <@ Verbose @>
-    printInfo "Running in verbose mode"
+
+    let logLevel =
+        let verbosity = results.TryGetResult <@ Verbosity @>
+
+        match verbosity with
+        | Some "d"
+        | Some "detailed" -> LogLevel.Information
+        | Some "diag"
+        | Some "diagnostic" -> LogLevel.Debug
+        | Some "n" -> LogLevel.Warning
+        | Some "normal" -> LogLevel.Warning
+        | None -> LogLevel.Warning
+        | Some x ->
+            use factory = LoggerFactory.Create(fun b -> b.AddConsole() |> ignore)
+            let logger = factory.CreateLogger("")
+            logger.LogError("unknown verbosity level given {0}", x)
+            exit 1
+
+    use factory =
+        LoggerFactory.Create(fun builder ->
+            builder
+                .AddCustomFormatter(fun options -> options.CustomPrefix <- "")
+                .SetMinimumLevel(logLevel)
+            |> ignore
+        )
+
+    logger <- factory.CreateLogger("")
+
+    logger.LogInformation("Running in verbose mode")
 
     let severityMapping =
         {
@@ -467,13 +477,13 @@ let main argv =
             TreatAsError = results.GetResult(<@ Treat_As_Error @>, []) |> Set.ofList
         }
 
-    printInfo "Treat as Hints: [%s]" (severityMapping.TreatAsHint |> String.concat ", ")
-    printInfo "Treat as Info: [%s]" (severityMapping.TreatAsInfo |> String.concat ", ")
-    printInfo "Treat as Warning: [%s]" (severityMapping.TreatAsWarning |> String.concat ", ")
-    printInfo "Treat as Error: [%s]" (severityMapping.TreatAsError |> String.concat ", ")
+    logger.LogInformation("Treat as Hints: [{0}]", (severityMapping.TreatAsHint |> String.concat ", "))
+    logger.LogInformation("Treat as Info: [{0}]", (severityMapping.TreatAsInfo |> String.concat ", "))
+    logger.LogInformation("Treat as Warning: [{0}]", (severityMapping.TreatAsWarning |> String.concat ", "))
+    logger.LogInformation("Treat as Error: [{0}]", (severityMapping.TreatAsError |> String.concat ", "))
 
     if not (severityMapping.IsValid()) then
-        printError "An analyzer code may only be listed once in the <treat-as-severity> arguments."
+        logger.LogError("An analyzer code may only be listed once in the <treat-as-severity> arguments.")
 
         exit 1
 
@@ -482,16 +492,16 @@ let main argv =
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
     let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
-    printInfo "Ignore Files: [%s]" (ignoreFiles |> String.concat ", ")
+    logger.LogInformation("Ignore Files: [{0}]", (ignoreFiles |> String.concat ", "))
     let ignoreFiles = ignoreFiles |> List.map Glob
     let properties = getProperties results
 
     if Option.isSome fscArgs && not properties.IsEmpty then
-        printError "fsc-args can't be combined with MSBuild properties."
+        logger.LogError("fsc-args can't be combined with MSBuild properties.")
         exit 1
 
-    if verbose then
-        properties |> List.iter (fun (k, v) -> printInfo $"Property %s{k}=%s{v}")
+    properties
+    |> List.iter (fun (k, v) -> logger.LogInformation("Property {0}={1}", k, v))
 
     let analyzersPaths =
         results.GetResults(<@ Analyzers_Path @>)
@@ -506,18 +516,9 @@ let main argv =
                 Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, path))
         )
 
-    printInfo "Loading analyzers from %s" (String.concat ", " analyzersPaths)
+    logger.LogInformation("Loading analyzers from {0}", (String.concat ", " analyzersPaths))
 
     let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
-
-    let logger =
-        { new Logger with
-            member _.Error msg = printError msg
-
-            member _.Verbose msg =
-                if verbose then
-                    printInfo "%s" msg
-        }
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
@@ -530,7 +531,7 @@ let main argv =
         The correct version can be found over at https://www.nuget.org/packages/FSharp.Analyzers.SDK#dependencies-body-tab.
         """
 
-        printError msg
+        logger.LogError(msg)
         exit 1
     )
 
@@ -544,7 +545,7 @@ let main argv =
             (accDlls + dlls), (accAnalyzers + analyzers)
         )
 
-    printInfo "Registered %d analyzers from %d dlls" analyzers dlls
+    logger.LogInformation("Registered {0} analyzers from {1} dlls", analyzers, dlls)
 
     let results =
         if analyzers = 0 then
@@ -552,17 +553,17 @@ let main argv =
         else
             match projOpts, fscArgs with
             | [], None ->
-                printError "No project given. Use `--project PATH_TO_FSPROJ`."
+                logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
 
                 None
             | _ :: _, Some _ ->
-                printError "`--project` and `--fsc-args` cannot be combined."
+                logger.LogError("`--project` and `--fsc-args` cannot be combined.")
                 exit 1
             | [], Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
             | projects, None ->
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
-                        printError $"Invalid `--project` argument. File does not exist: '{projPath}'"
+                        logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'")
                         exit 1
 
                 projects

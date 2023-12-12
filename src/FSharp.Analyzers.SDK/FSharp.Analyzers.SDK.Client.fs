@@ -7,6 +7,7 @@ open System.Reflection
 open System.Runtime.Loader
 open System.Text.RegularExpressions
 open McMaster.NETCore.Plugins
+open Microsoft.Extensions.Logging
 
 type AnalysisResult =
     {
@@ -126,25 +127,15 @@ module Client =
         |> Seq.choose (analyzerFromMember<'TAnalyzerAttribute, 'TContext> path)
         |> Seq.toList
 
-[<Interface>]
-type Logger =
-    abstract member Error: string -> unit
-    abstract member Verbose: string -> unit
-
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
-    (logger: Logger, excludedAnalyzers: string Set)
+    (logger: ILogger, excludedAnalyzers: string Set)
     =
+    do TASTCollecting.logger <- logger
+
     let registeredAnalyzers =
         ConcurrentDictionary<string, Client.RegisteredAnalyzer<'TContext> list>()
 
-    new() =
-        Client(
-            { new Logger with
-                member this.Error _ = ()
-                member this.Verbose _ = ()
-            },
-            Set.empty
-        )
+    new() = Client(Abstractions.NullLogger.Instance, Set.empty)
 
     member x.LoadAnalyzers(dir: string) : int * int =
         if Directory.Exists dir then
@@ -192,8 +183,12 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     then
                         true
                     else
-                        logger.Error
-                            $"Trying to load %s{name} which was built using SDK version %A{version}. Expect %A{Utils.currentFSharpAnalyzersSDKVersion} instead. Assembly will be skipped."
+                        logger.LogError(
+                            "Trying to load {0} which was built using SDK version {1}. Expect {2} instead. Assembly will be skipped.",
+                            name,
+                            version,
+                            Utils.currentFSharpAnalyzersSDKVersion
+                        )
 
                         false
                 )
@@ -205,7 +200,11 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                             let shouldExclude = excludedAnalyzers.Contains(registeredAnalyzer.Name)
 
                             if shouldExclude then
-                                logger.Verbose $"Excluding %s{registeredAnalyzer.Name} from %s{assembly.FullName}"
+                                logger.LogInformation(
+                                    "Excludings{0} from {1}",
+                                    registeredAnalyzer.Name,
+                                    assembly.FullName
+                                )
 
                             not shouldExclude
                         )

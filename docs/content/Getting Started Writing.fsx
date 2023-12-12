@@ -108,7 +108,7 @@ dotnet tool install --global fsharp-analyzers
 ```
 
 ```shell
-fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/bin/Release --verbose
+fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/bin/Release --verbosity d
 ```
 
 ### Packaging and Distribution

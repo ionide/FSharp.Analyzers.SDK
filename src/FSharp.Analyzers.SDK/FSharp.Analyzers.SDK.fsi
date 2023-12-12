@@ -2,6 +2,7 @@ namespace FSharp.Analyzers.SDK
 
 open System
 open System.Runtime.InteropServices
+open Microsoft.Extensions.Logging
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
@@ -165,7 +166,7 @@ module Utils =
 
     val typeCheckFile:
         fcs: FSharpChecker ->
-        printError: (string -> unit) ->
+        logger: ILogger ->
         options: FSharpProjectOptions ->
         fileName: string ->
         source: SourceOfSource ->

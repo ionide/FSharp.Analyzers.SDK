@@ -22,5 +22,6 @@
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="FSharp.Compiler.Service" />
     <PackageReference Include="McMaster.NETCore.Plugins" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
   </ItemGroup>
 </Project>
