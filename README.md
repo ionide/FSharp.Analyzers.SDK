@@ -36,7 +36,7 @@ There might be a little voice inside that tells you you're not ready; that you n
 
 I assure you, that's not the case.
 
-This project has some clear Contribution Guidelines and expectations that you can [read here](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/blob/master/CONTRIBUTING.md).
+This project has some clear Contribution Guidelines and expectations that you can [read here](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/blob/main/CONTRIBUTING.md).
 
 The contribution guidelines outline the process that you'll need to follow to get a patch merged. By making expectations and process explicit, I hope it will make it easier for you to contribute.
 
@@ -50,4 +50,4 @@ Thank you for contributing!
 The project is hosted on [GitHub](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK) where you can [report issues](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/issues), fork
 the project and submit pull requests.
 
-The library is available under [MIT license](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/blob/master/LICENSE.md), which allows modification and redistribution for both commercial and non-commercial purposes.
+The library is available under [MIT license](https://github.com/Krzysztof-Cieslak/FSharp.Analyzers.SDK/blob/main/LICENSE.md), which allows modification and redistribution for both commercial and non-commercial purposes.

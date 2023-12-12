@@ -14,8 +14,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <FsDocsLicenseLink>https://github.com/ionide/FSharp.Analyzers.SDK/blob/master/LICENSE.md</FsDocsLicenseLink>
-    <FsDocsReleaseNotesLink>https://github.com/ionide/FSharp.Analyzers.SDK/blob/master/CHANGELOG.md</FsDocsReleaseNotesLink>
+    <FsDocsLicenseLink>https://github.com/ionide/FSharp.Analyzers.SDK/blob/main/LICENSE.md</FsDocsLicenseLink>
+    <FsDocsReleaseNotesLink>https://github.com/ionide/FSharp.Analyzers.SDK/blob/main/CHANGELOG.md</FsDocsReleaseNotesLink>
     <RepositoryUrl>https://github.com/ionide/FSharp.Analyzers.SDK</RepositoryUrl>
   </PropertyGroup>
 
