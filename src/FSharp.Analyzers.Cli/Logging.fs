@@ -53,6 +53,7 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
         | LogLevel.Critical -> textWriter.Write("critical: ")
         | _ -> ()
 
+    // see https://learn.microsoft.com/en-us/dotnet/core/extensions/console-log-formatter
     member private _.SetColor(textWriter: TextWriter, logLevel: LogLevel) =
         let color =
             match logLevel with
