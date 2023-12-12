@@ -201,7 +201,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                             if shouldExclude then
                                 logger.LogInformation(
-                                    "Excludings{0} from {1}",
+                                    "Excluding {0} from {1}",
                                     registeredAnalyzer.Name,
                                     assembly.FullName
                                 )
