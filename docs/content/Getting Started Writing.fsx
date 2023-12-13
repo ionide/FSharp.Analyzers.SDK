@@ -190,6 +190,13 @@ Target.create
     )
 
 (**
+
+### Known footguns to avoid
+
+There's a footgun in the FCS-API that you can easily trigger when working on an analyzer:  
+Accessing the [FullName](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html#FullName) property of the [FSharpEntity](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html) type throws an exception if the entity doesn't have one.  
+Use the [TryGetFullName](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html#TryGetFullName) function for safe access.
+
 [Previous]({{fsdocs-previous-page-link}})
 [Next]({{fsdocs-next-page-link}})
 
