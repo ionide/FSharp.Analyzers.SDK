@@ -32,6 +32,7 @@ type Arguments =
     | [<Unique>] FSC_Args of string
     | [<Unique>] Code_Root of string
     | [<Unique; AltCommandLine("-v")>] Verbosity of string
+    | [<Unique>] Allow_Version_Mismatch
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -59,6 +60,8 @@ type Arguments =
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
+            | Allow_Version_Mismatch ->
+                "When not set (default), the analyzers that don't match with the major and minor parts of the Analyzer SDK version will not be executed. This can be overriden using this flag."
 
 type SeverityMappings =
     {
@@ -495,6 +498,8 @@ let main argv =
     logger.LogInformation("Treat as Warning: [{0}]", (severityMapping.TreatAsWarning |> String.concat ", "))
     logger.LogInformation("Treat as Error: [{0}]", (severityMapping.TreatAsError |> String.concat ", "))
 
+    let allowAnalyzerSDKVersionMismatch = results.Contains <@ Allow_Version_Mismatch @>
+    
     if not (severityMapping.IsValid()) then
         logger.LogError("An analyzer code may only be listed once in the <treat-as-severity> arguments.")
 
@@ -549,7 +554,7 @@ let main argv =
     )
 
     let client =
-        Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
+        Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers, allowAnalyzerSDKVersionMismatch)
 
     let dlls, analyzers =
         ((0, 0), analyzersPaths)

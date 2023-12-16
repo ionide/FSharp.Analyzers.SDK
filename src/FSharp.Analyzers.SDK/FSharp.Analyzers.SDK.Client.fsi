@@ -9,7 +9,7 @@ type AnalysisResult =
     }
 
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context> =
-    new: logger: ILogger * excludedAnalyzers: string Set -> Client<'TAttribute, 'TContext>
+    new: logger: ILogger * excludedAnalyzers: string Set * allowAnalyzerSDKVersionMismatch: bool -> Client<'TAttribute, 'TContext>
     new: unit -> Client<'TAttribute, 'TContext>
     /// <summary>
     /// Loads into private state any analyzers defined in any assembly

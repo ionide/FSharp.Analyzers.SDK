@@ -128,14 +128,14 @@ module Client =
         |> Seq.toList
 
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
-    (logger: ILogger, excludedAnalyzers: string Set)
+    (logger: ILogger, excludedAnalyzers: string Set, allowAnalyzerSDKVersionMismatch: bool)
     =
     do TASTCollecting.logger <- logger
 
     let registeredAnalyzers =
         ConcurrentDictionary<string, Client.RegisteredAnalyzer<'TContext> list>()
 
-    new() = Client(Abstractions.NullLogger.Instance, Set.empty)
+    new() = Client(Abstractions.NullLogger.Instance, Set.empty, false)
 
     member x.LoadAnalyzers(dir: string) : int * int =
         if Directory.Exists dir then
@@ -183,14 +183,22 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     then
                         true
                     else
-                        logger.LogError(
-                            "Trying to load {0} which was built using SDK version {1}. Expect {2} instead. Assembly will be skipped.",
-                            name,
-                            version,
-                            Utils.currentFSharpAnalyzersSDKVersion
-                        )
+                        if allowAnalyzerSDKVersionMismatch then
+                            logger.LogWarning(
+                                "{0} was built using SDK version {1}. Running {2} instead, may cause runtime error.",
+                                name,
+                                version,
+                                Utils.currentFSharpAnalyzersSDKVersion
+                            )
+                        else
+                            logger.LogError(
+                                "Trying to load {0} which was built using SDK version {1}. Running {2} instead. Assembly will be skipped.",
+                                name,
+                                version,
+                                Utils.currentFSharpAnalyzersSDKVersion
+                            )
 
-                        false
+                        allowAnalyzerSDKVersionMismatch 
                 )
                 |> Array.map (fun (path, assembly) ->
                     let analyzers =
