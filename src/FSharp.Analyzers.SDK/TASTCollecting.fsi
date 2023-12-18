@@ -1,5 +1,6 @@
 namespace FSharp.Analyzers.SDK
 
+open Microsoft.Extensions.Logging
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.Text
 
@@ -36,3 +37,6 @@ module TASTCollecting =
     /// Traverses the whole TAST and calls the appropriate members of the given TypedTreeCollectorBase
     /// to process the tree elements.
     val walkTast: walker: TypedTreeCollectorBase -> tast: FSharpImplementationFileContents -> unit
+
+    /// Set this to use a custom logger
+    val mutable logger: ILogger

@@ -4,6 +4,7 @@ module FSharp.Analyzers.SDK.Testing
 #nowarn "57"
 
 open Microsoft.Build.Logging.StructuredLogger
+open Microsoft.Extensions.Logging
 open CliWrap
 open System
 open System.IO
@@ -43,7 +44,7 @@ exception CompilerDiagnosticErrors of FSharpDiagnostic array
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
 
 let isFSharpFile (file: string) =
-    Seq.exists (fun (ext: string) -> file.EndsWith ext) fsharpFiles
+    Set.exists (fun (ext: string) -> file.EndsWith(ext, StringComparison.Ordinal)) fsharpFiles
 
 let readCompilerArgsFromBinLog (build: Build) =
     if not build.Succeeded then
@@ -81,7 +82,7 @@ let readCompilerArgsFromBinLog (build: Build) =
     match args with
     | None -> failwith $"Could not parse binlog at {build.LogFilePath}, does it contain CoreCompile?"
     | Some args ->
-        let idx = args.IndexOf "-o:"
+        let idx = args.IndexOf("-o:", StringComparison.Ordinal)
         args.Substring(idx).Split [| '\n' |]
 
 let mkOptions (compilerArgs: string array) =
@@ -245,9 +246,14 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
     if Array.isEmpty allSymbolUses then
         failwith "no symboluses"
 
-    let printError s = printf $"{s}"
-
-    match Utils.typeCheckFile fcs printError opts fileName (Utils.SourceOfSource.DiscreteSource source) with
+    match
+        Utils.typeCheckFile
+            fcs
+            Abstractions.NullLogger.Instance
+            opts
+            fileName
+            (Utils.SourceOfSource.DiscreteSource source)
+    with
     | Some(parseFileResults, checkFileResults) ->
         let diagErrors =
             checkFileResults.Diagnostics

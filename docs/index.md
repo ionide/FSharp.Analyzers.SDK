@@ -15,7 +15,7 @@ F# analyzers are live, real-time, project based plugins that enables to diagnose
 2. Run the console application:
 
 ```shell
-dotnet run --project src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbose
+dotnet run --project src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbosity d
 ```
 
 You can also set up a run configuration of FSharp.Analyzers.Cli in your favorite IDE using similar arguments. This also allows you to debug FSharp.Analyzers.Cli.

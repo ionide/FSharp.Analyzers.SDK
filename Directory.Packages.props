@@ -19,6 +19,9 @@
     <PackageVersion Include="Microsoft.Build.Locator" Version="1.4.1" />
     <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageVersion Include="MSBuild.StructuredLogger" Version="2.1.815" />
     <PackageVersion Include="NUnit" Version="3.13.3" />

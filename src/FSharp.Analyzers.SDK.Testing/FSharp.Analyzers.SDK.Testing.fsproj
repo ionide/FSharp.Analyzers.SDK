@@ -19,6 +19,7 @@
     <ItemGroup>
       <PackageReference Include="FSharp.Compiler.Service"/>
       <PackageReference Include="CliWrap" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Console" />
       <PackageReference Include="MSBuild.StructuredLogger" />
     </ItemGroup>
 

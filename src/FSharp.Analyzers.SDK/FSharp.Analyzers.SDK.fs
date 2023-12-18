@@ -3,6 +3,7 @@ namespace FSharp.Analyzers.SDK
 #nowarn "57"
 
 open System
+open Microsoft.Extensions.Logging
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
@@ -224,7 +225,7 @@ module Utils =
 
     let typeCheckFile
         (fcs: FSharpChecker)
-        (printError: string -> unit)
+        (logger: ILogger)
         (options: FSharpProjectOptions)
         (fileName: string)
         (source: SourceOfSource)
@@ -244,6 +245,6 @@ module Utils =
 
         match checkAnswer with
         | FSharpCheckFileAnswer.Aborted ->
-            printError $"Checking of file {fileName} aborted"
+            logger.LogError("Checking of file {0} aborted", fileName)
             None
         | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)

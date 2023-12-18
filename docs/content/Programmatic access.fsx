@@ -15,6 +15,7 @@ The `Client` needs to know what type of analyzer you intend to load: *console* o
 (*** hide ***)
 #r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/FSharp.Analyzers.SDK.dll"
 #r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/FSharp.Compiler.Service.dll"
+#r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/Microsoft.Extensions.Logging.Abstractions.dll"
 (** *)
 
 open FSharp.Analyzers.SDK

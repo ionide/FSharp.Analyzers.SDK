@@ -33,7 +33,7 @@ At the time of writing, the [G-Research analyzers](https://github.com/g-research
 With the package downloaded, we can run the CLI tool:
 
 ```shell
-dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.4.0\analyzers\dotnet\fs\ --verbose
+dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.4.0\analyzers\dotnet\fs\ --verbosity d
 ```
 
 ### Using an MSBuild target
@@ -57,7 +57,7 @@ Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to specify o
 
 ```xml
 <PropertyGroup>
-    <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --treat-as-warning IONIDE-004 --verbosity d</FSharpAnalyzersOtherFlags>
 </PropertyGroup>
 ```
 
@@ -101,7 +101,7 @@ This is effectively the same as adding a property to each `*proj` file which exi
     <PropertyGroup>
         <SarifOutput Condition="$(SarifOutput) == ''">./</SarifOutput>
         <CodeRoot Condition="$(CodeRoot) == ''">.</CodeRoot>
-        <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(SarifOutput)$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --code-root $(CodeRoot) --treat-as-warning IONIDE-004 --verbose</FSharpAnalyzersOtherFlags>
+        <FSharpAnalyzersOtherFlags>--analyzers-path &quot;$(PkgG-Research_FSharp_Analyzers)/analyzers/dotnet/fs&quot; --report &quot;$(SarifOutput)$(MSBuildProjectName)-$(TargetFramework).sarif&quot; --code-root $(CodeRoot) --treat-as-warning IONIDE-004 --verbosity d</FSharpAnalyzersOtherFlags>
     </PropertyGroup>
 </Project>
 ```
