@@ -259,8 +259,9 @@ let printMessages (msgs: AnalyzerMessage list) =
     for analyzerMessage in msgs do
         let m = analyzerMessage.Message
         let logLevel = severityToLogLevel[m.Severity]
+
         let messageFormat, messageArgs =
-            let baseArgs : obj array =
+            let baseArgs: obj array =
                 [|
                     m.Range.FileName
                     m.Range.StartLine
@@ -269,10 +270,12 @@ let printMessages (msgs: AnalyzerMessage list) =
                     colorFormat (CustomLogging.AnsiColorHelpers.consoleColorOfLogLevel logLevel) m.Code
                     m.Message
                 |]
+
             let baseFormat = "{0}({1},{2}): {3} {4} - {5}"
+
             match analyzerMessage.HelpUri with
             | None -> baseFormat, baseArgs
-            | Some uri -> baseFormat + " {6}", [|yield! baseArgs; colorFormat ConsoleColor.Cyan uri|]
+            | Some uri -> baseFormat + " {6}", [| yield! baseArgs; colorFormat ConsoleColor.Cyan uri |]
 
         msgLogger.Log(logLevel, messageFormat, messageArgs)
 

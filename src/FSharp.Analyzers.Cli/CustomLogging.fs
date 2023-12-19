@@ -13,39 +13,39 @@ module AnsiColorHelpers =
     // see https://learn.microsoft.com/en-us/dotnet/core/extensions/console-log-formatter#implement-custom-color-formatting
     let private ansiForegroundEscapeCodeOfColorConsole color =
         match color with
-        | ConsoleColor.Black       -> "\x1B[30m"
-        | ConsoleColor.DarkRed     -> "\x1B[31m"
-        | ConsoleColor.DarkGreen   -> "\x1B[32m"
-        | ConsoleColor.DarkYellow  -> "\x1B[33m"
-        | ConsoleColor.DarkBlue    -> "\x1B[34m"
+        | ConsoleColor.Black -> "\x1B[30m"
+        | ConsoleColor.DarkRed -> "\x1B[31m"
+        | ConsoleColor.DarkGreen -> "\x1B[32m"
+        | ConsoleColor.DarkYellow -> "\x1B[33m"
+        | ConsoleColor.DarkBlue -> "\x1B[34m"
         | ConsoleColor.DarkMagenta -> "\x1B[35m"
-        | ConsoleColor.DarkCyan    -> "\x1B[36m"
-        | ConsoleColor.Gray        -> "\x1B[37m"
-        | ConsoleColor.Red         -> "\x1B[1m\x1B[31m"
-        | ConsoleColor.Green       -> "\x1B[1m\x1B[32m"
-        | ConsoleColor.Yellow      -> "\x1B[1m\x1B[33m"
-        | ConsoleColor.Blue        -> "\x1B[1m\x1B[34m"
-        | ConsoleColor.Magenta     -> "\x1B[1m\x1B[35m"
-        | ConsoleColor.Cyan        -> "\x1B[1m\x1B[36m"
-        | ConsoleColor.White       -> "\x1B[1m\x1B[37m"
-        | _ -> 
-            #if DEBUG
+        | ConsoleColor.DarkCyan -> "\x1B[36m"
+        | ConsoleColor.Gray -> "\x1B[37m"
+        | ConsoleColor.Red -> "\x1B[1m\x1B[31m"
+        | ConsoleColor.Green -> "\x1B[1m\x1B[32m"
+        | ConsoleColor.Yellow -> "\x1B[1m\x1B[33m"
+        | ConsoleColor.Blue -> "\x1B[1m\x1B[34m"
+        | ConsoleColor.Magenta -> "\x1B[1m\x1B[35m"
+        | ConsoleColor.Cyan -> "\x1B[1m\x1B[36m"
+        | ConsoleColor.White -> "\x1B[1m\x1B[37m"
+        | _ ->
+#if DEBUG
             failwith $"didn't implement ansi code for color: {color}"
-            #else
+#else
             // do not break code analyzis to wrong runtime color or such thing for release
-            "\x1B[37m"        // ConsoleColor.Gray
-            #endif
-    
+            "\x1B[37m" // ConsoleColor.Gray
+#endif
+
     let consoleColorOfLogLevel logLevel =
         match logLevel with
-        | LogLevel.Error ->  ConsoleColor.Red
-        | LogLevel.Warning ->ConsoleColor.DarkYellow
+        | LogLevel.Error -> ConsoleColor.Red
+        | LogLevel.Warning -> ConsoleColor.DarkYellow
         | LogLevel.Information -> ConsoleColor.Blue
         | LogLevel.Trace -> ConsoleColor.Cyan
         | _ -> ConsoleColor.Gray
 
     let formatMessageAsAnsiColorizedString (color: ConsoleColor) (message: string) =
-        $"{ansiForegroundEscapeCodeOfColorConsole  color}{message}{ansiForegroundEscapeCodeOfColorConsole initialConsoleColor}"
+        $"{ansiForegroundEscapeCodeOfColorConsole color}{message}{ansiForegroundEscapeCodeOfColorConsole initialConsoleColor}"
 
 type CustomOptions() =
     inherit ConsoleFormatterOptions()
@@ -72,8 +72,10 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
         )
         =
         let message = logEntry.Formatter.Invoke(logEntry.State, logEntry.Exception)
+
         if formatterOptions.UseLogLevelAsPrefix then
             this.WritePrefix(textWriter, logEntry.LogLevel)
+
         textWriter.WriteLine message
 
     member private _.WritePrefix(textWriter: TextWriter, logLevel: LogLevel) =
