@@ -253,12 +253,8 @@ let printMessages (msgs: AnalyzerMessage list) =
 
     let msgLogger = factory.CreateLogger("")
 
-    let useAnsiColorCodes = true
     let colorFormat color message =
-      if useAnsiColorCodes then
         CustomLogging.AnsiColorHelpers.formatMessageAsAnsiColorizedString color message
-      else
-        message
 
     for analyzerMessage in msgs do
         let m = analyzerMessage.Message

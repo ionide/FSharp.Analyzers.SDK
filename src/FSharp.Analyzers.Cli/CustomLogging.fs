@@ -53,7 +53,6 @@ type CustomOptions() =
     /// if true: no LogLevel as prefix, colored output according to LogLevel
     /// if false: LogLevel as prefix, no colored output
     member val UseAnalyzersMsgStyle = false with get, set
-    member x.UseColoredOutput = x.UseAnalyzersMsgStyle
     member x.UseLogLevelAsPrefix = not x.UseAnalyzersMsgStyle
 
 type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
