@@ -10,7 +10,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 * [Add missing TAST walkers](https://github.com/ionide/FSharp.Analyzers.SDK/pull/185) (thanks @dawedawe!)
 
-
 ## [0.22.0] - 2023-12-19
 
 ### Changed
