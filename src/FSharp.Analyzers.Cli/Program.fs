@@ -576,7 +576,7 @@ let main argv =
             | projects, None ->
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
-                        logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'")
+                        logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
                         exit 1
 
                 projects
