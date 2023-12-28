@@ -358,7 +358,7 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
 
         sarifLogger.Dispose()
     with ex ->
-        logger.LogError("Could not write sarif to {report}")
+        logger.LogError(ex, "Could not write sarif to {report}", report)
         logger.LogInformation("{0}", ex)
 
 let calculateExitCode (msgs: AnalyzerMessage list option) : int =
