@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>netstandard1.0</TargetFramework>
         <NoPackageAnalysis>true</NoPackageAnalysis>
@@ -7,6 +7,7 @@
         <DevelopmentDependency>true</DevelopmentDependency>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <ChangelogFile>$(MSBuildThisFileDirectory)CHANGELOG.md</ChangelogFile>
+        <Description>MSBuild integration for fsharp-analyzers</Description>
     </PropertyGroup>
     <ItemGroup>
         <Content Include="build\*" PackagePath="build\" />
