@@ -219,6 +219,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             Array.length analyzers, analyzers |> Seq.collect snd |> Seq.length
         else
+            logger.LogWarning("Analyzer path {analyzerPath} does not exist", dir)
             0, 0
 
     member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
