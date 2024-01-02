@@ -119,7 +119,7 @@ dotnet msbuild YourSolution.sln /t:AnalyzeFSharpProject
 
 ### Select specific projects
 
-As we don't want to targt all projects of the solution, we create a second custom MSBuild target that calls the project-specific target for all relevant projects.  
+As we don't want to target all projects in the solution, we create a second custom MSBuild target that calls the project-specific target for all relevant projects.  
 Add the following custom target to the [Directory.Solution.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-solution-build?view=vs-2022) file to be able to invoke analysis from all selected projects in one simple command:
 
 ```xml
