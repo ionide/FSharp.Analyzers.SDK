@@ -188,7 +188,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         true
                     else
                         logger.LogError(
-                            "Trying to load {0} which was built using SDK version {1}. Expect {2} instead. Assembly will be skipped.",
+                            "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
                             name,
                             version,
                             Utils.currentFSharpAnalyzersSDKVersion
@@ -207,7 +207,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                                 if shouldExclude then
                                     logger.LogInformation(
-                                        "Excluding {0} from {1}",
+                                        "Excluding {Name} from {FullName}",
                                         registeredAnalyzer.Name,
                                         assembly.FullName
                                     )
@@ -218,7 +218,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                                 if shouldInclude then
                                     logger.LogInformation(
-                                        "Including {0} from {1}",
+                                        "Including {Name} from {FullName}",
                                         registeredAnalyzer.Name,
                                         assembly.FullName
                                     )
