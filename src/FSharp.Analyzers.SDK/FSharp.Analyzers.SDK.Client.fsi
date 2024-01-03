@@ -8,8 +8,14 @@ type AnalysisResult =
         Output: Result<Message list, exn>
     }
 
+type ExcludeInclude =
+    /// Analyzers in this set should be ignored.
+    | Exclude of string Set
+    /// Analyzers in this set should be used exclusively, while all others are ignored.
+    | Include of string Set
+
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context> =
-    new: logger: ILogger * excludedAnalyzers: string Set -> Client<'TAttribute, 'TContext>
+    new: logger: ILogger -> Client<'TAttribute, 'TContext>
     new: unit -> Client<'TAttribute, 'TContext>
     /// <summary>
     /// Loads into private state any analyzers defined in any assembly
@@ -17,6 +23,13 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// </summary>
     /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
     member LoadAnalyzers: dir: string -> int * int
+    /// <summary>
+    /// Loads into private state any analyzers defined in any assembly
+    /// matching `*Analyzer*.dll` in given directory (and any subdirectories)
+    /// Analyzers are filtered according to the given ExcludeInclude set.
+    /// </summary>
+    /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
+    member LoadAnalyzers: dir: string * excludeInclude: ExcludeInclude option -> int * int
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
     member RunAnalyzers: ctx: 'TContext -> Async<AnalyzerMessage list>
