@@ -139,9 +139,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
     new() = Client(Abstractions.NullLogger.Instance)
 
-    member x.LoadAnalyzers(dir: string) : int * int = x.LoadAnalyzers(dir, None)
-
-    member x.LoadAnalyzers(dir: string, excludeInclude: ExcludeInclude option) : int * int =
+    member x.LoadAnalyzers(dir: string, ?excludeInclude: ExcludeInclude) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")

@@ -20,16 +20,10 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <summary>
     /// Loads into private state any analyzers defined in any assembly
     /// matching `*Analyzer*.dll` in given directory (and any subdirectories)
+    /// Analyzers are filtered according to the ExcludeInclude set, if provided.
     /// </summary>
     /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
-    member LoadAnalyzers: dir: string -> int * int
-    /// <summary>
-    /// Loads into private state any analyzers defined in any assembly
-    /// matching `*Analyzer*.dll` in given directory (and any subdirectories)
-    /// Analyzers are filtered according to the given ExcludeInclude set.
-    /// </summary>
-    /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
-    member LoadAnalyzers: dir: string * excludeInclude: ExcludeInclude option -> int * int
+    member LoadAnalyzers: dir: string * ?excludeInclude: ExcludeInclude -> int * int
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
     member RunAnalyzers: ctx: 'TContext -> Async<AnalyzerMessage list>

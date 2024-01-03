@@ -539,15 +539,14 @@ let main argv =
         let includeAnalyzers = results.GetResult(<@ Include_Analyzer @>, [])
 
         match excludeAnalyzers, includeAnalyzers with
-        | [], [] -> None
-        | e, [] -> Some(Exclude(Set.ofList e))
-        | [], i -> Some(Include(Set.ofList i))
+        | e, [] -> Exclude(Set.ofList e)
+        | [], i -> Include(Set.ofList i)
         | i, _e ->
             logger.LogWarning(
                 "--exclude-analyzers and --include-analyzers are mutually exclusive, ignoring --exclude-analyzers"
             )
 
-            Some(Include(Set.ofList i))
+            Include(Set.ofList i)
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
