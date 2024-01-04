@@ -28,6 +28,7 @@ type Arguments =
     | [<Unique>] Treat_As_Error of string list
     | [<Unique>] Ignore_Files of string list
     | [<Unique>] Exclude_Analyzer of string list
+    | [<Unique>] Include_Analyzer of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
     | [<Unique>] Code_Root of string
@@ -53,6 +54,8 @@ type Arguments =
                 "List of analyzer codes that should be treated as severity Error by the tool. Regardless of the original severity."
             | Ignore_Files _ -> "Source files that shouldn't be processed."
             | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
+            | Include_Analyzer _ ->
+                "The names of analyzers that should exclusively be executed while all others are ignored. Takes precedence over --exclude-analyzer."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbosity _ ->
                 "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]."
@@ -531,7 +534,19 @@ let main argv =
 
     logger.LogInformation("Loading analyzers from {0}", (String.concat ", " analyzersPaths))
 
-    let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
+    let includeExclude =
+        let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
+        let includeAnalyzers = results.GetResult(<@ Include_Analyzer @>, [])
+
+        match excludeAnalyzers, includeAnalyzers with
+        | e, [] -> Exclude(Set.ofList e)
+        | [], i -> Include(Set.ofList i)
+        | i, _e ->
+            logger.LogWarning(
+                "--exclude-analyzers and --include-analyzers are mutually exclusive, ignoring --exclude-analyzers"
+            )
+
+            Include(Set.ofList i)
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
@@ -548,13 +563,12 @@ let main argv =
         exit 1
     )
 
-    let client =
-        Client<CliAnalyzerAttribute, CliContext>(logger, Set.ofList excludeAnalyzers)
+    let client = Client<CliAnalyzerAttribute, CliContext>(logger)
 
     let dlls, analyzers =
         ((0, 0), analyzersPaths)
         ||> List.fold (fun (accDlls, accAnalyzers) analyzersPath ->
-            let dlls, analyzers = client.LoadAnalyzers analyzersPath
+            let dlls, analyzers = client.LoadAnalyzers(analyzersPath, includeExclude)
             (accDlls + dlls), (accAnalyzers + analyzers)
         )
 

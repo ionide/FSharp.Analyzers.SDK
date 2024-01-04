@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 * [Add missing TAST walkers](https://github.com/ionide/FSharp.Analyzers.SDK/pull/185) (thanks @dawedawe!)
+* [Add support for --include-analyzers to ignore all others](https://github.com/ionide/FSharp.Analyzers.SDK/pull/194) (thanks @dawedawe!)
 
 ## [0.22.0] - 2023-12-19
 

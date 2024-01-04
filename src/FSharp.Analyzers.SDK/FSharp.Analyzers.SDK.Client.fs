@@ -127,17 +127,19 @@ module Client =
         |> Seq.choose (analyzerFromMember<'TAnalyzerAttribute, 'TContext> path)
         |> Seq.toList
 
-type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
-    (logger: ILogger, excludedAnalyzers: string Set)
-    =
+type ExcludeInclude =
+    | Exclude of string Set
+    | Include of string Set
+
+type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>(logger: ILogger) =
     do TASTCollecting.logger <- logger
 
     let registeredAnalyzers =
         ConcurrentDictionary<string, Client.RegisteredAnalyzer<'TContext> list>()
 
-    new() = Client(Abstractions.NullLogger.Instance, Set.empty)
+    new() = Client(Abstractions.NullLogger.Instance)
 
-    member x.LoadAnalyzers(dir: string) : int * int =
+    member x.LoadAnalyzers(dir: string, ?excludeInclude: ExcludeInclude) : int * int =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")
@@ -184,7 +186,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         true
                     else
                         logger.LogError(
-                            "Trying to load {0} which was built using SDK version {1}. Expect {2} instead. Assembly will be skipped.",
+                            "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
                             name,
                             version,
                             Utils.currentFSharpAnalyzersSDKVersion
@@ -197,16 +199,30 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         assembly.GetExportedTypes()
                         |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
                         |> Seq.filter (fun registeredAnalyzer ->
-                            let shouldExclude = excludedAnalyzers.Contains(registeredAnalyzer.Name)
+                            match excludeInclude with
+                            | Some(Exclude excluded) ->
+                                let shouldExclude = excluded.Contains(registeredAnalyzer.Name)
 
-                            if shouldExclude then
-                                logger.LogInformation(
-                                    "Excluding {0} from {1}",
-                                    registeredAnalyzer.Name,
-                                    assembly.FullName
-                                )
+                                if shouldExclude then
+                                    logger.LogInformation(
+                                        "Excluding {Name} from {FullName}",
+                                        registeredAnalyzer.Name,
+                                        assembly.FullName
+                                    )
 
-                            not shouldExclude
+                                not shouldExclude
+                            | Some(Include included) ->
+                                let shouldInclude = included.Contains(registeredAnalyzer.Name)
+
+                                if shouldInclude then
+                                    logger.LogInformation(
+                                        "Including {Name} from {FullName}",
+                                        registeredAnalyzer.Name,
+                                        assembly.FullName
+                                    )
+
+                                shouldInclude
+                            | None -> true
                         )
                         |> Seq.toList
 
