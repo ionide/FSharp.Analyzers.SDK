@@ -6,6 +6,7 @@ open System.Collections.Concurrent
 open System.Reflection
 open System.Runtime.Loader
 open System.Text.RegularExpressions
+open GlobExpressions
 open McMaster.NETCore.Plugins
 open Microsoft.Extensions.Logging
 
@@ -141,6 +142,13 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
     member x.LoadAnalyzers(dir: string, ?excludeInclude: ExcludeInclude) : int * int =
         if Directory.Exists dir then
+
+            let excludeInclude =
+                match excludeInclude with
+                | Some(Exclude excluded) -> Some(Choice1Of2(List.ofSeq excluded |> List.map Glob))
+                | Some(Include included) -> Some(Choice2Of2(List.ofSeq included |> List.map Glob))
+                | None -> None
+
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")
 
@@ -149,7 +157,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     let s = Path.GetFileName(a)
 
                     not (
-                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.InvariantCultureIgnoreCase)
+                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.OrdinalIgnoreCase)
                         || regex.IsMatch(s)
                     )
                 )
@@ -200,8 +208,9 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
                         |> Seq.filter (fun registeredAnalyzer ->
                             match excludeInclude with
-                            | Some(Exclude excluded) ->
-                                let shouldExclude = excluded.Contains(registeredAnalyzer.Name)
+                            | Some(Choice1Of2 excluded) ->
+                                let shouldExclude =
+                                    excluded |> List.exists (fun g -> g.IsMatch registeredAnalyzer.Name)
 
                                 if shouldExclude then
                                     logger.LogInformation(
@@ -211,8 +220,9 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                                     )
 
                                 not shouldExclude
-                            | Some(Include included) ->
-                                let shouldInclude = included.Contains(registeredAnalyzer.Name)
+                            | Some(Choice2Of2 included) ->
+                                let shouldInclude =
+                                    included |> List.exists (fun g -> g.IsMatch registeredAnalyzer.Name)
 
                                 if shouldInclude then
                                     logger.LogInformation(
