@@ -9,10 +9,10 @@ type AnalysisResult =
     }
 
 type ExcludeInclude =
-    /// Analyzers in this set should be ignored.
-    | Exclude of string Set
-    /// Analyzers in this set should be used exclusively, while all others are ignored.
-    | Include of string Set
+    /// A predicate function to exclude Analyzers.
+    | ExcludeFilter of (string -> bool)
+    /// A predicate function to include Analyzers exclusively, while all others are ignored.
+    | IncludeFilter of (string -> bool)
 
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context> =
     new: logger: ILogger -> Client<'TAttribute, 'TContext>

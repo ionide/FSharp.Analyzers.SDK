@@ -26,9 +26,10 @@ type Arguments =
     | [<Unique>] Treat_As_Hint of string list
     | [<Unique>] Treat_As_Warning of string list
     | [<Unique>] Treat_As_Error of string list
-    | [<Unique>] Ignore_Files of string list
-    | [<Unique>] Exclude_Analyzer of string list
-    | [<Unique>] Include_Analyzer of string list
+    | [<Unique>] Exclude_Files of string list
+    | [<Unique>] Include_Files of string list
+    | [<Unique>] Exclude_Analyzers of string list
+    | [<Unique>] Include_Analyzers of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
     | [<Unique>] Code_Root of string
@@ -52,10 +53,12 @@ type Arguments =
                 "List of analyzer codes that should be treated as severity Warning by the tool. Regardless of the original severity."
             | Treat_As_Error _ ->
                 "List of analyzer codes that should be treated as severity Error by the tool. Regardless of the original severity."
-            | Ignore_Files _ -> "Source files that shouldn't be processed."
-            | Exclude_Analyzer _ -> "The names of analyzers that should not be executed."
-            | Include_Analyzer _ ->
-                "The names of analyzers that should exclusively be executed while all others are ignored. Takes precedence over --exclude-analyzer."
+            | Exclude_Files _ -> "Source files that shouldn't be processed."
+            | Include_Files _ ->
+                "Source files that should be processed exclusively while all others are ignored. Takes precedence over --exclude-files."
+            | Exclude_Analyzers _ -> "The names of analyzers that should not be executed."
+            | Include_Analyzers _ ->
+                "The names of analyzers that should exclusively be executed while all others are ignored. Takes precedence over --exclude-analyzers."
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbosity _ ->
                 "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]."
@@ -131,7 +134,7 @@ let loadProject toolsPath properties projPath =
 let runProjectAux
     (client: Client<CliAnalyzerAttribute, CliContext>)
     (fsharpOptions: FSharpProjectOptions)
-    (ignoreFiles: Glob list)
+    (excludeIncludeFiles: Choice<Glob list, Glob list>)
     (mappings: SeverityMappings)
     =
     async {
@@ -140,11 +143,19 @@ let runProjectAux
         let! messagesPerAnalyzer =
             fsharpOptions.SourceFiles
             |> Array.filter (fun file ->
-                match ignoreFiles |> List.tryFind (fun g -> g.IsMatch file) with
-                | Some g ->
-                    logger.LogInformation("Ignoring file {0} for pattern {1}", file, g.Pattern)
-                    false
-                | None -> true
+                match excludeIncludeFiles with
+                | Choice1Of2 excludeFiles ->
+                    match excludeFiles |> List.tryFind (fun g -> g.IsMatch file) with
+                    | Some g ->
+                        logger.LogInformation("Ignoring file {0} for pattern {1}", file, g.Pattern)
+                        false
+                    | None -> true
+                | Choice2Of2 includeFiles ->
+                    match includeFiles |> List.tryFind (fun g -> g.IsMatch file) with
+                    | Some g ->
+                        logger.LogInformation("Including file {0} for pattern {1}", file, g.Pattern)
+                        true
+                    | None -> false
             )
             |> Array.choose (fun fileName ->
                 let fileContent = File.ReadAllText fileName
@@ -173,13 +184,13 @@ let runProject
     toolsPath
     properties
     proj
-    (globs: Glob list)
+    (excludeIncludeFiles: Choice<Glob list, Glob list>)
     (mappings: SeverityMappings)
     =
     async {
         let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
         let! option = loadProject toolsPath properties path
-        return! runProjectAux client option globs mappings
+        return! runProjectAux client option excludeIncludeFiles mappings
     }
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
@@ -190,7 +201,7 @@ let isFSharpFile (file: string) =
 let runFscArgs
     (client: Client<CliAnalyzerAttribute, CliContext>)
     (fscArgs: string)
-    (globs: Glob list)
+    (excludeIncludeFiles: Choice<Glob list, Glob list>)
     (mappings: SeverityMappings)
     =
     if String.IsNullOrWhiteSpace fscArgs then
@@ -229,7 +240,7 @@ let runFscArgs
             Stamp = None
         }
 
-    runProjectAux client projectOptions globs mappings
+    runProjectAux client projectOptions excludeIncludeFiles mappings
 
 let printMessages (msgs: AnalyzerMessage list) =
 
@@ -507,9 +518,24 @@ let main argv =
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
-    let ignoreFiles = results.GetResult(<@ Ignore_Files @>, [])
-    logger.LogInformation("Ignore Files: [{0}]", (ignoreFiles |> String.concat ", "))
-    let ignoreFiles = ignoreFiles |> List.map Glob
+
+    let exclInclFiles =
+        let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
+        logger.LogInformation("Exclude Files: [{0}]", (excludeFiles |> String.concat ", "))
+        let excludeFiles = excludeFiles |> List.map Glob
+
+        let includeFiles = results.GetResult(<@ Include_Files @>, [])
+        logger.LogInformation("Include Files: [{0}]", (includeFiles |> String.concat ", "))
+        let includeFiles = includeFiles |> List.map Glob
+
+        match excludeFiles, includeFiles with
+        | e, [] -> Choice1Of2 e
+        | [], i -> Choice2Of2 i
+        | _e, i ->
+            logger.LogWarning("--exclude-files and --include-files are mutually exclusive, ignoring --exclude-files")
+
+            Choice2Of2 i
+
     let properties = getProperties results
 
     if Option.isSome fscArgs && not properties.IsEmpty then
@@ -534,19 +560,24 @@ let main argv =
 
     logger.LogInformation("Loading analyzers from {0}", (String.concat ", " analyzersPaths))
 
-    let includeExclude =
-        let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzer @>, [])
-        let includeAnalyzers = results.GetResult(<@ Include_Analyzer @>, [])
+    let exclInclAnalyzers =
+        let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzers @>, [])
+        let includeAnalyzers = results.GetResult(<@ Include_Analyzers @>, [])
 
         match excludeAnalyzers, includeAnalyzers with
-        | e, [] -> Exclude(Set.ofList e)
-        | [], i -> Include(Set.ofList i)
-        | i, _e ->
+        | e, [] ->
+            fun (s: string) -> e |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            |> ExcludeFilter
+        | [], i ->
+            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            |> IncludeFilter
+        | _e, i ->
             logger.LogWarning(
                 "--exclude-analyzers and --include-analyzers are mutually exclusive, ignoring --exclude-analyzers"
             )
 
-            Include(Set.ofList i)
+            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            |> IncludeFilter
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
@@ -568,7 +599,7 @@ let main argv =
     let dlls, analyzers =
         ((0, 0), analyzersPaths)
         ||> List.fold (fun (accDlls, accAnalyzers) analyzersPath ->
-            let dlls, analyzers = client.LoadAnalyzers(analyzersPath, includeExclude)
+            let dlls, analyzers = client.LoadAnalyzers(analyzersPath, exclInclAnalyzers)
             (accDlls + dlls), (accAnalyzers + analyzers)
         )
 
@@ -586,7 +617,9 @@ let main argv =
             | _ :: _, Some _ ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
                 exit 1
-            | [], Some fscArgs -> runFscArgs client fscArgs ignoreFiles severityMapping |> Async.RunSynchronously
+            | [], Some fscArgs ->
+                runFscArgs client fscArgs exclInclFiles severityMapping
+                |> Async.RunSynchronously
             | projects, None ->
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
@@ -595,7 +628,7 @@ let main argv =
 
                 projects
                 |> List.map (fun projPath ->
-                    runProject client toolsPath properties projPath ignoreFiles severityMapping
+                    runProject client toolsPath properties projPath exclInclFiles severityMapping
                 )
                 |> Async.Sequential
                 |> Async.RunSynchronously

@@ -128,8 +128,8 @@ module Client =
         |> Seq.toList
 
 type ExcludeInclude =
-    | Exclude of string Set
-    | Include of string Set
+    | ExcludeFilter of (string -> bool)
+    | IncludeFilter of (string -> bool)
 
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>(logger: ILogger) =
     do TASTCollecting.logger <- logger
@@ -149,7 +149,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     let s = Path.GetFileName(a)
 
                     not (
-                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.InvariantCultureIgnoreCase)
+                        s.EndsWith("fsharp.analyzers.sdk.dll", StringComparison.OrdinalIgnoreCase)
                         || regex.IsMatch(s)
                     )
                 )
@@ -200,8 +200,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
                         |> Seq.filter (fun registeredAnalyzer ->
                             match excludeInclude with
-                            | Some(Exclude excluded) ->
-                                let shouldExclude = excluded.Contains(registeredAnalyzer.Name)
+                            | Some(ExcludeFilter excludeFilter) ->
+                                let shouldExclude = excludeFilter registeredAnalyzer.Name
 
                                 if shouldExclude then
                                     logger.LogInformation(
@@ -211,8 +211,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                                     )
 
                                 not shouldExclude
-                            | Some(Include included) ->
-                                let shouldInclude = included.Contains(registeredAnalyzer.Name)
+                            | Some(IncludeFilter includeFilter) ->
+                                let shouldInclude = includeFilter registeredAnalyzer.Name
 
                                 if shouldInclude then
                                     logger.LogInformation(
