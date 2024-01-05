@@ -24,6 +24,5 @@
     <PackageReference Include="FSharp.Compiler.Service" />
     <PackageReference Include="McMaster.NETCore.Plugins" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Glob" />
   </ItemGroup>
 </Project>
