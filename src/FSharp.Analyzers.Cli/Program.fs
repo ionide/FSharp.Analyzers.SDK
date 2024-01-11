@@ -6,12 +6,13 @@ open System.Text.RegularExpressions
 open FSharp.Compiler.CodeAnalysis
 open FSharp.Compiler.Text
 open Argu
-open FSharp.Analyzers.SDK
 open GlobExpressions
 open Microsoft.CodeAnalysis.Sarif
 open Microsoft.CodeAnalysis.Sarif.Writers
 open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
+open FSharp.Analyzers.SDK
+open FSharp.Analyzers.Cli
 open FSharp.Analyzers.Cli.CustomLogging
 
 type Arguments =
@@ -266,23 +267,31 @@ let printMessages (msgs: AnalyzerMessage list) =
 
     let msgLogger = factory.CreateLogger("")
 
-    msgs
-    |> Seq.iter (fun analyzerMessage ->
+    let colorFormat color message =
+        CustomLogging.AnsiColorHelpers.formatMessageAsAnsiColorizedString color message
+
+    for analyzerMessage in msgs do
         let m = analyzerMessage.Message
+        let logLevel = severityToLogLevel[m.Severity]
 
-        msgLogger.Log(
-            severityToLogLevel[m.Severity],
-            "{0}({1},{2}): {3} {4} - {5}",
-            m.Range.FileName,
-            m.Range.StartLine,
-            m.Range.StartColumn,
-            (m.Severity.ToString()),
-            m.Code,
-            m.Message
-        )
-    )
+        let messageFormat, messageArgs =
+            let baseArgs: obj array =
+                [|
+                    m.Range.FileName
+                    m.Range.StartLine
+                    m.Range.StartColumn
+                    colorFormat (CustomLogging.AnsiColorHelpers.consoleColorOfLogLevel logLevel) (m.Severity.ToString())
+                    colorFormat (CustomLogging.AnsiColorHelpers.consoleColorOfLogLevel logLevel) m.Code
+                    m.Message
+                |]
 
-    ()
+            let baseFormat = "{0}({1},{2}): {3} {4} - {5}"
+
+            match analyzerMessage.HelpUri with
+            | None -> baseFormat, baseArgs
+            | Some uri -> baseFormat + " {6}", [| yield! baseArgs; colorFormat ConsoleColor.Cyan uri |]
+
+        msgLogger.Log(logLevel, messageFormat, messageArgs)
 
 let writeReport (results: AnalyzerMessage list option) (codeRoot: string option) (report: string) =
     try
