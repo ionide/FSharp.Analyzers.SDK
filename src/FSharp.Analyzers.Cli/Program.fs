@@ -596,11 +596,14 @@ let main argv =
 
     let client = Client<CliAnalyzerAttribute, CliContext>(logger)
 
-    let dlls, analyzers =
-        ((0, 0), analyzersPaths)
-        ||> List.fold (fun (accDlls, accAnalyzers) analyzersPath ->
-            let dlls, analyzers = client.LoadAnalyzers(analyzersPath, exclInclAnalyzers)
-            (accDlls + dlls), (accAnalyzers + analyzers)
+    let dlls, analyzers, failedAssemblies =
+        ((0, 0, 0), analyzersPaths)
+        ||> List.fold (fun (accDlls, accAnalyzers, accFailed) analyzersPath ->
+            let loadedDlls = client.LoadAnalyzers(analyzersPath, exclInclAnalyzers)
+
+            (accDlls + loadedDlls.AnalyzerAssemblies),
+            (accAnalyzers + loadedDlls.Analyzers),
+            (accFailed + loadedDlls.FailedAssemblies)
         )
 
     logger.LogInformation("Registered {0} analyzers from {1} dlls", analyzers, dlls)
@@ -638,5 +641,13 @@ let main argv =
 
     results |> Option.iter printMessages
     report |> Option.iter (writeReport results codeRoot)
+
+    if failedAssemblies > 0 then
+        logger.LogError(
+            "Because we failed to load some assemblies to obtain analyzers from them, exiting (failure count: {FailedAssemblyLoadCount})",
+            failedAssemblies
+        )
+
+        exit -3
 
     calculateExitCode results
