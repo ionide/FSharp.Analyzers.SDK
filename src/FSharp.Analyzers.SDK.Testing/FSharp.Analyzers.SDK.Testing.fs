@@ -224,15 +224,18 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
     let fcs = Utils.createFCS (Some documentSource)
     let pathToAnalyzerDlls = Path.GetFullPath(".")
 
-    let foundDlls, registeredAnalyzers =
+    let assemblyLoadStats =
         let client = Client<CliAnalyzerAttribute, CliContext>()
         client.LoadAnalyzers pathToAnalyzerDlls
 
-    if foundDlls = 0 then
+    if assemblyLoadStats.AnalyzerAssemblies = 0 then
         failwith $"no Dlls found in {pathToAnalyzerDlls}"
 
-    if registeredAnalyzers = 0 then
+    if assemblyLoadStats.Analyzers = 0 then
         failwith $"no Analyzers found in {pathToAnalyzerDlls}"
+
+    if assemblyLoadStats.FailedAssemblies > 0 then
+        failwith $"failed to load %i{assemblyLoadStats.FailedAssemblies} Analyzers in {pathToAnalyzerDlls}"
 
     let opts =
         { opts with

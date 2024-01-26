@@ -8,6 +8,16 @@ type AnalysisResult =
         Output: Result<Message list, exn>
     }
 
+type AssemblyLoadStats =
+    {
+        /// The number of DLLs from which we tried to load analyzers.
+        AnalyzerAssemblies: int
+        /// The total number of analyzers loaded across all attempted DLLs.
+        Analyzers: int
+        /// The number of assemblies from which we tried and failed to load any DLLs.
+        FailedAssemblies: int
+    }
+
 type ExcludeInclude =
     /// A predicate function to exclude Analyzers.
     | ExcludeFilter of (string -> bool)
@@ -23,7 +33,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// Analyzers are filtered according to the ExcludeInclude set, if provided.
     /// </summary>
     /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
-    member LoadAnalyzers: dir: string * ?excludeInclude: ExcludeInclude -> int * int
+    member LoadAnalyzers: dir: string * ?excludeInclude: ExcludeInclude -> AssemblyLoadStats
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
     member RunAnalyzers: ctx: 'TContext -> Async<AnalyzerMessage list>

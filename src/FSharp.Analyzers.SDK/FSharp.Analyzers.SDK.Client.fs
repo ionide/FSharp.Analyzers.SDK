@@ -127,6 +127,13 @@ module Client =
         |> Seq.choose (analyzerFromMember<'TAnalyzerAttribute, 'TContext> path)
         |> Seq.toList
 
+type AssemblyLoadStats =
+    {
+        AnalyzerAssemblies: int
+        Analyzers: int
+        FailedAssemblies: int
+    }
+
 type ExcludeInclude =
     | ExcludeFilter of (string -> bool)
     | IncludeFilter of (string -> bool)
@@ -139,7 +146,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
     new() = Client(Abstractions.NullLogger.Instance)
 
-    member x.LoadAnalyzers(dir: string, ?excludeInclude: ExcludeInclude) : int * int =
+    member x.LoadAnalyzers(dir: string, ?excludeInclude: ExcludeInclude) : AssemblyLoadStats =
         if Directory.Exists dir then
             let analyzerAssemblies =
                 let regex = Regex(@".*test.*\.dll$")
@@ -174,6 +181,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 let fas = references |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
                 fas.Version
 
+            let skippedAssemblies = ref 0
+
             let analyzers =
                 analyzerAssemblies
                 |> Array.filter (fun (name, analyzerAssembly) ->
@@ -185,6 +194,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     then
                         true
                     else
+                        System.Threading.Interlocked.Increment skippedAssemblies |> ignore
+
                         logger.LogError(
                             "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
                             name,
@@ -233,10 +244,22 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 registeredAnalyzers.AddOrUpdate(path, analyzers, (fun _ _ -> analyzers))
                 |> ignore
 
-            Array.length analyzers, analyzers |> Seq.collect snd |> Seq.length
+            let assemblyCount = Array.length analyzers
+            let analyzerCount = analyzers |> Seq.sumBy (snd >> Seq.length)
+
+            {
+                AnalyzerAssemblies = assemblyCount
+                Analyzers = analyzerCount
+                FailedAssemblies = skippedAssemblies.Value
+            }
         else
             logger.LogWarning("Analyzer path {analyzerPath} does not exist", dir)
-            0, 0
+
+            {
+                AnalyzerAssemblies = 0
+                Analyzers = 0
+                FailedAssemblies = 0
+            }
 
     member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
         async {
