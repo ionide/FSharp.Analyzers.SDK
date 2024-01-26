@@ -12,6 +12,7 @@ open Microsoft.CodeAnalysis.Sarif
 open Microsoft.CodeAnalysis.Sarif.Writers
 open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
+open FSharp.Analyzers.Cli
 open FSharp.Analyzers.Cli.CustomLogging
 
 type Arguments =
@@ -136,6 +137,7 @@ let runProjectAux
     (fsharpOptions: FSharpProjectOptions)
     (excludeIncludeFiles: Choice<Glob list, Glob list>)
     (mappings: SeverityMappings)
+    : Async<Result<AnalyzerMessage list, AnalysisFailure> list>
     =
     async {
         let! checkProjectResults = fcs.ParseAndCheckProject(fsharpOptions)
@@ -157,25 +159,33 @@ let runProjectAux
                         true
                     | None -> false
             )
-            |> Array.choose (fun fileName ->
+            |> Array.map (fun fileName ->
                 let fileContent = File.ReadAllText fileName
                 let sourceText = SourceText.ofString fileContent
 
                 Utils.typeCheckFile fcs logger fsharpOptions fileName (Utils.SourceOfSource.SourceText sourceText)
-                |> Option.map (Utils.createContext checkProjectResults fileName sourceText)
+                |> Result.map (Utils.createContext checkProjectResults fileName sourceText)
             )
             |> Array.map (fun ctx ->
-                logger.LogInformation("Running analyzers for {0}", ctx.FileName)
-                client.RunAnalyzers ctx
+                match ctx with
+                | Error e -> async.Return(Error e)
+                | Ok ctx ->
+                    async {
+                        logger.LogInformation("Running analyzers for {0}", ctx.FileName)
+                        let! results = client.RunAnalyzers ctx
+                        return Ok results
+                    }
             )
             |> Async.Parallel
 
         return
-            [
-                for messages in messagesPerAnalyzer do
-                    let mappedMessages = messages |> List.map (mapMessageToSeverity mappings)
-                    yield! mappedMessages
-            ]
+            messagesPerAnalyzer
+            |> Seq.map (fun messages ->
+                match messages with
+                | Error e -> Error e
+                | Ok messages -> messages |> List.map (mapMessageToSeverity mappings) |> Ok
+            )
+            |> Seq.toList
     }
 
 let runProject
@@ -266,7 +276,7 @@ let printMessages (msgs: AnalyzerMessage list) =
     let msgLogger = factory.CreateLogger("")
 
     msgs
-    |> Seq.iter (fun analyzerMessage ->
+    |> List.iter (fun analyzerMessage ->
         let m = analyzerMessage.Message
 
         msgLogger.Log(
@@ -283,7 +293,7 @@ let printMessages (msgs: AnalyzerMessage list) =
 
     ()
 
-let writeReport (results: AnalyzerMessage list option) (codeRoot: string option) (report: string) =
+let writeReport (results: AnalyzerMessage list) (codeRoot: string option) (report: string) =
     try
         let codeRoot =
             match codeRoot with
@@ -318,7 +328,7 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
 
         sarifLogger.AnalysisStarted()
 
-        for analyzerResult in (Option.defaultValue List.empty results) do
+        for analyzerResult in results do
             let reportDescriptor = ReportingDescriptor()
             reportDescriptor.Id <- analyzerResult.Message.Code
             reportDescriptor.Name <- analyzerResult.Message.Message
@@ -373,20 +383,6 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
     with ex ->
         logger.LogError(ex, "Could not write sarif to {report}", report)
         logger.LogInformation("{0}", ex)
-
-let calculateExitCode (msgs: AnalyzerMessage list option) : int =
-    match msgs with
-    | None -> -1
-    | Some msgs ->
-        let check =
-            msgs
-            |> List.exists (fun analyzerMessage ->
-                let message = analyzerMessage.Message
-
-                message.Severity = Severity.Error
-            )
-
-        if check then -2 else 0
 
 /// If multiple MSBuild properties are given in one -p flag like -p:prop1="val1a;val1b;val1c";prop2="1;2;3";prop3=val3
 /// argu will think it means prop1 has the value: "val1a;val1b;val1c";prop2="1;2;3";prop3=val3
@@ -638,15 +634,36 @@ let main argv =
                 |> List.concat
                 |> Some
 
-    results |> Option.iter printMessages
-    report |> Option.iter (writeReport results codeRoot)
+    match results with
+    | None -> -1
+    | Some results ->
+        let results, hasError =
+            match Result.allOkOrError results with
+            | Ok results -> results, false
+            | Error(results, _errors) -> results, true
 
-    if failedAssemblies > 0 then
-        logger.LogError(
-            "Because we failed to load some assemblies to obtain analyzers from them, exiting (failure count: {FailedAssemblyLoadCount})",
-            failedAssemblies
-        )
+        let results = results |> List.concat
 
-        exit -3
+        printMessages results
 
-    calculateExitCode results
+        report |> Option.iter (writeReport results codeRoot)
+
+        let check =
+            results
+            |> List.exists (fun analyzerMessage ->
+                let message = analyzerMessage.Message
+
+                message.Severity = Severity.Error
+            )
+
+        if failedAssemblies > 0 then
+            logger.LogError(
+                "Because we failed to load some assemblies to obtain analyzers from them, exiting (failure count: {FailedAssemblyLoadCount})",
+                failedAssemblies
+            )
+
+            exit -3
+
+        if check then -2
+        elif hasError then -4
+        else 0

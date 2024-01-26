@@ -257,7 +257,7 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
             fileName
             (Utils.SourceOfSource.DiscreteSource source)
     with
-    | Some(parseFileResults, checkFileResults) ->
+    | Ok(parseFileResults, checkFileResults) ->
         let diagErrors =
             checkFileResults.Diagnostics
             |> Array.filter (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
@@ -267,7 +267,7 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
 
         let sourceText = SourceText.ofString source
         Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
-    | None -> failwith "typechecking file failed"
+    | Error e -> failwith $"typechecking file failed: %O{e}"
 
 let getContext (opts: FSharpProjectOptions) source = getContextFor opts false source
 let getContextForSignature (opts: FSharpProjectOptions) source = getContextFor opts true source

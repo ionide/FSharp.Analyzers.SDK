@@ -176,6 +176,8 @@ type AnalyzerMessage =
         HelpUri: string option
     }
 
+type AnalysisFailure = | Aborted
+
 module Utils =
     let currentFSharpAnalyzersSDKVersion =
         Assembly.GetExecutingAssembly().GetName().Version
@@ -230,6 +232,7 @@ module Utils =
         (options: FSharpProjectOptions)
         (fileName: string)
         (source: SourceOfSource)
+        : Result<FSharpParseFileResults * FSharpCheckFileResults, AnalysisFailure>
         =
 
         let sourceText =
@@ -247,5 +250,5 @@ module Utils =
         match checkAnswer with
         | FSharpCheckFileAnswer.Aborted ->
             logger.LogError("Checking of file {0} aborted", fileName)
-            None
-        | FSharpCheckFileAnswer.Succeeded result -> Some(parseRes, result)
+            Error AnalysisFailure.Aborted
+        | FSharpCheckFileAnswer.Succeeded result -> Ok(parseRes, result)
