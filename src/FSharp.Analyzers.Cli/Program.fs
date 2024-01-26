@@ -171,12 +171,11 @@ let runProjectAux
             |> Async.Parallel
 
         return
-            Some
-                [
-                    for messages in messagesPerAnalyzer do
-                        let mappedMessages = messages |> List.map (mapMessageToSeverity mappings)
-                        yield! mappedMessages
-                ]
+            [
+                for messages in messagesPerAnalyzer do
+                    let mappedMessages = messages |> List.map (mapMessageToSeverity mappings)
+                    yield! mappedMessages
+            ]
     }
 
 let runProject
@@ -623,6 +622,7 @@ let main argv =
             | [], Some fscArgs ->
                 runFscArgs client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
+                |> Some
             | projects, None ->
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
@@ -635,7 +635,6 @@ let main argv =
                 )
                 |> Async.Sequential
                 |> Async.RunSynchronously
-                |> Array.choose id
                 |> List.concat
                 |> Some
 
