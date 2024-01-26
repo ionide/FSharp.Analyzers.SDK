@@ -119,6 +119,7 @@ type Fix =
         ToText: string
     }
 
+[<RequireQualifiedAccess>]
 type Severity =
     | Info
     | Hint

@@ -8,6 +8,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## Unreleased
 
 ### Changed
+* [Add `RequireQualifiedAccess` to `Severity` type](https://github.com/ionide/FSharp.Analyzers.SDK/pull/199) (thanks @Smaug123!)
 * [Fail the tool when any analyzers fail to load](https://github.com/ionide/FSharp.Analyzers.SDK/pull/198) (thanks @Smaug123!)
 
 ## [0.23.0] - 2024-01-05

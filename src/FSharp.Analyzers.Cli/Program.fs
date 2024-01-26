@@ -84,13 +84,13 @@ type SeverityMappings =
 let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK.AnalyzerMessage) =
     let targetSeverity =
         if mappings.TreatAsInfo |> Set.contains msg.Message.Code then
-            Info
+            Severity.Info
         else if mappings.TreatAsHint |> Set.contains msg.Message.Code then
-            Hint
+            Severity.Hint
         else if mappings.TreatAsWarning |> Set.contains msg.Message.Code then
-            Warning
+            Severity.Warning
         else if mappings.TreatAsError |> Set.contains msg.Message.Code then
-            Error
+            Severity.Error
         else
             msg.Message.Severity
 
@@ -247,10 +247,10 @@ let printMessages (msgs: AnalyzerMessage list) =
     let severityToLogLevel =
         Map.ofArray
             [|
-                Error, LogLevel.Error
-                Warning, LogLevel.Warning
-                Info, LogLevel.Information
-                Hint, LogLevel.Trace
+                Severity.Error, LogLevel.Error
+                Severity.Warning, LogLevel.Warning
+                Severity.Info, LogLevel.Information
+                Severity.Hint, LogLevel.Trace
             |]
 
     if List.isEmpty msgs then
@@ -276,7 +276,7 @@ let printMessages (msgs: AnalyzerMessage list) =
             m.Range.FileName,
             m.Range.StartLine,
             m.Range.StartColumn,
-            (m.Severity.ToString()),
+            m.Severity.ToString(),
             m.Code,
             m.Message
         )
@@ -338,10 +338,10 @@ let writeReport (results: AnalyzerMessage list option) (codeRoot: string option)
 
             result.Level <-
                 match analyzerResult.Message.Severity with
-                | Info -> FailureLevel.Note
-                | Hint -> FailureLevel.Note
-                | Warning -> FailureLevel.Warning
-                | Error -> FailureLevel.Error
+                | Severity.Info -> FailureLevel.Note
+                | Severity.Hint -> FailureLevel.Note
+                | Severity.Warning -> FailureLevel.Warning
+                | Severity.Error -> FailureLevel.Error
 
             let msg = Message()
             msg.Text <- analyzerResult.Message.Message
@@ -384,7 +384,7 @@ let calculateExitCode (msgs: AnalyzerMessage list option) : int =
             |> List.exists (fun analyzerMessage ->
                 let message = analyzerMessage.Message
 
-                message.Severity = Error
+                message.Severity = Severity.Error
             )
 
         if check then -2 else 0

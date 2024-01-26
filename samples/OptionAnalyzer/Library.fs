@@ -36,7 +36,7 @@ let optionValueAnalyzer: Analyzer<CliContext> =
                         Type = "Option.Value analyzer"
                         Message = "Option.Value shouldn't be used"
                         Code = "OV001"
-                        Severity = Warning
+                        Severity = Severity.Warning
                         Range = r
                         Fixes = []
                     }

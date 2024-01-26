@@ -87,7 +87,7 @@ let private topologicallySortedOpenStatementsAnalyzer
                     Type = "Unsorted System open statement"
                     Message = $"%s{openStatementText} was found after non System namespaces where opened!"
                     Code = "SOT001"
-                    Severity = Warning
+                    Severity = Severity.Warning
                     Range = mOpen
                     Fixes = []
                 }
