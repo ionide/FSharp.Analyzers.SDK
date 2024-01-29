@@ -152,6 +152,12 @@ type AnalyzerMessage =
         HelpUri: string option
     }
 
+/// Represents a failure to run FSC analysis.
+[<RequireQualifiedAccess>]
+type AnalysisFailure =
+    /// The F# compiler service aborted during analysis.
+    | Aborted
+
 module Utils =
 
     [<RequireQualifiedAccess>]
@@ -171,7 +177,7 @@ module Utils =
         options: FSharpProjectOptions ->
         fileName: string ->
         source: SourceOfSource ->
-            option<FSharpParseFileResults * FSharpCheckFileResults>
+            Result<FSharpParseFileResults * FSharpCheckFileResults, AnalysisFailure>
 
     val createContext:
         checkProjectResults: FSharpCheckProjectResults ->
