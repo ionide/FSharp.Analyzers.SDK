@@ -1,4 +1,5 @@
 ﻿open System
+open System.Collections.Generic
 open System.IO
 open System.Runtime.Loader
 open System.Runtime.InteropServices
@@ -456,6 +457,32 @@ let getProperties (results: ParseResults<Arguments>) =
             | _ -> ()
         ]
 
+/// Returns a "does this string match any of these globs" function,
+/// and also an IReadOnlyList you can use to determine whether across all invocations of the function,
+/// any given glob was ever matched.
+/// Note that the returned function will always scan over every element of the input list, so that it
+/// can report the "did anything match this glob" correctly.
+let createFilter (globs: string list) : (string -> bool) * IReadOnlyList<Glob * bool> =
+    let globs = globs |> List.map Glob
+
+    let unmatchedAnalyzerPatterns = ResizeArray()
+
+    globs |> Seq.map (fun glob -> glob, true) |> unmatchedAnalyzerPatterns.AddRange
+
+    let anyMatches (s: string) =
+        let mutable result = false
+
+        globs
+        |> List.iteri (fun index glob ->
+            if glob.IsMatch s then
+                unmatchedAnalyzerPatterns.[index] <- (glob, false)
+                result <- true
+        )
+
+        result
+
+    anyMatches, unmatchedAnalyzerPatterns :> _
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -555,24 +582,24 @@ let main argv =
 
     logger.LogInformation("Loading analyzers from {0}", (String.concat ", " analyzersPaths))
 
-    let exclInclAnalyzers =
+    let exclInclAnalyzers, unmatchedAnalyzerPatterns =
         let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzers @>, [])
         let includeAnalyzers = results.GetResult(<@ Include_Analyzers @>, [])
 
         match excludeAnalyzers, includeAnalyzers with
         | e, [] ->
-            fun (s: string) -> e |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
-            |> ExcludeFilter
+            let result, list = createFilter e
+            ExcludeFilter result, list
         | [], i ->
-            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
-            |> IncludeFilter
+            let result, list = createFilter i
+            IncludeFilter result, list
         | _e, i ->
             logger.LogWarning(
                 "--exclude-analyzers and --include-analyzers are mutually exclusive, ignoring --exclude-analyzers"
             )
 
-            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
-            |> IncludeFilter
+            let result, list = createFilter i
+            IncludeFilter result, list
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
         if assemblyName.Name <> "FSharp.Core" then
@@ -634,36 +661,51 @@ let main argv =
                 |> List.concat
                 |> Some
 
-    match results with
-    | None -> -1
-    | Some results ->
-        let results, hasError =
-            match Result.allOkOrError results with
-            | Ok results -> results, false
-            | Error(results, _errors) -> results, true
+    let results =
+        match results with
+        | None -> exit -1
+        | Some results -> results
 
-        let results = results |> List.concat
+    let results, hasError =
+        match Result.allOkOrError results with
+        | Ok results -> results, false
+        | Error(results, _errors) -> results, true
 
-        printMessages results
+    let results = results |> List.concat
 
-        report |> Option.iter (writeReport results codeRoot)
+    printMessages results
 
-        let check =
-            results
-            |> List.exists (fun analyzerMessage ->
-                let message = analyzerMessage.Message
+    report |> Option.iter (writeReport results codeRoot)
 
-                message.Severity = Severity.Error
-            )
+    let check =
+        results
+        |> List.exists (fun analyzerMessage ->
+            let message = analyzerMessage.Message
 
-        if failedAssemblies > 0 then
-            logger.LogError(
-                "Because we failed to load some assemblies to obtain analyzers from them, exiting (failure count: {FailedAssemblyLoadCount})",
-                failedAssemblies
-            )
+            message.Severity = Severity.Error
+        )
 
-            exit -3
+    if failedAssemblies > 0 then
+        logger.LogError(
+            "Because we failed to load some assemblies to obtain analyzers from them, exiting (failure count: {FailedAssemblyLoadCount})",
+            failedAssemblies
+        )
 
-        if check then -2
-        elif hasError then -4
-        else 0
+        exit -3
+
+    let unmatchedAnalyzerPatterns =
+        unmatchedAnalyzerPatterns
+        |> Seq.choose (fun (glob, isUnmatched) -> if isUnmatched then Some glob else None)
+        |> Seq.toList
+
+    if not (List.isEmpty unmatchedAnalyzerPatterns) then
+        logger.LogError(
+            "The following glob(s) were specified to include or exclude specific analyzers, but they did not match any discovered analyzers. Have you got them right? {UnmatchedAnalyzerGlobs}",
+            unmatchedAnalyzerPatterns |> Seq.map _.Pattern |> String.concat ", "
+        )
+
+        exit -5
+
+    if check then -2
+    elif hasError then -4
+    else 0
