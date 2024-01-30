@@ -2,7 +2,7 @@
   "profiles": {
     "ReadMeSample": {
       "commandName": "Project",
-      "commandLineArgs": "--include-analyzers OptionAnailyzer --project /Users/patrick/Documents/GitHub/FSharp.Analyzers.SDK/samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path /Users/patrick/Documents/GitHub/FSharp.Analyzers.SDK/samples/OptionAnalyzer/bin/Release --verbosity d"
+      "commandLineArgs": "--project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./samples/OptionAnalyzer/bin/Release --verbosity d"
     }
   }
 }
