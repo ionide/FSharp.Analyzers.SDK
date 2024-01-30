@@ -605,7 +605,7 @@ let main argv =
 
     let results =
         if analyzers = 0 then
-            Some []
+            None
         else
             match projOpts, fscArgs with
             | [], None ->
