@@ -661,6 +661,25 @@ let main argv =
                 |> List.concat
                 |> Some
 
+    let unmatchedAnalyzerPatterns =
+        unmatchedAnalyzerPatterns
+        |> Seq.choose (fun (glob, isUnmatched) -> if isUnmatched then Some glob else None)
+        |> Seq.toList
+
+    // Before we process the results, unconditionally warn if the inclusion or exclusion globs didn't look right.
+    // Then, *after* we've printed the results (which may be useful even if they're partial!), we'll fail if they
+    // didn't look right.
+    let anyUnmatchedAnalyzers =
+        if not (List.isEmpty unmatchedAnalyzerPatterns) then
+            logger.LogError(
+                "The following glob(s) were specified to include or exclude specific analyzers, but they did not match any discovered analyzers. Have you got them right? {UnmatchedAnalyzerGlobs}",
+                unmatchedAnalyzerPatterns |> Seq.map _.Pattern |> String.concat ", "
+            )
+
+            true
+        else
+            false
+
     let results =
         match results with
         | None -> exit -1
@@ -693,19 +712,12 @@ let main argv =
 
         exit -3
 
-    let unmatchedAnalyzerPatterns =
-        unmatchedAnalyzerPatterns
-        |> Seq.choose (fun (glob, isUnmatched) -> if isUnmatched then Some glob else None)
-        |> Seq.toList
-
-    if not (List.isEmpty unmatchedAnalyzerPatterns) then
-        logger.LogError(
-            "The following glob(s) were specified to include or exclude specific analyzers, but they did not match any discovered analyzers. Have you got them right? {UnmatchedAnalyzerGlobs}",
-            unmatchedAnalyzerPatterns |> Seq.map _.Pattern |> String.concat ", "
-        )
-
-        exit -5
-
-    if check then -2
-    elif hasError then -4
-    else 0
+    if anyUnmatchedAnalyzers then
+        logger.LogError("Aborting because there were unmatched analyzer globs (see earlier log).")
+        -5
+    elif check then
+        -2
+    elif hasError then
+        -4
+    else
+        0
