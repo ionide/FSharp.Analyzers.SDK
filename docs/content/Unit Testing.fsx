@@ -17,11 +17,11 @@ For a complete example of an unit testing project, take a look at [`OptionAnalyz
 *)
 
 (*** hide ***)
-#r "../../src/FSharp.Analyzers.SDK.Testing/bin/Release/net6.0/FSharp.Analyzers.SDK.dll"
-#r "../../src/FSharp.Analyzers.SDK.Testing/bin/Release/net6.0/FSharp.Analyzers.SDK.Testing.dll"
-#r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/FSharp.Compiler.Service.dll"
-#r "../../samples/OptionAnalyzer.Test/bin/Release/net6.0/nunit.framework.dll"
-#r "../../samples/OptionAnalyzer.Test/bin/Release/net6.0/OptionAnalyzer.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.Cli/release/FSharp.Compiler.Service.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.SDK/release/FSharp.Analyzers.SDK.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.SDK.Testing/release/FSharp.Analyzers.SDK.Testing.dll"
+#r "../../artifacts/bin/OptionAnalyzer.Test/release/nunit.framework.dll"
+#r "../../artifacts/bin/OptionAnalyzer.Test/release/OptionAnalyzer.dll"
 (** *)
 
 open FSharp.Compiler.CodeAnalysis

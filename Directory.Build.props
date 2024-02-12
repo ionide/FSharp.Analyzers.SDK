@@ -11,6 +11,7 @@
     <WarnOn>$(WarnOn);3390</WarnOn><!-- Malformed XML doc comments -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <OtherFlags>$(OtherFlags) --test:GraphBasedChecking --test:ParallelOptimization --test:ParallelIlxGen</OtherFlags>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
   </PropertyGroup>
 
   <PropertyGroup>
