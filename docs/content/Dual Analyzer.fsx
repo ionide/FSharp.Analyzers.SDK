@@ -12,8 +12,8 @@ With a little orchestration it is possible to easily write two analyzer function
 *)
 
 (*** hide ***)
-#r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/FSharp.Analyzers.SDK.dll"
-#r "../../src/FSharp.Analyzers.Cli/bin/Release/net6.0/FSharp.Compiler.Service.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.SDK/release/FSharp.Analyzers.SDK.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.Cli/release/FSharp.Compiler.Service.dll"
 (** *)
 
 open FSharp.Analyzers.SDK
