@@ -19,7 +19,6 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="NUnit" />
         <PackageReference Include="NUnit3TestAdapter" />
-        <PackageReference Include="coverlet.collector" />
         <PackageReference Include="FSharp.Compiler.Service"/>
     </ItemGroup>
 
