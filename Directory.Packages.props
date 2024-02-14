@@ -5,8 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="CliWrap" Version="3.6.4" />
-    <PackageVersion Include="FSharp.Core" Version="[8.0.100]" />
-    <PackageVersion Include="FSharp.Compiler.Service" Version="[43.8.100]" />
+    <PackageVersion Include="FSharp.Core" Version="[8.0.200]" />
+    <PackageVersion Include="FSharp.Compiler.Service" Version="[43.8.200]" />
     <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
     <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <PackageVersion Include="Argu" Version="6.1.1" />
