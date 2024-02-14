@@ -5,11 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.25.0] - 2024-02-14
 
 ### Changed
 
 * [Update to FCS and FSharp.Core 43.8.200](https://github.com/ionide/FSharp.Analyzers.SDK/pull/207)
+* [Fail when no analyzers are registered but the tool is invoked](https://github.com/ionide/FSharp.Analyzers.SDK/pull/202) (thanks @Smaug123!)
+* [Remove Coverlet.Collector package dependency](https://github.com/ionide/FSharp.Analyzers.SDK/pull/206) (thanks @dawedawe!)
+* [Update Ionide.ProjInfo to 0.63.0](https://github.com/ionide/FSharp.Analyzers.SDK/pull/205) (thanks @nojaf!)
 
 ## [0.24.0] - 2024-01-30
 
