@@ -281,7 +281,7 @@ let printMessages (msgs: AnalyzerMessage list) =
 
         msgLogger.Log(
             severityToLogLevel[m.Severity],
-            "{0}({1},{2}): {3} {4} - {5}",
+            "{0}({1},{2}): {3} {4} : {5}",
             m.Range.FileName,
             m.Range.StartLine,
             m.Range.StartColumn,
