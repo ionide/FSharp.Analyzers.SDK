@@ -39,8 +39,9 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Project _ -> "Path to your .fsproj file."
-            | Analyzers_Path _ -> "Path to a folder where your analyzers are located."
+            | Project _ -> "List of paths to your .fsproj file."
+            | Analyzers_Path _ ->
+                "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
             | Configuration _ -> "The configuration to use, e.g. Debug or Release."
             | Runtime _ -> "The runtime identifier (RID)."
@@ -118,21 +119,31 @@ let rec mkKn (ty: Type) =
 
 let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
-let loadProject toolsPath properties projPath =
+let loadProjects toolsPath properties (projPaths: string list) =
     async {
-        let loader = WorkspaceLoader.Create(toolsPath, properties)
-        let parsed = loader.LoadProjects [ projPath ] |> Seq.toList
+        let projPaths =
+            projPaths
+            |> List.map (fun proj -> Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath)
 
-        if parsed.IsEmpty then
-            logger.LogError("Failed to load project '{0}'", projPath)
+        for proj in projPaths do
+            logger.LogInformation("Loading project {0}", proj)
+
+        let loader = WorkspaceLoader.Create(toolsPath, properties)
+        let projectOptions = loader.LoadProjects projPaths
+
+        let failedLoads =
+            projPaths
+            |> Seq.filter (fun path -> not (projectOptions |> Seq.exists (fun p -> p.ProjectFileName = path)))
+            |> Seq.toList
+
+        if Seq.length failedLoads > 0 then
+            logger.LogError("Failed to load project '{0}'", failedLoads)
             exit 1
 
-        let fcsPo = FCS.mapToFSharpProjectOptions parsed.Head parsed
-
-        return fcsPo
+        return FCS.mapManyOptions projectOptions |> Seq.toList
     }
 
-let runProjectAux
+let runProject
     (client: Client<CliAnalyzerAttribute, CliContext>)
     (fsharpOptions: FSharpProjectOptions)
     (excludeIncludeFiles: Choice<Glob list, Glob list>)
@@ -140,6 +151,7 @@ let runProjectAux
     : Async<Result<AnalyzerMessage list, AnalysisFailure> list>
     =
     async {
+        logger.LogInformation("Checking project {0}", fsharpOptions.ProjectFileName)
         let! checkProjectResults = fcs.ParseAndCheckProject(fsharpOptions)
 
         let! messagesPerAnalyzer =
@@ -160,21 +172,23 @@ let runProjectAux
                     | None -> false
             )
             |> Array.map (fun fileName ->
-                let fileContent = File.ReadAllText fileName
-                let sourceText = SourceText.ofString fileContent
+                async {
+                    let! fileContent = File.ReadAllTextAsync fileName |> Async.AwaitTask
+                    let sourceText = SourceText.ofString fileContent
+                    logger.LogDebug("Checking file {0}", fileName)
 
-                Utils.typeCheckFile fcs logger fsharpOptions fileName (Utils.SourceOfSource.SourceText sourceText)
-                |> Result.map (Utils.createContext checkProjectResults fileName sourceText)
-            )
-            |> Array.map (fun ctx ->
-                match ctx with
-                | Error e -> async.Return(Error e)
-                | Ok ctx ->
-                    async {
-                        logger.LogInformation("Running analyzers for {0}", ctx.FileName)
-                        let! results = client.RunAnalyzers ctx
-                        return Ok results
-                    }
+                    // Since we did ParseAndCheckProject, we can be sure that the file is in the project.
+                    // See https://fsharp.github.io/fsharp-compiler-docs/fcs/project.html for more information.
+                    let! parseAndCheckResults = fcs.GetBackgroundCheckResultsForFileInProject(fileName, fsharpOptions)
+
+                    let ctx =
+                        Utils.createContext checkProjectResults fileName sourceText parseAndCheckResults
+
+                    logger.LogInformation("Running analyzers for {0}", ctx.FileName)
+                    let! results = client.RunAnalyzers ctx
+                    return Ok results
+                }
+
             )
             |> Async.Parallel
 
@@ -186,20 +200,6 @@ let runProjectAux
                 | Ok messages -> messages |> List.map (mapMessageToSeverity mappings) |> Ok
             )
             |> Seq.toList
-    }
-
-let runProject
-    (client: Client<CliAnalyzerAttribute, CliContext>)
-    toolsPath
-    properties
-    proj
-    (excludeIncludeFiles: Choice<Glob list, Glob list>)
-    (mappings: SeverityMappings)
-    =
-    async {
-        let path = Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath
-        let! option = loadProject toolsPath properties path
-        return! runProjectAux client option excludeIncludeFiles mappings
     }
 
 let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
@@ -249,7 +249,7 @@ let runFscArgs
             Stamp = None
         }
 
-    runProjectAux client projectOptions excludeIncludeFiles mappings
+    runProject client projectOptions excludeIncludeFiles mappings
 
 let printMessages (msgs: AnalyzerMessage list) =
 
@@ -482,7 +482,11 @@ let main argv =
     use factory =
         LoggerFactory.Create(fun builder ->
             builder
-                .AddCustomFormatter(fun options -> options.UseAnalyzersMsgStyle <- false)
+                .AddCustomFormatter(fun options ->
+                    options.UseAnalyzersMsgStyle <- false
+                    options.TimestampFormat <- "[HH:mm:ss.fff]"
+                    options.UseUtcTimestamp <- true
+                )
                 .SetMinimumLevel(logLevel)
             |> ignore
         )
@@ -610,7 +614,6 @@ let main argv =
             match projOpts, fscArgs with
             | [], None ->
                 logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
-
                 None
             | _ :: _, Some _ ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
@@ -625,11 +628,16 @@ let main argv =
                         logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
                         exit 1
 
-                projects
-                |> List.map (fun projPath ->
-                    runProject client toolsPath properties projPath exclInclFiles severityMapping
-                )
-                |> Async.Sequential
+                async {
+                    let! loadedProjects = loadProjects toolsPath properties projects
+
+                    return!
+                        loadedProjects
+                        |> List.map (fun (projPath: FSharpProjectOptions) ->
+                            runProject client projPath exclInclFiles severityMapping
+                        )
+                        |> Async.Parallel
+                }
                 |> Async.RunSynchronously
                 |> List.concat
                 |> Some
