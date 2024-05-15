@@ -12,6 +12,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * [Emit Analyzer Errors in the MSBuild Canonical Error Format](https://github.com/ionide/FSharp.Analyzers.SDK/pull/208) (thanks @Numpsy!)
 * [Update Structured Logger libraries](https://github.com/ionide/FSharp.Analyzers.SDK/pull/211) (thanks @nojaf!)
 * Update FSharp.Compiler.Service and FSharp.Core to the .NET SDK 8.0.300 release versions
+* [More efficiently analyze larger solutions](https://github.com/ionide/FSharp.Analyzers.SDK/pull/210) (thanks @TheAngryByrd!)
 
 ## [0.25.0] - 2024-02-14
 
