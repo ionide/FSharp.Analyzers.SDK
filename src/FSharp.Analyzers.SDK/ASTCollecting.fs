@@ -25,14 +25,6 @@ module ASTCollecting =
         | SynArgPats.Pats ps -> ps
         | SynArgPats.NamePatPairs(pats = xs) -> xs |> List.map (fun (_, _, pat) -> pat)
 
-    /// A pattern that collects all patterns from a `SynSimplePats` into a single flat list
-    let (|AllSimplePats|) (pats: SynSimplePats) =
-        let rec loop acc pat =
-            match pat with
-            | SynSimplePats.SimplePats(pats = pats) -> acc @ pats
-
-        loop [] pats
-
     type SyntaxCollectorBase() =
         abstract WalkSynModuleOrNamespace: path: SyntaxVisitorPath * SynModuleOrNamespace -> unit
         default _.WalkSynModuleOrNamespace(_, _) = ()
@@ -493,9 +485,9 @@ module ASTCollecting =
             match s with
             | SynMemberDefn.AbstractSlot(slotSig = valSig) -> walkValSig nextPath valSig
             | SynMemberDefn.Member(binding, _) -> walkBinding nextPath binding
-            | SynMemberDefn.ImplicitCtor(attributes = AllAttrs attrs; ctorArgs = AllSimplePats pats) ->
+            | SynMemberDefn.ImplicitCtor(attributes = AllAttrs attrs; ctorArgs = pats) ->
                 List.iter (walkAttribute nextPath) attrs
-                List.iter (walkSimplePat nextPath) pats
+                walkPat nextPath pats
             | SynMemberDefn.ImplicitInherit(inheritType = t; inheritArgs = e) ->
                 walkType nextPath t
                 walkExpr nextPath e
