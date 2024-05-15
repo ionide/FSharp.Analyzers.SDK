@@ -5,18 +5,18 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="CliWrap" Version="3.6.4" />
-    <PackageVersion Include="FSharp.Core" Version="[8.0.200]" />
-    <PackageVersion Include="FSharp.Compiler.Service" Version="[43.8.200]" />
+    <PackageVersion Include="FSharp.Core" Version="[8.0.300]" />
+    <PackageVersion Include="FSharp.Compiler.Service" Version="[43.8.300]" />
     <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.1.8" PrivateAssets="all" />
     <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <PackageVersion Include="Argu" Version="6.1.1" />
     <PackageVersion Include="Glob" Version="1.1.9" />
-    <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.63.0" />
+    <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.65.0" />
     <PackageVersion Include="Microsoft.Build" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
     <PackageVersion Include="Microsoft.Build.Framework" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
     <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
-    <PackageVersion Include="Microsoft.Build.Locator" Version="1.4.1" />
+    <PackageVersion Include="Microsoft.Build.Locator" Version="1.7.8" />
     <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.1.1" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="6.0.0" />
