@@ -39,7 +39,18 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
             this.WritePrefix(textWriter, logEntry.LogLevel)
             textWriter.WriteLine(message)
 
-    member private _.WritePrefix(textWriter: TextWriter, logLevel: LogLevel) =
+    member private x.WritePrefix(textWriter: TextWriter, logLevel: LogLevel) =
+        if not (isNull formatterOptions.TimestampFormat) then
+            let dateTime =
+                if formatterOptions.UseUtcTimestamp then
+                    DateTime.UtcNow
+                else
+                    DateTime.Now
+
+            let timestamp = dateTime.ToString(formatterOptions.TimestampFormat)
+
+            textWriter.Write($"{timestamp} ")
+
         match logLevel with
         | LogLevel.Trace -> textWriter.Write("trace: ")
         | LogLevel.Debug -> textWriter.Write("debug: ")
