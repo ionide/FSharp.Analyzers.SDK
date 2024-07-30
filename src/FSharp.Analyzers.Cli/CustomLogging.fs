@@ -34,7 +34,7 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
         if formatterOptions.UseAnalyzersMsgStyle then
             this.SetColor(textWriter, logEntry.LogLevel)
             textWriter.WriteLine(message)
-            this.ResetColor()
+            this.ResetColor(textWriter)
         else
             this.WritePrefix(textWriter, logEntry.LogLevel)
             textWriter.WriteLine(message)
@@ -72,7 +72,9 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
 
         textWriter.Write(color)
 
-    member private _.ResetColor() = Console.ForegroundColor <- origColor
+    member private _.ResetColor(textWriter: TextWriter) =
+        textWriter.Write("\x1B[0m")
+        Console.ForegroundColor <- origColor
 
     interface IDisposable with
         member _.Dispose() = optionsReloadToken.Dispose()
