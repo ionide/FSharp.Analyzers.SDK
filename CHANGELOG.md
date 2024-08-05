@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 * [Reset the console foreground colour after printing results](https://github.com/ionide/FSharp.Analyzers.SDK/pull/216) (thanks @Numpsy!)
+* [Only Analyze projects passed in via CLI](https://github.com/ionide/FSharp.Analyzers.SDK/pull/217) (thanks @TheAngryByrd)
 
 ## [0.26.0] - 2024-05-15
 

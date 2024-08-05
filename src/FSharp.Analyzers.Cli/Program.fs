@@ -119,6 +119,8 @@ let rec mkKn (ty: Type) =
 
 let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
+/// <summary>Runs MSBuild to create FSharpProjectOptions based on the projPaths.</summary>
+/// <returns>Returns only the FSharpProjectOptions based on the projPaths and not any referenced projects.</returns>
 let loadProjects toolsPath properties (projPaths: string list) =
     async {
         let projPaths =
@@ -140,7 +142,12 @@ let loadProjects toolsPath properties (projPaths: string list) =
             logger.LogError("Failed to load project '{0}'", failedLoads)
             exit 1
 
-        return FCS.mapManyOptions projectOptions |> Seq.toList
+        let loaded =
+            FCS.mapManyOptions projectOptions
+            |> Seq.filter (fun p -> projPaths |> List.exists (fun x -> x = p.ProjectFileName)) // We only want to analyze what was passed in
+            |> Seq.toList
+
+        return loaded
     }
 
 let runProject
