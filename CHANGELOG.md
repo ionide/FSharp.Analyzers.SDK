@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2024-08-17
+
+### Changed
+
+* [Update FCS and FSharp.Core to the .NET SDK 8.0.400 release versions](https://github.com/ionide/FSharp.Analyzers.SDK/pull/218)
+
+
 ## [0.26.1] - 2024-08-05
 
 ### Fixed
@@ -18,6 +25,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * [Emit Analyzer Errors in the MSBuild Canonical Error Format](https://github.com/ionide/FSharp.Analyzers.SDK/pull/208) (thanks @Numpsy!)
 * [Update Structured Logger libraries](https://github.com/ionide/FSharp.Analyzers.SDK/pull/211) (thanks @nojaf!)
 * Update FSharp.Compiler.Service and FSharp.Core to the .NET SDK 8.0.300 release versions
+* [More efficiently analyze larger solutions](https://github.com/ionide/FSharp.Analyzers.SDK/pull/210) (thanks @TheAngryByrd!)
 
 ## [0.25.0] - 2024-02-14
 
