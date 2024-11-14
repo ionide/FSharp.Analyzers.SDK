@@ -136,6 +136,7 @@ module ASTCollecting =
             | SynTypeConstraint.WhereTyparIsReferenceType(t, _)
             | SynTypeConstraint.WhereTyparIsUnmanaged(t, _)
             | SynTypeConstraint.WhereTyparSupportsNull(t, _)
+            | SynTypeConstraint.WhereTyparNotSupportsNull(t, _, _)
             | SynTypeConstraint.WhereTyparIsComparable(t, _)
             | SynTypeConstraint.WhereTyparIsEquatable(t, _) -> walkTypar path t
             | SynTypeConstraint.WhereTyparDefaultsToType(t, ty, _)
@@ -245,6 +246,8 @@ module ASTCollecting =
             | SynType.StaticConstant _ -> ()
             | SynType.StaticConstantExpr _ -> ()
             | SynType.StaticConstantNamed _ -> ()
+            | SynType.StaticConstantNull _ -> ()
+            | SynType.WithNull(innerType, _, _, _) -> walkType nextPath innerType
             | SynType.Paren(innerType, _) -> walkType nextPath innerType
             | SynType.SignatureParameter(usedType = t; range = _) -> walkType nextPath t
             | SynType.Or(lhsType = lhs; rhsType = rhs) ->
