@@ -20,7 +20,8 @@ let buildStage =
 
 pipeline "Build" {
     restoreStage
-    stage "lint" { run "dotnet fantomas . --check" }
+    // TODO: can uncomment this after .NET SDK 9.0.101 releases
+    // stage "lint" { run "dotnet fantomas . --check" }
     stage "build" { run "dotnet build -c Release --no-restore -maxCpuCount" }
     stage "test" {
         purgeBinLogCache ()
