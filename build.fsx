@@ -11,8 +11,7 @@ let purgeBinLogCache () =
 
 let restoreStage =
     stage "restore" {
-        // TODO: can uncomment this after .NET SDK 9.0.101 releases
-        // run "dotnet tool restore"
+        run "dotnet tool restore"
         run "dotnet restore --locked-mode"
     }
 
