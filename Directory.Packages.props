@@ -22,7 +22,7 @@
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.4" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="6.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageVersion Include="MSBuild.StructuredLogger" Version="2.2.240" />
     <PackageVersion Include="NUnit" Version="3.13.3" />
