@@ -41,7 +41,7 @@ dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users
 As you can see, the path to the analyzer DLL files could be tricky to get right across a wide range of setups.  
 Luckily, we can use an MSBuild custom target to take care of the path construction.  
 
-Note: If using MSBuild is not the right solution for you, you can also [call the analyzers from a FAKE build script](#Call-Analyzers-in-Your-FAKE-Build).
+Note: If you're using FAKE you can [call the analyzers from a FAKE build script](#Call-Analyzers-in-Your-FAKE-Build).
 
 Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your `fsproj`:
 
