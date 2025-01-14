@@ -41,6 +41,8 @@ dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users
 As you can see, the path to the analyzer DLL files could be tricky to get right across a wide range of setups.  
 Luckily, we can use an MSBuild custom target to take care of the path construction.  
 
+Note: If using MSBuild is not the right solution for you, you can also [call the analyzers from a FAKE build script](#Call-Analyzers-in-Your-FAKE-Build).
+
 Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your `fsproj`:
 
 ```xml
@@ -185,5 +187,64 @@ We often add a dummy target to a project to print out some values:
 ```
 
 Run `dotnet msbuild YourProject.fsproj /t:Dump` and verify that `CodeRoot` has a value or not.
+
+## Call Analyzers in Your FAKE Build
+
+The below example assumes:
+
+1. You have the `fsharp-analyzers` dotnet tool installed
+2. You are using [FAKE](https://fake.build/) as your build automation
+3. You are using [Paket](https://github.com/fsprojects/Paket) as your package manager
+
+You can adapt this example to work with other build automation tools and package managers.
+
+```fsharp
+open Fake.Api
+open Fake.Core
+open Fake.DotNet
+open Fake.IO
+open Fake.IO.Globbing.Operators
+open System.IO
+
+let restore _ =
+    // this is a dummy example of how you can restore your solution
+    let setParams : DotNet.RestoreOptions -> DotNet.RestoreOptions = id
+    DotNet.restore setParams "MySolution.sln"
+
+let runAnalyzers args = DotNet.exec id "fsharp-analyzers" args
+
+let analyze _ =
+    // this example is using paket as our package manager & we have our analyzers in a group called "analyzers"
+    // however you can grab your analyzers from anywhere
+    let analyzerPaths = !! "packages/analyzers/**/analyzers/dotnet/fs"
+
+    let createArgsForProject (project: string) analyzerPaths =
+        [
+            "--project"
+            project
+            "--analyzers-path"
+            yield! analyzerPaths
+        ]
+        |> String.concat " "
+
+    // use globbing to get all the fsproj files you want to analyze
+    !! "src/**/*.fsproj"
+    |> Seq.iter (fun fsproj ->
+        let result =
+            createArgsForProject fsproj analyzerPaths
+            |> runAnalyzers
+
+        result.Errors
+        |> Seq.iter Trace.traceError
+    )
+
+// other FAKE code here...
+
+Target.create "Restore" restore
+Target.create "Analyzers" analyze
+
+// example of setting up analyzers in your dependency graph
+"Restore" ==> "Analyzers" |> ignore
+```
 
 [Next]({{fsdocs-next-page-link}})
