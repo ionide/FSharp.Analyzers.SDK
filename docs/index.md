@@ -22,7 +22,7 @@ You can also set up a run configuration of FSharp.Analyzers.Cli in your favorite
 
 ## Using Analyzers
 
-Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/Getting%20Started%20Using.html) guide for analyzer users!
+Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/getting-started/Installing%20Analyzers.html) guide for analyzer users!
 
 ## Writing Analyzers
 

@@ -1,8 +1,8 @@
 ﻿(**
 ---
 category: end-users
-categoryindex: 1
-index: 4
+categoryindex: 2
+index: 3
 ---
 
 # Programmatically running an analyzer
