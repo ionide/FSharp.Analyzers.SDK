@@ -13,7 +13,7 @@ let Setup () =
     task {
         let! opts =
             mkOptionsFromProject
-                "net7.0"
+                "net8.0"
                 [
                     {
                         Name = "Newtonsoft.Json"

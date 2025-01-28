@@ -1,8 +1,8 @@
 (**
 ---
 category: end-users
-categoryindex: 1
-index: 2
+categoryindex: 2
+index: 1
 ---
 
 # Getting started writing an analyzer

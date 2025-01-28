@@ -1,8 +1,8 @@
 ﻿(**
 ---
 category: end-users
-categoryindex: 1
-index: 3
+categoryindex: 2
+index: 2
 ---
 
 # Writing an analyzer for both console and editor

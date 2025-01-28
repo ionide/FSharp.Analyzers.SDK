@@ -1,47 +1,18 @@
 ---
-category: end-users
+category: getting-started
 categoryindex: 1
-index: 1
+index: 4
 ---
 
-# Getting started using analyzers
+# MSBuild
 
-## Premise
+## Using Analyzer Build Target in a Project
 
-We assume the analyzers you want to use are distributed as a nuget package.
+The path to the analyzer DLL files could be tricky to get right across a wide range of setups. Luckily, we can use a MSBuild custom target to take care of the path construction. Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your project. This imports a new target to your project file (`AnalyzeFSharpProject`) and will allow us to easily run the analyzers for our project.   
 
-## Using analyzers in a single project
+### Installing Target via Nuget
 
-### Raw command line
-
-A dotnet CLI tool, called [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers), is used to run analyzers outside the context of an IDE.  
-Add it to your tool-manifest with:
-```shell
-dotnet tool install fsharp-analyzers
-```
-
-Next, add the `PackageReference` pointing to your favorite analyzers to the `.fsproj` file of the project you want to analyze:
-
-```xml
-<PackageReference Include="G-Research.FSharp.Analyzers" Version="0.4.0">
-    <PrivateAssets>all</PrivateAssets>
-    <IncludeAssets>analyzers</IncludeAssets>
-</PackageReference>
-```
-
-At the time of writing, the [G-Research analyzers](https://github.com/g-research/fsharp-analyzers) [package](https://www.nuget.org/packages/G-Research.FSharp.Analyzers) contains the only analyzers compatible with the latest CLI tool.  
-With the package downloaded, we can run the CLI tool:
-
-```shell
-dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path C:\Users\yourusername\.nuget\packages\g-research.fsharp.analyzers\0.4.0\analyzers\dotnet\fs\ --verbosity d
-```
-
-### Using an MSBuild target
-
-As you can see, the path to the analyzer DLL files could be tricky to get right across a wide range of setups.  
-Luckily, we can use an MSBuild custom target to take care of the path construction.  
-
-Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Build) to your `fsproj`:
+If you are using Nuget, add it to your `.fsproj` file:
 
 ```xml
 <PackageReference Include="FSharp.Analyzers.Build" Version="0.2.0">
@@ -50,8 +21,25 @@ Add [FSharp.Analyzers.Build](https://www.nuget.org/packages/FSharp.Analyzers.Bui
 </PackageReference>
 ```
 
-This imports a new target to your project file: `AnalyzeFSharpProject`.  
-And will allow us to easily run the analyzers for our project.  
+### Installing Target via Paket
+
+If you are using Paket, add it to your `paket.dependencies`
+
+```paket
+group analyzers
+    source https://api.nuget.org/v3/index.json
+
+    nuget FSharp.Analyzers.Build
+```
+
+as well as the `paket.references` of your project:
+
+```paket
+group analyzers
+  FSharp.Analyzers.Build
+```
+
+### Configuring the Build Target
 
 Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to specify our settings in a property called `FSharpAnalyzersOtherFlags`:
 
@@ -62,8 +50,11 @@ Before we can run `dotnet msbuild /t:AnalyzeFSharpProject`, we need to specify o
 ```
 
 To locate the analyzer DLLs in the filesystem, we use the variable `$(PkgG-Research_FSharp_Analyzers)`. It's produced by NuGet and normalized to be usable by [MSBuild](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files#generatepathproperty).
-In general, a `Pkg` prefix is added and dots in the package ID are replaced by underscores. But make sure to look at the [nuget.g.props](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restore-outputs) file in the `obj` folder for the exact string.  
+In general, a `Pkg` prefix is added and dots in the package ID are replaced by underscores. But make sure to look at the [nuget.g.props](https://learn.microsoft.com/en-us/nuget/reference/msbuild-targets#restore-outputs) file in the `obj` folder for the exact string.
+
 The `/analyzers/dotnet/fs` subpath is a convention analyzer authors should follow when creating their packages.
+
+### Running the Build Target
 
 At last, you can run the analyzer from the project folder:
 
@@ -71,12 +62,13 @@ At last, you can run the analyzer from the project folder:
 dotnet msbuild /t:AnalyzeFSharpProject
 ```
 
-Note: if your project has multiple `TargetFrameworks` the tool will be invoked for each target framework.
+📓 Note: If your project has multiple `TargetFrameworks` the tool will be invoked for each target framework.
 
-## Using analyzers in a solution
+## Using Analyzer Build Target in a Solution
 
-Adding the custom target from above to all `.fsproj` files of a solution doesn't scale very well.  
-So we use the MSBuild infrastructure to add the needed package reference and the MSBuild target to all projects in one go.  
+Adding the custom target from above to all `.fsproj` files of a solution doesn't scale very well. We can use the MSBuild infrastructure to add the needed package reference and the MSBuild target to all projects in one go.
+
+### Setting up Directory.Build.props
 
 We start with adding the `PackageReference` pointing to your favorite analyzers to the [Directory.Build.props](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022) file.  
 This adds the package reference to all `.fsproj` files that are in a subfolder of the file location of `Directory.Build.props`:
@@ -94,8 +86,10 @@ This adds the package reference to all `.fsproj` files that are in a subfolder o
 </ItemGroup>
 ```
 
-Likewise we add the `FSharpAnalyzersOtherFlags` property to the [Directory.Build.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022) file.  
-This is effectively the same as adding a property to each `*proj` file which exists in a subfolder.
+### Setting up Directory.Build.targets
+
+Likewise we add the `FSharpAnalyzersOtherFlags` property to the [Directory.Build.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-by-directory?view=vs-2022) file. For first time MSBuild users, this is effectively the same as adding a property to each `*proj` file which exists in a subfolder.
+
 ```xml
 <Project>
     <PropertyGroup>
@@ -106,10 +100,9 @@ This is effectively the same as adding a property to each `*proj` file which exi
 </Project>
 ```
 
-⚠️ We are adding the `FSharpAnalyzersOtherFlags` property to our **Directory.Build.targets** and **not to** any **Directory.Build.props** file!  
-MSBuild will first evaluate `Directory.Build.props` which has no access to the generated nuget.g.props. `$(PkgG-Research_FSharp_Analyzers)` won't be known at this point. `Directory.Build.targets` is evaluated after the project file and has access to `Pkg` generated properties.
+⚠️ We are adding the `FSharpAnalyzersOtherFlags` property to our **Directory.Build.targets** and **not to** any **Directory.Build.props** file! MSBuild will first evaluate `Directory.Build.props` which has no access to the generated nuget.g.props. `$(PkgG-Research_FSharp_Analyzers)` won't be known at this point. `Directory.Build.targets` is evaluated after the project file and has access to `Pkg` generated properties.
 
-### All projects in the solution
+### Run Target for All Projects in the Solution
 
 We can run the `AnalyzeFSharpProject` target against all projects in a solution
 
@@ -117,9 +110,9 @@ We can run the `AnalyzeFSharpProject` target against all projects in a solution
 dotnet msbuild YourSolution.sln /t:AnalyzeFSharpProject
 ```
 
-### Select specific projects
+### Configuring Specific Projects to Run
 
-As we don't want to target all projects in the solution, we create a second custom MSBuild target that calls the project-specific target for all relevant projects.  
+As we may not always want to target every project in a solution, we can   create a second custom MSBuild target that calls the project-specific target for all relevant projects.  
 Add the following custom target to the [Directory.Solution.targets](https://learn.microsoft.com/en-us/visualstudio/msbuild/customize-solution-build?view=vs-2022) file to be able to invoke analysis from all selected projects in one simple command:
 
 ```xml
@@ -127,12 +120,28 @@ Add the following custom target to the [Directory.Solution.targets](https://lear
     <ItemGroup>
         <ProjectsToAnalyze Include="src/**/*.fsproj" />
     </ItemGroup>
-
+    
     <Target Name="AnalyzeSolution">
         <MSBuild Projects="@(ProjectsToAnalyze)" Targets="AnalyzeFSharpProject" />
     </Target>
 </Project>
 ```
+
+You can also exclude certain projects from the analysis if they fall within the same pattern
+
+```xml
+<Project>
+    <ItemGroup>
+      <ProjectsToAnalyze Include="src/**/*.fsproj" Exclude="src/**/Special.fsproj" />
+    </ItemGroup>
+    
+    <Target Name="AnalyzeSolution">
+        <MSBuild Projects="@(ProjectsToAnalyze)" Targets="AnalyzeFSharpProject" />
+    </Target>
+</Project>
+```
+
+### Running the Solution Target
 
 At last, you can run the analyzer from the solution folder:
 
@@ -142,15 +151,15 @@ dotnet msbuild /t:AnalyzeSolution
 
 Note: we passed the `--code-root` flag so that the `*.sarif` report files will report file paths relative to this root. This can be imported for certain editors to function properly. 
 
-## MSBuild tips and tricks
+## MSBuild Tips and Tricks
 
 MSBuild can be overwhelming for the uninitiated. Here are some tricks we've seen in the wild:
 
-### Use well-known properties
+### Use Well-Known Properties
 
 Checkout the [MSBuild reserved and well-known properties](https://learn.microsoft.com/en-us/visualstudio/msbuild/msbuild-reserved-and-well-known-properties?view=vs-2022) to use existing variables like `$(MSBuildProjectFile)`.
 
-### Wrap path arguments in quotes
+### Wrap Path Arguments in Quotes
 
 As MSBuild is all XML, you can use `&quot;` to wrap evaluated values in quotes:
 
@@ -160,7 +169,7 @@ As MSBuild is all XML, you can use `&quot;` to wrap evaluated values in quotes:
 </PropertyGroup>
 ```
 
-### Extend `<FSharpAnalyzersOtherFlags>` in multiple lines
+### Extend `<FSharpAnalyzersOtherFlags>` in Multiple Lines
 
 You can extend the value of `$(FSharpAnalyzersOtherFlags)` by setting it again in multiple lines:
 
@@ -173,7 +182,7 @@ You can extend the value of `$(FSharpAnalyzersOtherFlags)` by setting it again i
 </PropertyGroup>
 ```
 
-### Verify parameters are present
+### Verify Parameters are Present
 
 It can be a bit confusing to find out if a variable contains the value you think it does.
 We often add a dummy target to a project to print out some values:

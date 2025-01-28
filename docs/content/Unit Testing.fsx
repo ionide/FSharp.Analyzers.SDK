@@ -1,8 +1,8 @@
 ﻿(**
 ---
 category: end-users
-categoryindex: 1
-index: 5
+categoryindex: 2
+index: 4
 ---
 
 # Unit testing an analyzer

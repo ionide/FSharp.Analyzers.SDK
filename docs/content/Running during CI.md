@@ -1,7 +1,7 @@
 ﻿---
 category: end-users
-categoryindex: 1
-index: 6
+categoryindex: 2
+index: 5
 ---
 
 # Running analyzers during continuous integration
