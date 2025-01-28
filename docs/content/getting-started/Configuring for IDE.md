@@ -8,16 +8,16 @@ index: 2
 
 ## Visual Studio Code
 
-In order to configure analyzers for VSCode, you will need to update your project's `.vscode/settings.json` file or your user settings. You should only need the following settings:
+In order to configure analyzers for VSCode, you will need to update your project's `.vscode/settings.json` file or your user settings. You should need the settings shown below.
 
 ```json
 {
   "FSharp.enableAnalyzers": true,
-  "FSharp.analyzersPath": ["packages/analyzers"]
+  "FSharp.analyzersPath": ["path/to/analyzers/directory"]
 }
 ```
 
-📓 Note: The path in `FSharp.analyzersPath` above is currently pointing to the path we set up in the Paket example on the [installation page]({{fsdocs-previous-page-link}}).
+📓 Note: Issue created [here](https://github.com/ionide/FsAutoComplete/issues/1350) regarding analyzers & SDK mismatches in the logs
 
 After saving your new settings, make sure to restart VSCode. Once VSCode restarts, you should be able to test and see if the analyzers are working by opening a F# file in your workspace and entering the following code
 

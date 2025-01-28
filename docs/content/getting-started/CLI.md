@@ -8,19 +8,13 @@ index: 3
 
 ## Example Command
 
-When running the CLI tool from the command line, the bare minimum you need to provide is the path to the project file(s) you want to analyze.
-
-```shell
-dotnet fsharp-analyzers --project ./YourProject.fsproj
-```
-
-An optional argument you may need to provide is `--analyzers-path`. This is the path to the directory containing the analyzer DLLs. 
+When running the CLI tool from the command line (and after installing analyzers), the minimum console arguments you need to provide is the path to the project file(s) you want to analyze.
 
 ```shell
 dotnet fsharp-analyzers --project ./YourProject.fsproj --analyzers-path ./path/to/analyzers/directory
 ```
 
-⚠️ If you don't provide this argument, it will default to `packages/analyzers`.
+⚠️ If you don't provide the `--analyzers-path` argument, it will default to `packages/analyzers`. If you are using Paket with a group called `analyzers`, this default path should work for you.
 
 ## Viewing Additional Commands
 

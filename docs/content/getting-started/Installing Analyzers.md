@@ -10,7 +10,7 @@ index: 1
 A dotnet CLI tool, called [fsharp-analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/), is used to run analyzers outside the context of an IDE. Add it to your tool-manifest with:
 
 ```shell
-dotnet tool install fsharp-analyzers
+dotnet tool install fsharp-analyzers --create-manifest-if-needed
 ```
 
 ## Installing Analyzers
