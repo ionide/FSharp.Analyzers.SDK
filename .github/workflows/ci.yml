@@ -25,16 +25,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:  
           global-json-file: 'global.json'
+           #  9.0.101 because of https://github.com/dotnet/fsharp/issues/18298#issuecomment-2655277169
           dotnet-version: |
-            8.x
-            9.x
-
+            8.x 
+            9.0.101
       - name: Build
         run: dotnet fsi build.fsx
 
       - name: Upload documentation
         if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./output
 
@@ -45,4 +45,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4

@@ -288,14 +288,14 @@ module ASTCollecting =
             | SynExpr.InferredUpcast(expr = e)
             | SynExpr.InferredDowncast(expr = e)
             | SynExpr.AddressOf(expr = e)
-            | SynExpr.DoBang(e, _)
+            | SynExpr.DoBang(e, _, _)
             | SynExpr.YieldOrReturn(expr = e)
             | SynExpr.ArrayOrListComputed(expr = e)
             | SynExpr.ComputationExpr(expr = e)
             | SynExpr.Do(e, _)
             | SynExpr.Assert(e, _)
             | SynExpr.Lazy(e, _)
-            | SynExpr.YieldOrReturnFrom(_, e, _) -> walkExpr nextPath e
+            | SynExpr.YieldOrReturnFrom(_, e, _, _) -> walkExpr nextPath e
             | SynExpr.SequentialOrImplicitYield(expr1 = e1; expr2 = e2; ifNotStmt = ifNotE) ->
                 walkExpr nextPath e1
                 walkExpr nextPath e2
@@ -498,7 +498,7 @@ module ASTCollecting =
             | SynMemberDefn.Interface(t, _, members, _) ->
                 walkType nextPath t
                 members |> Option.iter (List.iter (walkMember nextPath))
-            | SynMemberDefn.Inherit(baseType = t) -> walkType nextPath t
+            | SynMemberDefn.Inherit(baseType = t) -> t |> Option.iter (walkType nextPath)
             | SynMemberDefn.ValField(field, _) -> walkField nextPath field
             | SynMemberDefn.NestedType(typeDefn = tdef) -> walkTypeDefn nextPath tdef
             | SynMemberDefn.AutoProperty(attributes = AllAttrs attrs; typeOpt = t; synExpr = e; range = _) ->
