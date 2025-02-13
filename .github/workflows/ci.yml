@@ -25,10 +25,10 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:  
           global-json-file: 'global.json'
+           #  9.0.101 because of https://github.com/dotnet/fsharp/issues/18298#issuecomment-2655277169
           dotnet-version: |
-            8.x
-            9.x
-
+            8.x 
+            9.0.101
       - name: Build
         run: dotnet fsi build.fsx
 
