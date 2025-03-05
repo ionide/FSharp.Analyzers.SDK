@@ -169,6 +169,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                                 fun config ->
                                     config.DefaultContext <- AssemblyLoadContext.Default
                                     config.PreferSharedTypes <- true
+                                    config.LoadInMemory <- true
                             )
 
                         Some(analyzerDll, analyzerLoader.LoadDefaultAssembly())
