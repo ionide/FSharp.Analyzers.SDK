@@ -35,6 +35,7 @@ type Arguments =
     | [<Unique>] FSC_Args of string
     | [<Unique>] Code_Root of string
     | [<Unique; AltCommandLine("-v")>] Verbosity of string
+    | [<Unique>] Output_Format of string
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -67,6 +68,8 @@ type Arguments =
             | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
+            | Output_Format _ ->
+                "Format to write analyzer results to stdout in. The available options are: default."
 
 type SeverityMappings =
     {
@@ -102,6 +105,14 @@ let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK
                 Severity = targetSeverity
             }
     }
+
+[<RequireQualifiedAccess>]
+type OutputFormat =
+| Default
+
+let parseOutputFormat = function
+| "default" -> Ok OutputFormat.Default
+| other -> Error $"Unknown output format: %s{other}."
 
 let mutable logLevel = LogLevel.Warning
 
@@ -258,7 +269,7 @@ let runFscArgs
 
     runProject client projectOptions excludeIncludeFiles mappings
 
-let printMessages (msgs: AnalyzerMessage list) =
+let printMessagesInDefaultFormat (msgs: AnalyzerMessage list) =
 
     let severityToLogLevel =
         Map.ofArray
@@ -551,6 +562,14 @@ let main argv =
     properties
     |> List.iter (fun (k, v) -> logger.LogInformation("Property {0}={1}", k, v))
 
+    let outputFormat =
+        results.TryGetResult <@ Output_Format @>
+        |> Option.map parseOutputFormat
+        |> Option.defaultValue (Ok OutputFormat.Default)
+        |> Result.defaultWith (fun errMsg ->
+            logger.LogError("{0} Using default output format.", errMsg)
+            OutputFormat.Default)
+
     let analyzersPaths =
         results.GetResults(<@ Analyzers_Path @>)
         |> List.concat
@@ -659,7 +678,8 @@ let main argv =
 
         let results = results |> List.concat
 
-        printMessages results
+        match outputFormat with
+        | OutputFormat.Default -> printMessagesInDefaultFormat results
 
         report |> Option.iter (writeReport results codeRoot)
 
