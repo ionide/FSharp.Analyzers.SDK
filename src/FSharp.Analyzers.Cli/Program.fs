@@ -69,7 +69,7 @@ type Arguments =
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
             | Output_Format _ ->
-                "Format to write analyzer results to stdout in. The available options are: default."
+                "Format in which to write analyzer results to stdout. The available options are: default, github."
 
 type SeverityMappings =
     {
@@ -109,8 +109,10 @@ let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK
 [<RequireQualifiedAccess>]
 type OutputFormat =
 | Default
+| GitHub
 
 let parseOutputFormat = function
+| "github" -> Ok OutputFormat.GitHub
 | "default" -> Ok OutputFormat.Default
 | other -> Error $"Unknown output format: %s{other}."
 
@@ -311,13 +313,70 @@ let printMessagesInDefaultFormat (msgs: AnalyzerMessage list) =
 
     ()
 
-let writeReport (results: AnalyzerMessage list) (codeRoot: string option) (report: string) =
-    try
-        let codeRoot =
-            match codeRoot with
-            | None -> Directory.GetCurrentDirectory() |> Uri
-            | Some root -> Path.GetFullPath root |> Uri
+let printMessagesInGitHubFormat (codeRoot : Uri) (msgs: AnalyzerMessage list) =
+    let severityToLogLevel =
+        Map.ofArray
+            [|
+                Severity.Error, LogLevel.Error
+                Severity.Warning, LogLevel.Warning
+                Severity.Info, LogLevel.Information
+                Severity.Hint, LogLevel.Trace
+            |]
 
+    let severityToGitHubAnnotationType =
+        Map.ofArray
+            [|
+                Severity.Error, "error"
+                Severity.Warning, "warning"
+                Severity.Info, "notice"
+                Severity.Hint, "notice"
+            |]
+
+    if List.isEmpty msgs then
+        logger.LogInformation("No messages found from the analyzer(s)")
+
+    use factory =
+        LoggerFactory.Create(fun builder ->
+            builder
+                .AddCustomFormatter(fun options -> options.UseAnalyzersMsgStyle <- true)
+                .SetMinimumLevel(LogLevel.Trace)
+            |> ignore
+        )
+
+    // No category name because GitHub needs the annotation type to be the first
+    // element on each line.
+    let msgLogger = factory.CreateLogger("")
+
+    msgs
+    |> List.iter (fun analyzerMessage ->
+        let m = analyzerMessage.Message
+
+        // We want file names to be relative to the repository so GitHub will recognize them.
+        // GitHub also only understands Unix-style directory separators.
+        let relativeFileName =
+            codeRoot.MakeRelativeUri(Uri(m.Range.FileName))
+            |> _.OriginalString
+
+        msgLogger.Log(
+            severityToLogLevel[m.Severity],
+            "::{0} file={1},line={2},endLine={3},col={4},endColumn={5},title={6} ({7})::{8}: {9}",
+            severityToGitHubAnnotationType[m.Severity],
+            relativeFileName,
+            m.Range.StartLine,
+            m.Range.EndLine,
+            m.Range.StartColumn,
+            m.Range.EndColumn,
+            analyzerMessage.Name,
+            m.Code,
+            m.Severity.ToString(),
+            m.Message
+        )
+    )
+
+    ()
+
+let writeReport (results: AnalyzerMessage list) (codeRoot: Uri) (report: string) =
+    try
         // Construct full path to ensure path separators are normalized.
         let report = Path.GetFullPath report
         // Ensure the parent directory exists
@@ -678,8 +737,14 @@ let main argv =
 
         let results = results |> List.concat
 
+        let codeRoot =
+            match codeRoot with
+            | None -> Directory.GetCurrentDirectory() |> Uri
+            | Some root -> Path.GetFullPath root |> Uri
+
         match outputFormat with
         | OutputFormat.Default -> printMessagesInDefaultFormat results
+        | OutputFormat.GitHub -> printMessagesInGitHubFormat codeRoot results
 
         report |> Option.iter (writeReport results codeRoot)
 
