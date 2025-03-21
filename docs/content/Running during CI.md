@@ -42,6 +42,7 @@ Example when using MSBuild:
 
 ## GitHub Actions
 
+### GitHub Advanced Security
 If you are using [GitHub Actions](https://docs.github.com/en/code-security/codeql-cli/using-the-advanced-functionality-of-the-codeql-cli/sarif-output) you can easily send the *sarif file* to [CodeQL](https://codeql.github.com/).
 
 ```yml
@@ -67,5 +68,15 @@ Sample:
 ![Example](https://user-images.githubusercontent.com/2621499/275484611-e38461f8-3689-4bf0-8ab8-11a6318e01aa.png)
 
 See [fsproject/fantomas#2962](https://github.com/fsprojects/fantomas/pull/2962) for more information.
+
+### Github Workflow Commands
+If you cannot use GitHub Advanced Security (e.g. if your repository is private), you can get similar annotations by running the analyzers with `--output-format github`.
+This will make the analyzers print their results as [GitHub Workflow Commands](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions).
+If you for instance have a GitHub Action to run analyzers on every pull request, these annotations will show up in the "Files changed" on the pull request.
+If the annotations don't show correctly, you might need to set the `code-root` to the root of the repository.
+
+Note that GitHub has a hard limit of 10 annotations of each type (notice, warning, error) per CI step.
+This means that only the first 10 errors, the first 10 warnings and the first 10 hints/info results from analyzers will generate annotations.
+The workflow log will contain all analyzer results even if a job hits the annotation limits.
 
 [Previous]({{fsdocs-previous-page-link}})
