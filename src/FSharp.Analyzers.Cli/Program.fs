@@ -343,6 +343,8 @@ let printMessagesInGitHubFormat (codeRoot : Uri) (msgs: AnalyzerMessage list) =
             |> ignore
         )
 
+    // No category name because GitHub needs the annotation type to be the first
+    // element on each line.
     let msgLogger = factory.CreateLogger("")
 
     msgs
