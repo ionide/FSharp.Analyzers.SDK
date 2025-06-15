@@ -173,6 +173,7 @@ let runProject
     async {
         logger.LogInformation("Checking project {0}", fsharpOptions.ProjectFileName)
         let! checkProjectResults = fcs.ParseAndCheckProject(fsharpOptions)
+        let analyzerOptions = BackgroundCompilerOptions fsharpOptions
 
         let! messagesPerAnalyzer =
             fsharpOptions.SourceFiles
@@ -202,7 +203,7 @@ let runProject
                     let! parseAndCheckResults = fcs.GetBackgroundCheckResultsForFileInProject(fileName, fsharpOptions)
 
                     let ctx =
-                        Utils.createContext checkProjectResults fileName sourceText parseAndCheckResults
+                        Utils.createContext checkProjectResults fileName sourceText parseAndCheckResults analyzerOptions
 
                     logger.LogInformation("Running analyzers for {0}", ctx.FileName)
                     let! results = client.RunAnalyzers ctx
