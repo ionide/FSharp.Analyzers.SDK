@@ -17,6 +17,7 @@ open FSharp.Analyzers.Cli.CustomLogging
 
 type Arguments =
     | Project of string list
+    | Script of string list
     | Analyzers_Path of string list
     | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
     | [<Unique; AltCommandLine("-c")>] Configuration of string
@@ -41,6 +42,7 @@ type Arguments =
         member s.Usage =
             match s with
             | Project _ -> "List of paths to your .fsproj file."
+            | Script _ -> "List of paths to your .fsx file. Supports globs."
             | Analyzers_Path _ ->
                 "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
@@ -595,6 +597,12 @@ let main argv =
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
 
+    let scripts = 
+        results.GetResult(<@ Script @>, [])
+        // |> List.map Glob
+
+
+
     let exclInclFiles =
         let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
         logger.LogInformation("Exclude Files: [{0}]", (excludeFiles |> String.concat ", "))
@@ -696,25 +704,37 @@ let main argv =
         if analyzers = 0 then
             None
         else
-            match projOpts, fscArgs with
-            | [], None ->
-                logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
-                None
-            | _ :: _, Some _ ->
+            match fscArgs with
+            // | None ->
+            //     logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
+            //     None
+            |  Some _ when projOpts |> List.isEmpty |> not ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
                 exit 1
-            | [], Some fscArgs ->
+            | Some fscArgs ->
                 runFscArgs client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
                 |> Some
-            | projects, None ->
+            | None ->
+                let scriptOptions =
+                    scripts 
+                    |> List.map(fun script ->
+                        let fileContent = File.ReadAllText script
+                        let sourceText = SourceText.ofString fileContent
+                        let (options, _diagnostics) = fcs.GetProjectOptionsFromScript(script, sourceText) |> Async.RunSynchronously
+
+                        options
+                    )
+
+                let projects = projOpts
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
                         logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
                         exit 1
-
                 async {
                     let! loadedProjects = loadProjects toolsPath properties projects
+
+                    let loadedProjects = scriptOptions @ loadedProjects
 
                     return!
                         loadedProjects
