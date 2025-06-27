@@ -17,7 +17,22 @@ open FSharp.Analyzers.Cli.CustomLogging
 
 
 type ExitErrorCodes =
+    | Success = 0
+    | AnalyzerFoundError = -2
+    | FailedAssemblyLoading = -3
+    | AnalysisAborted = -4
+    | FailedToLoadProject = 10
+    | EmptyFscArgs = 11
+    | MissingPropertyValue = 12
+    | RuntimeAndOsOptions = 13
+    | RuntimeAndArchOptions = 14
+    | UnknownLoggerVerbosity = 15
+    | AnalyzerListedMultipleTimesInTreatAsSeverity = 16
+    | FscArgsCombinedWithMsBuildProperties = 17
+    | FSharpCoreAssemblyLoadFailed = 18
+    | ProjectAndFscArgs = 19
     | InvalidGlob = 20
+    | InvalidProjectArguments = 21
 
 type Arguments =
     | Project of string list
@@ -159,7 +174,7 @@ let loadProjects toolsPath properties (projPaths: string list) =
 
         if Seq.length failedLoads > 0 then
             logger.LogError("Failed to load project '{0}'", failedLoads)
-            exit 1
+            exit (int ExitErrorCodes.FailedToLoadProject)
 
         let loaded =
             FCS.mapManyOptions projectOptions
@@ -241,7 +256,7 @@ let runFscArgs
     =
     if String.IsNullOrWhiteSpace fscArgs then
         logger.LogError("Empty --fsc-args were passed!")
-        exit 1
+        exit (int ExitErrorCodes.EmptyFscArgs)
     else
 
     let fscArgs = fscArgs.Split(';', StringSplitOptions.RemoveEmptyEntries)
@@ -486,7 +501,7 @@ let expandMultiProperties (properties: (string * string) list) =
                     match pair with
                     | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
                         logger.LogError("Missing property value for '{0}'", k)
-                        exit 1
+                        exit (int ExitErrorCodes.MissingPropertyValue)
                     | [| k; v |] -> yield (k, v)
                     | _ -> ()
 
@@ -498,10 +513,10 @@ let validateRuntimeOsArchCombination (runtime, arch, os) =
     match runtime, os, arch with
     | Some _, Some _, _ ->
         logger.LogError("Specifying both the `-r|--runtime` and `-os` options is not supported.")
-        exit 1
+        exit (int ExitErrorCodes.RuntimeAndOsOptions)
     | Some _, _, Some _ ->
         logger.LogError("Specifying both the `-r|--runtime` and `-a|--arch` options is not supported.")
-        exit 1
+        exit (int ExitErrorCodes.RuntimeAndArchOptions)
     | _ -> ()
 
 let getProperties (results: ParseResults<Arguments>) =
@@ -561,7 +576,7 @@ let main argv =
             use factory = LoggerFactory.Create(fun b -> b.AddConsole() |> ignore)
             let logger = factory.CreateLogger("")
             logger.LogError("unknown verbosity level given {0}", x)
-            exit 1
+            exit (int ExitErrorCodes.UnknownLoggerVerbosity)
 
     use factory =
         LoggerFactory.Create(fun builder ->
@@ -595,7 +610,7 @@ let main argv =
     if not (severityMapping.IsValid()) then
         logger.LogError("An analyzer code may only be listed once in the <treat-as-severity> arguments.")
 
-        exit 1
+        exit (int ExitErrorCodes.AnalyzerListedMultipleTimesInTreatAsSeverity)
 
     let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
@@ -639,7 +654,7 @@ let main argv =
 
     if Option.isSome fscArgs && not properties.IsEmpty then
         logger.LogError("fsc-args can't be combined with MSBuild properties.")
-        exit 1
+        exit (int ExitErrorCodes.FscArgsCombinedWithMsBuildProperties)
 
     properties
     |> List.iter (fun (k, v) -> logger.LogInformation("Property {0}={1}", k, v))
@@ -698,7 +713,7 @@ let main argv =
         """
 
         logger.LogError(msg)
-        exit 1
+        exit (int ExitErrorCodes.FSharpCoreAssemblyLoadFailed)
     )
 
     let client = Client<CliAnalyzerAttribute, CliContext>(logger)
@@ -725,7 +740,7 @@ let main argv =
             //     None
             |  Some _ when projOpts |> List.isEmpty |> not ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
-                exit 1
+                exit (int ExitErrorCodes.ProjectAndFscArgs)
             | Some fscArgs ->
                 runFscArgs client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
@@ -745,7 +760,7 @@ let main argv =
                 for projPath in projects do
                     if not (File.Exists(projPath)) then
                         logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
-                        exit 1
+                        exit (int ExitErrorCodes.InvalidProjectArguments)
                 async {
                     let! loadedProjects = loadProjects toolsPath properties projects
 
@@ -797,8 +812,8 @@ let main argv =
                 failedAssemblies
             )
 
-            exit -3
+            exit (int ExitErrorCodes.FailedAssemblyLoading)
 
-        if check then -2
-        elif hasError then -4
-        else 0
+        if check then (int ExitErrorCodes.AnalyzerFoundError)
+        elif hasError then (int ExitErrorCodes.AnalysisAborted)
+        else (int ExitErrorCodes.Success)
