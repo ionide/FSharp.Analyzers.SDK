@@ -15,6 +15,10 @@ open Ionide.ProjInfo
 open FSharp.Analyzers.Cli
 open FSharp.Analyzers.Cli.CustomLogging
 
+
+type ExitErrorCodes =
+    | InvalidGlob = 20
+
 type Arguments =
     | Project of string list
     | Script of string list
@@ -535,6 +539,7 @@ let getProperties (results: ParseResults<Arguments>) =
             | _ -> ()
         ]
 
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -596,12 +601,22 @@ let main argv =
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
+    let cwd = Directory.GetCurrentDirectory() |> DirectoryInfo
 
     let scripts = 
         results.GetResult(<@ Script @>, [])
-        // |> List.map Glob
+        |> List.collect(fun scriptGlob ->
+            if Path.IsPathRooted scriptGlob then
+                [scriptGlob]
+            else
+                // TODO: need to discuss if this should fail fast or not
+                // also other path arguments take a `./` while this oen does not and feels inconsistent
+                if scriptGlob.StartsWith('.') then
+                    logger.LogCritical("Starting a glob with \".\" won't find files. You should remove this from the glob: {scriptGlob}", scriptGlob)
+                    exit (int ExitErrorCodes.InvalidGlob)
+                cwd.GlobFiles(scriptGlob) |> Seq.toList   |> List.map (fun file -> file.FullName)
 
-
+        )
 
     let exclInclFiles =
         let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
