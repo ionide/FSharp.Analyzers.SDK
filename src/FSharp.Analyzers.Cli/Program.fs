@@ -31,7 +31,7 @@ type ExitErrorCodes =
     | FscArgsCombinedWithMsBuildProperties = 17
     | FSharpCoreAssemblyLoadFailed = 18
     | ProjectAndFscArgs = 19
-    | InvalidGlob = 20
+    | InvalidScriptArguments = 20
     | InvalidProjectArguments = 21
 
 type Arguments =
@@ -60,8 +60,8 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Project _ -> "List of paths to your .fsproj file."
-            | Script _ -> "List of paths to your .fsx file. Supports globs."
+            | Project _ -> "List of paths to your .fsproj file. Cannot be combined with `--fsc-args`."
+            | Script _ -> "List of paths to your .fsx file. Supports globs. Cannot be combined with `--fsc-args`."
             | Analyzers_Path _ ->
                 "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
@@ -618,19 +618,26 @@ let main argv =
     let codeRoot = results.TryGetResult <@ Code_Root @>
     let cwd = Directory.GetCurrentDirectory() |> DirectoryInfo
 
+    let beginsWithCurrentPath (path: string) =
+        path.StartsWith("./") || path.StartsWith(".\\")
+
     let scripts = 
         results.GetResult(<@ Script @>, [])
         |> List.collect(fun scriptGlob ->
-            if Path.IsPathRooted scriptGlob then
-                [scriptGlob]
-            else
-                // TODO: need to discuss if this should fail fast or not
-                // also other path arguments take a `./` while this oen does not and feels inconsistent
-                if scriptGlob.StartsWith('.') then
-                    logger.LogCritical("Starting a glob with \".\" won't find files. You should remove this from the glob: {scriptGlob}", scriptGlob)
-                    exit (int ExitErrorCodes.InvalidGlob)
-                cwd.GlobFiles(scriptGlob) |> Seq.toList   |> List.map (fun file -> file.FullName)
+            let root, scriptGlob = 
+                if Path.IsPathRooted scriptGlob then
+                    // Glob can't handle absolute paths, so we need to make sure the scriptGlob is a relative path
+                    let root = Path.GetPathRoot scriptGlob
+                    let glob = scriptGlob.Substring(root.Length)
+                    DirectoryInfo root, glob
+                else if beginsWithCurrentPath scriptGlob then
+                    // Glob can't handle relative paths starting with "./" or ".\", so we need trim it
+                    let relativeGlob = scriptGlob.Substring(2) // remove "./" or ".\"
+                    cwd, relativeGlob
+                else
+                    cwd, scriptGlob
 
+            root.GlobFiles scriptGlob |> Seq.map (fun file -> file.FullName) |> Seq.toList
         )
 
     let exclInclFiles =
@@ -735,47 +742,72 @@ let main argv =
             None
         else
             match fscArgs with
-            // | None ->
-            //     logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
-            //     None
             |  Some _ when projOpts |> List.isEmpty |> not ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
+                exit (int ExitErrorCodes.ProjectAndFscArgs)
+            |  Some _ when scripts |> List.isEmpty |> not ->
+                logger.LogError("`--script` and `--fsc-args` cannot be combined.")
                 exit (int ExitErrorCodes.ProjectAndFscArgs)
             | Some fscArgs ->
                 runFscArgs client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
                 |> Some
             | None ->
-                let scriptOptions =
-                    scripts 
-                    |> List.map(fun script ->
-                        let fileContent = File.ReadAllText script
-                        let sourceText = SourceText.ofString fileContent
-                        let (options, _diagnostics) = fcs.GetProjectOptionsFromScript(script, sourceText) |> Async.RunSynchronously
+                match projOpts, scripts with
+                | [], [] ->
+                    logger.LogError("No projects or scripts were specified. Use `--project` or `--script` to specify them.")
+                    exit (int ExitErrorCodes.EmptyFscArgs)
+                | projects, scripts ->
 
-                        options
-                    )
+                    for script in scripts do
+                        if not (File.Exists(script)) then
+                            logger.LogError("Invalid `--script` argument. File does not exist: '{script}'", script)
+                            exit (int ExitErrorCodes.InvalidProjectArguments)
 
-                let projects = projOpts
-                for projPath in projects do
-                    if not (File.Exists(projPath)) then
-                        logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
-                        exit (int ExitErrorCodes.InvalidProjectArguments)
-                async {
-                    let! loadedProjects = loadProjects toolsPath properties projects
-
-                    let loadedProjects = scriptOptions @ loadedProjects
-
-                    return!
-                        loadedProjects
-                        |> List.map (fun (projPath: FSharpProjectOptions) ->
-                            runProject client projPath exclInclFiles severityMapping
+                    let scriptOptions =
+                        scripts 
+                        |> List.map(fun script -> async {
+                            let! fileContent = File.ReadAllTextAsync script |> Async.AwaitTask
+                            let sourceText = SourceText.ofString fileContent
+                            // GetProjectOptionsFromScript cannot be run in parallel, it is not thread-safe.
+                            let! options, diagnostics = fcs.GetProjectOptionsFromScript(script, sourceText)
+                            if not (List.isEmpty diagnostics) then
+                                diagnostics
+                                |> List.iter (fun d ->
+                                    logger.LogError(
+                                        "Script {0} has a diagnostic: {1} at {2}",
+                                        script,
+                                        d.Message,
+                                        d.Range
+                                    )
+                                )
+                            return options
+                        }
                         )
-                        |> Async.Parallel
-                }
-                |> Async.RunSynchronously
-                |> List.concat
-                |> Some
+                        |> Async.Sequential
+
+                    for projPath in projects do
+                        if not (File.Exists(projPath)) then
+                            logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
+                            exit (int ExitErrorCodes.InvalidProjectArguments)
+                    async {
+                        let! scriptOptions = scriptOptions |> Async.StartChild
+                        let! loadedProjects = loadProjects toolsPath properties projects |> Async.StartChild
+                        let! loadedProjects = loadedProjects
+                        let! scriptOptions = scriptOptions
+
+                        let loadedProjects = Array.toList scriptOptions @ loadedProjects
+
+                        return!
+                            loadedProjects
+                            |> List.map (fun (projPath: FSharpProjectOptions) ->
+                                runProject client projPath exclInclFiles severityMapping
+                            )
+                            |> Async.Parallel
+                    }
+                    |> Async.RunSynchronously
+                    |> List.concat
+                    |> Some
 
     match results with
     | None -> -1
