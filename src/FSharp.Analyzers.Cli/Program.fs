@@ -18,6 +18,7 @@ open FSharp.Analyzers.Cli.CustomLogging
 
 type ExitErrorCodes =
     | Success = 0
+    | NoAnalyzersFound = -1
     | AnalyzerFoundError = -2
     | FailedAssemblyLoading = -3
     | AnalysisAborted = -4
@@ -810,7 +811,7 @@ let main argv =
                     |> Some
 
     match results with
-    | None -> -1
+    | None -> int ExitErrorCodes.NoAnalyzersFound
     | Some results ->
         let results, hasError =
             match Result.allOkOrError results with
