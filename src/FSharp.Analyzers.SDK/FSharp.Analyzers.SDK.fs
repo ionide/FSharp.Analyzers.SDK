@@ -49,6 +49,24 @@ module EntityCache =
         with _ ->
             []
 
+[<AutoOpen>]
+module Extensions =
+    open FSharp.Compiler.CodeAnalysis.ProjectSnapshot
+
+    type FSharpReferencedProjectSnapshot with
+
+        member x.ProjectFilePath =
+            match x with
+            | FSharpReferencedProjectSnapshot.FSharpReference(snapshot = snapshot) -> snapshot.ProjectFileName |> Some
+            | _ -> None
+
+    type FSharpReferencedProject with
+
+        member x.ProjectFilePath =
+            match x with
+            | FSharpReferencedProject.FSharpReference(options = options) -> options.ProjectFileName |> Some
+            | _ -> None
+
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
 type AnalyzerAttribute(name: string, shortDescription: string, helpUri: string) =
@@ -93,6 +111,45 @@ type EditorAnalyzerAttribute
 
 type Context = interface end
 
+type AnalyzerProjectOptions =
+    | BackgroundCompilerOptions of FSharpProjectOptions
+    | TransparentCompilerOptions of FSharpProjectSnapshot
+
+    member x.ProjectFileName =
+        match x with
+        | BackgroundCompilerOptions(options) -> options.ProjectFileName
+        | TransparentCompilerOptions(snapshot) -> snapshot.ProjectFileName
+
+    member x.ProjectId =
+        match x with
+        | BackgroundCompilerOptions(options) -> options.ProjectId
+        | TransparentCompilerOptions(snapshot) -> snapshot.ProjectId
+
+    member x.SourceFiles =
+        match x with
+        | BackgroundCompilerOptions(options) -> options.SourceFiles |> Array.toList
+        | TransparentCompilerOptions(snapshot) -> snapshot.SourceFiles |> List.map (fun f -> f.FileName)
+        |> List.map System.IO.Path.GetFullPath
+
+    member x.ReferencedProjectsPath =
+        match x with
+        | BackgroundCompilerOptions(options) ->
+          options.ReferencedProjects
+          |> Array.choose (fun p -> p.ProjectFilePath)
+          |> Array.toList
+        | TransparentCompilerOptions(snapshot) -> snapshot.ReferencedProjects |> List.choose (fun p -> p.ProjectFilePath)
+
+    member x.LoadTime =
+        match x with
+        | BackgroundCompilerOptions(options) -> options.LoadTime
+        | TransparentCompilerOptions(snapshot) -> snapshot.LoadTime
+
+    member x.OtherOptions =
+        match x with
+        | BackgroundCompilerOptions(options) -> options.OtherOptions |> Array.toList
+        | TransparentCompilerOptions(snapshot) -> snapshot.OtherOptions
+
+
 type CliContext =
     {
         FileName: string
@@ -101,6 +158,7 @@ type CliContext =
         CheckFileResults: FSharpCheckFileResults
         TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults
+        ProjectOptions: AnalyzerProjectOptions
     }
 
     interface Context
@@ -122,6 +180,7 @@ type EditorContext =
         CheckFileResults: FSharpCheckFileResults option
         TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults option
+        ProjectOptions: AnalyzerProjectOptions
     }
 
     interface Context
@@ -196,6 +255,7 @@ module Utils =
         (fileName: string)
         (sourceText: ISourceText)
         ((parseFileResults: FSharpParseFileResults, checkFileResults: FSharpCheckFileResults))
+        (projectOptions: AnalyzerProjectOptions)
         : CliContext
         =
         {
@@ -205,6 +265,7 @@ module Utils =
             CheckFileResults = checkFileResults
             TypedTree = checkFileResults.ImplementationFile
             CheckProjectResults = checkProjectResults
+            ProjectOptions = projectOptions
         }
 
     let createFCS documentSource =

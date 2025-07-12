@@ -245,6 +245,7 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
     fcs.NotifyFileChanged(fileName, opts) |> Async.RunSynchronously // workaround for https://github.com/dotnet/fsharp/issues/15960
     let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
     let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
+    let analyzerOpts = BackgroundCompilerOptions opts
 
     if Array.isEmpty allSymbolUses then
         failwith "no symboluses"
@@ -266,7 +267,7 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
             raise (CompilerDiagnosticErrors diagErrors)
 
         let sourceText = SourceText.ofString source
-        Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults)
+        Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults) analyzerOpts
     | Error e -> failwith $"typechecking file failed: %O{e}"
 
 let getContext (opts: FSharpProjectOptions) source = getContextFor opts false source

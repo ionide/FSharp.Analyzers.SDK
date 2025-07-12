@@ -47,6 +47,24 @@ type EditorAnalyzerAttribute =
 /// Marker interface which both the CliContext and EditorContext implement
 type Context = interface end
 
+/// Options related to the project being analyzed.
+type AnalyzerProjectOptions =
+    | BackgroundCompilerOptions of FSharpProjectOptions
+    | TransparentCompilerOptions of FSharpProjectSnapshot
+    
+    /// The current project name.
+    member ProjectFileName: string
+    /// The identifier of the current project.
+    member ProjectId: string option
+    /// The set of source files in the current project.
+    member SourceFiles: string list
+    /// Projects referenced by this project.
+    member ReferencedProjectsPath: string list
+    /// The time at which the project was loaded.
+    member LoadTime: DateTime
+    /// Additional command line argument options for the project.
+    member OtherOptions: string list
+
 /// All the relevant compiler information for a given file.
 /// Contains the source text, untyped and typed tree information.
 type CliContext =
@@ -69,6 +87,8 @@ type CliContext =
         /// A handle to the results of the entire project
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckprojectresults.html">FSharpCheckProjectResults Type</a>
         CheckProjectResults: FSharpCheckProjectResults
+        /// Options related to the project being analyzed.
+        ProjectOptions: AnalyzerProjectOptions
     }
 
     interface Context
@@ -101,6 +121,8 @@ type EditorContext =
         /// A handle to the results of the entire project
         /// See <a href="https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-codeanalysis-fsharpcheckprojectresults.html">FSharpCheckProjectResults Type</a>
         CheckProjectResults: FSharpCheckProjectResults option
+        // Options related to the project being analyzed.
+        ProjectOptions: AnalyzerProjectOptions
     }
 
     interface Context
@@ -184,4 +206,5 @@ module Utils =
         fileName: string ->
         sourceText: ISourceText ->
         parseFileResults: FSharpParseFileResults * checkFileResults: FSharpCheckFileResults ->
+        projectOptions: AnalyzerProjectOptions ->
             CliContext
