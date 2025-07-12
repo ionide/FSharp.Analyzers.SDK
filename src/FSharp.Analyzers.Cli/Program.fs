@@ -15,8 +15,29 @@ open Ionide.ProjInfo
 open FSharp.Analyzers.Cli
 open FSharp.Analyzers.Cli.CustomLogging
 
+
+type ExitErrorCodes =
+    | Success = 0
+    | NoAnalyzersFound = -1
+    | AnalyzerFoundError = -2
+    | FailedAssemblyLoading = -3
+    | AnalysisAborted = -4
+    | FailedToLoadProject = 10
+    | EmptyFscArgs = 11
+    | MissingPropertyValue = 12
+    | RuntimeAndOsOptions = 13
+    | RuntimeAndArchOptions = 14
+    | UnknownLoggerVerbosity = 15
+    | AnalyzerListedMultipleTimesInTreatAsSeverity = 16
+    | FscArgsCombinedWithMsBuildProperties = 17
+    | FSharpCoreAssemblyLoadFailed = 18
+    | ProjectAndFscArgs = 19
+    | InvalidScriptArguments = 20
+    | InvalidProjectArguments = 21
+
 type Arguments =
     | Project of string list
+    | Script of string list
     | Analyzers_Path of string list
     | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
     | [<Unique; AltCommandLine("-c")>] Configuration of string
@@ -40,7 +61,8 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Project _ -> "List of paths to your .fsproj file."
+            | Project _ -> "List of paths to your .fsproj file. Cannot be combined with `--fsc-args`."
+            | Script _ -> "List of paths to your .fsx file. Supports globs. Cannot be combined with `--fsc-args`."
             | Analyzers_Path _ ->
                 "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
@@ -153,7 +175,7 @@ let loadProjects toolsPath properties (projPaths: string list) =
 
         if Seq.length failedLoads > 0 then
             logger.LogError("Failed to load project '{0}'", failedLoads)
-            exit 1
+            exit (int ExitErrorCodes.FailedToLoadProject)
 
         let loaded =
             FCS.mapManyOptions projectOptions
@@ -235,7 +257,7 @@ let runFscArgs
     =
     if String.IsNullOrWhiteSpace fscArgs then
         logger.LogError("Empty --fsc-args were passed!")
-        exit 1
+        exit (int ExitErrorCodes.EmptyFscArgs)
     else
 
     let fscArgs = fscArgs.Split(';', StringSplitOptions.RemoveEmptyEntries)
@@ -480,7 +502,7 @@ let expandMultiProperties (properties: (string * string) list) =
                     match pair with
                     | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
                         logger.LogError("Missing property value for '{0}'", k)
-                        exit 1
+                        exit (int ExitErrorCodes.MissingPropertyValue)
                     | [| k; v |] -> yield (k, v)
                     | _ -> ()
 
@@ -492,10 +514,10 @@ let validateRuntimeOsArchCombination (runtime, arch, os) =
     match runtime, os, arch with
     | Some _, Some _, _ ->
         logger.LogError("Specifying both the `-r|--runtime` and `-os` options is not supported.")
-        exit 1
+        exit (int ExitErrorCodes.RuntimeAndOsOptions)
     | Some _, _, Some _ ->
         logger.LogError("Specifying both the `-r|--runtime` and `-a|--arch` options is not supported.")
-        exit 1
+        exit (int ExitErrorCodes.RuntimeAndArchOptions)
     | _ -> ()
 
 let getProperties (results: ParseResults<Arguments>) =
@@ -533,6 +555,7 @@ let getProperties (results: ParseResults<Arguments>) =
             | _ -> ()
         ]
 
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -554,7 +577,7 @@ let main argv =
             use factory = LoggerFactory.Create(fun b -> b.AddConsole() |> ignore)
             let logger = factory.CreateLogger("")
             logger.LogError("unknown verbosity level given {0}", x)
-            exit 1
+            exit (int ExitErrorCodes.UnknownLoggerVerbosity)
 
     use factory =
         LoggerFactory.Create(fun builder ->
@@ -588,12 +611,35 @@ let main argv =
     if not (severityMapping.IsValid()) then
         logger.LogError("An analyzer code may only be listed once in the <treat-as-severity> arguments.")
 
-        exit 1
+        exit (int ExitErrorCodes.AnalyzerListedMultipleTimesInTreatAsSeverity)
 
     let projOpts = results.GetResults <@ Project @> |> List.concat
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
+    let cwd = Directory.GetCurrentDirectory() |> DirectoryInfo
+
+    let beginsWithCurrentPath (path: string) =
+        path.StartsWith("./") || path.StartsWith(".\\")
+
+    let scripts = 
+        results.GetResult(<@ Script @>, [])
+        |> List.collect(fun scriptGlob ->
+            let root, scriptGlob = 
+                if Path.IsPathRooted scriptGlob then
+                    // Glob can't handle absolute paths, so we need to make sure the scriptGlob is a relative path
+                    let root = Path.GetPathRoot scriptGlob
+                    let glob = scriptGlob.Substring(root.Length)
+                    DirectoryInfo root, glob
+                else if beginsWithCurrentPath scriptGlob then
+                    // Glob can't handle relative paths starting with "./" or ".\", so we need trim it
+                    let relativeGlob = scriptGlob.Substring(2) // remove "./" or ".\"
+                    cwd, relativeGlob
+                else
+                    cwd, scriptGlob
+
+            root.GlobFiles scriptGlob |> Seq.map (fun file -> file.FullName) |> Seq.toList
+        )
 
     let exclInclFiles =
         let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
@@ -616,7 +662,7 @@ let main argv =
 
     if Option.isSome fscArgs && not properties.IsEmpty then
         logger.LogError("fsc-args can't be combined with MSBuild properties.")
-        exit 1
+        exit (int ExitErrorCodes.FscArgsCombinedWithMsBuildProperties)
 
     properties
     |> List.iter (fun (k, v) -> logger.LogInformation("Property {0}={1}", k, v))
@@ -675,7 +721,7 @@ let main argv =
         """
 
         logger.LogError(msg)
-        exit 1
+        exit (int ExitErrorCodes.FSharpCoreAssemblyLoadFailed)
     )
 
     let client = Client<CliAnalyzerAttribute, CliContext>(logger)
@@ -696,39 +742,76 @@ let main argv =
         if analyzers = 0 then
             None
         else
-            match projOpts, fscArgs with
-            | [], None ->
-                logger.LogError("No project given. Use `--project PATH_TO_FSPROJ`.")
-                None
-            | _ :: _, Some _ ->
+            match fscArgs with
+            |  Some _ when projOpts |> List.isEmpty |> not ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
-                exit 1
-            | [], Some fscArgs ->
+                exit (int ExitErrorCodes.ProjectAndFscArgs)
+            |  Some _ when scripts |> List.isEmpty |> not ->
+                logger.LogError("`--script` and `--fsc-args` cannot be combined.")
+                exit (int ExitErrorCodes.ProjectAndFscArgs)
+            | Some fscArgs ->
                 runFscArgs client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
                 |> Some
-            | projects, None ->
-                for projPath in projects do
-                    if not (File.Exists(projPath)) then
-                        logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
-                        exit 1
+            | None ->
+                match projOpts, scripts with
+                | [], [] ->
+                    logger.LogError("No projects or scripts were specified. Use `--project` or `--script` to specify them.")
+                    exit (int ExitErrorCodes.EmptyFscArgs)
+                | projects, scripts ->
 
-                async {
-                    let! loadedProjects = loadProjects toolsPath properties projects
+                    for script in scripts do
+                        if not (File.Exists(script)) then
+                            logger.LogError("Invalid `--script` argument. File does not exist: '{script}'", script)
+                            exit (int ExitErrorCodes.InvalidProjectArguments)
 
-                    return!
-                        loadedProjects
-                        |> List.map (fun (projPath: FSharpProjectOptions) ->
-                            runProject client projPath exclInclFiles severityMapping
+                    let scriptOptions =
+                        scripts 
+                        |> List.map(fun script -> async {
+                            let! fileContent = File.ReadAllTextAsync script |> Async.AwaitTask
+                            let sourceText = SourceText.ofString fileContent
+                            // GetProjectOptionsFromScript cannot be run in parallel, it is not thread-safe.
+                            let! options, diagnostics = fcs.GetProjectOptionsFromScript(script, sourceText)
+                            if not (List.isEmpty diagnostics) then
+                                diagnostics
+                                |> List.iter (fun d ->
+                                    logger.LogError(
+                                        "Script {0} has a diagnostic: {1} at {2}",
+                                        script,
+                                        d.Message,
+                                        d.Range
+                                    )
+                                )
+                            return options
+                        }
                         )
-                        |> Async.Parallel
-                }
-                |> Async.RunSynchronously
-                |> List.concat
-                |> Some
+                        |> Async.Sequential
+
+                    for projPath in projects do
+                        if not (File.Exists(projPath)) then
+                            logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
+                            exit (int ExitErrorCodes.InvalidProjectArguments)
+                    async {
+                        let! scriptOptions = scriptOptions |> Async.StartChild
+                        let! loadedProjects = loadProjects toolsPath properties projects |> Async.StartChild
+                        let! loadedProjects = loadedProjects
+                        let! scriptOptions = scriptOptions
+
+                        let loadedProjects = Array.toList scriptOptions @ loadedProjects
+
+                        return!
+                            loadedProjects
+                            |> List.map (fun (projPath: FSharpProjectOptions) ->
+                                runProject client projPath exclInclFiles severityMapping
+                            )
+                            |> Async.Parallel
+                    }
+                    |> Async.RunSynchronously
+                    |> List.concat
+                    |> Some
 
     match results with
-    | None -> -1
+    | None -> int ExitErrorCodes.NoAnalyzersFound
     | Some results ->
         let results, hasError =
             match Result.allOkOrError results with
@@ -762,8 +845,8 @@ let main argv =
                 failedAssemblies
             )
 
-            exit -3
+            exit (int ExitErrorCodes.FailedAssemblyLoading)
 
-        if check then -2
-        elif hasError then -4
-        else 0
+        if check then (int ExitErrorCodes.AnalyzerFoundError)
+        elif hasError then (int ExitErrorCodes.AnalysisAborted)
+        else (int ExitErrorCodes.Success)
