@@ -14,10 +14,10 @@ These class libraries expose a *value* of type [Analyzer<'TContext>](../referenc
 
 ## Create project
 
-Create a new class library targeting `net6.0`
+Create a new class library targeting `net8.0`
 
 ```shell
-dotnet new classlib -lang F# -f net6.0 -n OptionValueAnalyzer
+dotnet new classlib -lang F# -f net8.0 -n OptionValueAnalyzer
 ```
 
 Note that the assembly name needs to contain `Analyzer` in the name in order for it to be picked up.
@@ -38,7 +38,7 @@ The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https
 It is considered a best practice to use the correct `FSharp.Core` version and not the implicit one from the SDK.
 
 ```xml
-<PackageReference Update="FSharp.Core" Version="7.0.400" />
+<PackageReference Update="FSharp.Core" Version="9.0.300" />
 ```
 
 ## First analyzer
@@ -120,13 +120,13 @@ Simply run `dotnet pack --configuration Release` against the analyzer project to
 dotnet nuget push {NugetPackageFullPath} -s nuget.org -k {NugetApiKey}
 ```
 
-However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies have to be right *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net6.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
+However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies have to be right *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net8.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
 
 ```shell
-dotnet publish --configuration Release --framework net6.0
+dotnet publish --configuration Release --framework net8.0
 ```
 
-against the analyzer project and put every file from that output into the `./lib/net6.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
+against the analyzer project and put every file from that output into the `./lib/net8.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
 *)
 
 // make ZipFile available
@@ -163,7 +163,7 @@ Target.create
         if exitCode <> 0 then
             failwith "dotnet pack failed"
         else
-            match Shell.Exec("dotnet", "publish --configuration Release --framework net6.0", analyzerProject) with
+            match Shell.Exec("dotnet", "publish --configuration Release --framework net8.0", analyzerProject) with
             | 0 ->
                 let nupkg =
                     System.IO.Directory.GetFiles(__SOURCE_DIRECTORY__ </> "dist")
@@ -173,15 +173,15 @@ Target.create
                 let nugetParent = DirectoryInfo(nupkg).Parent.FullName
                 let nugetFileName = Path.GetFileNameWithoutExtension(nupkg)
 
-                let publishPath = analyzerProject </> "bin" </> "Release" </> "net6.0" </> "publish"
+                let publishPath = analyzerProject </> "bin" </> "Release" </> "net8.0" </> "publish"
                 // Unzip the nuget
                 ZipFile.ExtractToDirectory(nupkg, nugetParent </> nugetFileName)
                 // delete the initial nuget package
                 File.Delete nupkg
-                // remove stuff from ./lib/net6.0
-                Shell.deleteDir (nugetParent </> nugetFileName </> "lib" </> "net6.0")
-                // move the output of publish folder into the ./lib/net6.0 directory
-                Shell.copyDir (nugetParent </> nugetFileName </> "lib" </> "net6.0") publishPath (fun _ -> true)
+                // remove stuff from ./lib/net8.0
+                Shell.deleteDir (nugetParent </> nugetFileName </> "lib" </> "net8.0")
+                // move the output of publish folder into the ./lib/net8.0 directory
+                Shell.copyDir (nugetParent </> nugetFileName </> "lib" </> "net8.0") publishPath (fun _ -> true)
                 // re-create the nuget package
                 ZipFile.CreateFromDirectory(nugetParent </> nugetFileName, nupkg)
                 // delete intermediate directory
