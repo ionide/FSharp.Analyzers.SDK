@@ -6,7 +6,15 @@
       "version": "20.0.0",
       "commands": [
         "fsdocs"
-      ]
+      ],
+      "rollForward": false
+    },
+    "fsharp-analyzers": {
+      "version": "0.32.0",
+      "commands": [
+        "fsharp-analyzers"
+      ],
+      "rollForward": false
     }
   }
 }

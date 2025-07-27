@@ -1,11 +1,46 @@
 <Project>
+
+    <PropertyGroup>
+        <_AnalyzerProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_AnalyzerProjectOptions>
+    </PropertyGroup>
+
     <Target Name="_AnalyzeFSharpProject">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <Exec
                 ContinueOnError="true"
                 IgnoreExitCode="true"
-                Command="dotnet fsharp-analyzers --project &quot;$(MSBuildProjectFile)&quot; $(FSharpAnalyzersOtherFlags)" />
+                Command="dotnet fsharp-analyzers $(_AnalyzerProjectOptions) $(FSharpAnalyzersOtherFlags)" />
     </Target>
 
     <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
+
+    <Target Name="_SetupFSharpAnalyzerProjectOptions" BeforeTargets="CoreCompile" Condition="'$(RunAnalyzers)' == 'true'">
+        <PropertyGroup>
+            <!-- 
+                Required for F# Targets CoreCompile to output command line arguments 
+                https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Fsc.fs#L721-L725 
+                https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Microsoft.FSharp.Targets#L418C19-L418C32
+            -->
+            <ProvideCommandLineArgs>true</ProvideCommandLineArgs>
+        </PropertyGroup>
+    </Target>
+
+    <Target Name="FsharpAnalyzerAfterBuild" DependsOnTargets="_SetupFSharpAnalyzerProjectOptions" AfterTargets="AfterBuild" Condition="'$(RunAnalyzers)' == 'true'">
+        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+        <!-- 
+            Question: Should we only execute this target if FscCommandLineArgs is not empty? 
+            Argument for Incremental builds may skip CoreCompile if no files changed, so we don't want to run the analyzer in that case.
+            There may be a better way to detect if CoreCompile was skipped but this seems to work.
+            And if someone wants to run the analyzer without FscCommandLineArgs, they can run the AnalyzeFSharpProject target directly.
+        -->
+        <PropertyGroup>
+            <_AnalyzerProjectOptions Condition="'@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_AnalyzerProjectOptions>
+        </PropertyGroup>
+        <Exec
+                ContinueOnError="true"
+                IgnoreExitCode="true"
+                Condition="'@(FscCommandLineArgs->Count())' != '0'"
+                Command="dotnet fsharp-analyzers $(_AnalyzerProjectOptions) $(FSharpAnalyzersOtherFlags)" />
+
+    </Target>
 </Project>
