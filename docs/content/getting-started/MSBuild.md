@@ -195,4 +195,30 @@ We often add a dummy target to a project to print out some values:
 
 Run `dotnet msbuild YourProject.fsproj /t:Dump` and verify that `CodeRoot` has a value or not.
 
+## Analyze FSharp Projects After Build
+
+If you'd like the analyzer to be ran after a build, you can set `RunAnalyzersDuringBuild` or `RunAnalyzers` to `true` in your project file:
+
+```xml
+<PropertyGroup>
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <FSharpAnalyzersOtherFlags>similar to previous section</FSharpAnalyzersOtherFlags>
+</PropertyGroup>
+```
+
+This is reusing the [Roslyn Analyzers variables](https://learn.microsoft.com/en-us/visualstudio/code-quality/disable-code-analysis?view=vs-2022#net-framework-projects-1). For brevity, here are the relevant variables:
+
+- `RunAnalyzersDuringBuild` : Controls whether analyzers run at build time.
+- `RunAnalyzers` : It takes precedence over `RunAnalyzersDuringBuild` and is used to control whether analyzers run at build time or not.
+
+This will run after the `CoreCompile` [target](https://github.com/dotnet/fsharp/blob/dd929579fc275ab99fd496da34bbe6bdade73c86/src/FSharp.Build/Microsoft.FSharp.Targets#L279-L280), which is the default target for building F# projects. The benefit of running after the `CoreCompile` target is this will speed up the analyzers execution as it will attempt to re-use the F# Compiler command line args `FscCommandLineArgs` property to run the analyzers without requiring a [design-time build](https://github.com/dotnet/project-system/blob/main/docs/design-time-builds.md). 
+
+However, this target might be skipped if the project is not built again due to [incremental builds](https://learn.microsoft.com/en-us/visualstudio/msbuild/incremental-builds?view=vs-2022). If you want to run the analyzers after every build, you can set `FSharpAnalyzers_AlwaysRunAfterBuild` to `true`:
+
+```xml
+<PropertyGroup>
+    <FSharpAnalyzers_AlwaysRunAfterBuild>true</FSharpAnalyzers_AlwaysRunAfterBuild>
+</PropertyGroup>
+```
+
 [Next]({{fsdocs-next-page-link}})
