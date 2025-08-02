@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.32.1] - 2025-08-02
+
+### Changed 
+
+* [Perf: Move membersToIgnore/exprTypesToIgnore out of visitDeclaration()](https://github.com/ionide/FSharp.Analyzers.SDK/pull/238) (thanks @Numpsy!)
+
 ## [0.32.0] - 2025-07-12
 
 ### Added
