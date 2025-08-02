@@ -356,11 +356,12 @@ module TASTCollecting =
 
     and visitObjMember f memb = visitExpr f memb.Body
 
-    let rec visitDeclaration f d =
-        let membersToIgnore = set [ "CompareTo"; "GetHashCode"; "Equals" ]
+    let membersToIgnore = set [ "CompareTo"; "GetHashCode"; "Equals" ]
 
-        let exprTypesToIgnore =
+    let exprTypesToIgnore =
             set [ "Microsoft.FSharp.Core.int"; "Microsoft.FSharp.Core.bool" ]
+
+    let rec visitDeclaration f d =
 
         match d with
         | FSharpImplementationFileDeclaration.Entity(_e, subDecls) ->
