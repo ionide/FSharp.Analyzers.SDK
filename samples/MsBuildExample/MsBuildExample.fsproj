@@ -1,11 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="..\..\src\FSharp.Analyzers.Build\buildMultitargeting\FSharp.Analyzers.Build.targets" />
+  <Import Project="../../src/FSharp.Analyzers.Build/buildMultitargeting/FSharp.Analyzers.Build.targets" />
 
   
 <PropertyGroup>
     <RunAnalyzers>true</RunAnalyzers>
     <FSharpAnalyzersOtherFlags>--analyzers-path "../../artifacts/bin/OptionAnalyzer/debug" -v d</FSharpAnalyzersOtherFlags>
+    <FSharpAnalyzers_Exe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzers_Exe>
     <!-- <FSharpAnalyzers_AlwaysRunAfterBuild>true</FSharpAnalyzers_AlwaysRunAfterBuild> -->
 </PropertyGroup>
 
@@ -19,7 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OptionAnalyzer\OptionAnalyzer.fsproj" />
+    <ProjectReference Include="../OptionAnalyzer/OptionAnalyzer.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
