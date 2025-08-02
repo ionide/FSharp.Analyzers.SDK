@@ -20,7 +20,25 @@
 
     <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
 
-    <Target Name="_SetupFSharpAnalyzerProjectOptions" BeforeTargets="CoreCompile" Condition="'$(RunAnalyzers)' == 'true'">
+    <Target Name="_FSharpAnalyzersDetermineRunAnalyzersValues" BeforeTargets="CoreCompile">
+        <!-- 
+            Roslyn uses multiple values for determining whether to run analyzers 
+            see: https://learn.microsoft.com/en-us/visualstudio/code-quality/disable-code-analysis?view=vs-2019#net-framework-projects-1
+
+            RunAnalyzersDuringBuild : 	Controls whether analyzers run at build time.
+            RunAnalyzers:  It takes precedence over RunAnalyzersDuringBuild
+        -->
+        <PropertyGroup>
+            <_FSharpAnalyzers_RunDuringBuild Condition="'$(RunAnalyzersDuringBuild)' != ''">$(RunAnalyzersDuringBuild)</_FSharpAnalyzers_RunDuringBuild>
+            <_FSharpAnalyzers_RunDuringBuild Condition="'$(RunAnalyzers)' != ''">$(RunAnalyzers)</_FSharpAnalyzers_RunDuringBuild>
+        </PropertyGroup>
+    </Target>
+
+    <Target 
+        Name="_SetupFSharpAnalyzerProjectOptions" 
+        DependsOnTargets="_FSharpAnalyzersDetermineRunAnalyzersValues"
+        BeforeTargets="CoreCompile" 
+        Condition="'$(_FSharpAnalyzers_RunDuringBuild)' == 'true'">
         <PropertyGroup>
             <!-- 
                 Required for F# Targets CoreCompile to output command line arguments 
@@ -35,7 +53,7 @@
         Name="_FSharpAnalyzerAfterBuild" 
         DependsOnTargets="_SetupFSharpAnalyzerProjectOptions;CoreCompile" 
         AfterTargets="AfterBuild" 
-        Condition="'$(RunAnalyzers)' == 'true'">
+        Condition="'$(_FSharpAnalyzers_RunDuringBuild)' == 'true'">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <PropertyGroup>
             <!-- 
