@@ -1,8 +1,11 @@
 <Project>
 
     <PropertyGroup>
+        <!-- Used for dotnet host discovery -->
         <FSharpAnalyzers_ExeHost Condition="'$(FSharpAnalyzers_ExeHost)' == ''">dotnet</FSharpAnalyzers_ExeHost>
+        <!-- Points to the dotnet tool or the FSharp.Analyzers.Cli.dll for debugging -->
         <FSharpAnalyzers_Exe Condition="'$(FSharpAnalyzers_Exe)' == ''">fsharp-analyzers</FSharpAnalyzers_Exe>
+        <!-- The build will continue even if the analyzer fails -->
         <FSharpAnalyzers_ContinueOnError Condition="'$(FSharpAnalyzers_ContinueOnError)' == ''">true</FSharpAnalyzers_ContinueOnError>
         <_FSharpAnalyzers_ProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_FSharpAnalyzers_ProjectOptions>
     </PropertyGroup>
@@ -35,7 +38,11 @@
         Condition="'$(RunAnalyzers)' == 'true'">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <PropertyGroup>
-            <FSharpAnalyzers_AlwaysRunAfterBuild Condition="$(FSharpAnalyzers_AlwaysRunAfterBuild) == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzers_AlwaysRunAfterBuild>
+            <!-- 
+                If FscCommandLineArgs is empty, then CoreCompile did not run, we'll try to skip running the analyzer if this wasn't explicitly set to true
+            -->
+            <FSharpAnalyzers_AlwaysRunAfterBuild Condition="'$(FSharpAnalyzers_AlwaysRunAfterBuild)' == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzers_AlwaysRunAfterBuild>
+            <!-- We'll try to use FscCommandLineArgs- to speed up analyzer execution since this skips requiring a design-time build -->
             <_FSharpAnalyzers_ProjectOptions Condition="'@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzers_ProjectOptions>
         </PropertyGroup>
         <Exec
