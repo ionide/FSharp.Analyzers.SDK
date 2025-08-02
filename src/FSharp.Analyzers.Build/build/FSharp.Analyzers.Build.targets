@@ -1,15 +1,18 @@
 <Project>
 
     <PropertyGroup>
-        <_AnalyzerProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_AnalyzerProjectOptions>
+        <FSharpAnalyzers_ExeHost Condition="'$(FSharpAnalyzers_ExeHost)' == ''">dotnet</FSharpAnalyzers_ExeHost>
+        <FSharpAnalyzers_Exe Condition="'$(FSharpAnalyzers_Exe)' == ''">fsharp-analyzers</FSharpAnalyzers_Exe>
+        <FSharpAnalyzers_ContinueOnError Condition="'$(FSharpAnalyzers_ContinueOnError)' == ''">true</FSharpAnalyzers_ContinueOnError>
+        <_FSharpAnalyzers_ProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_FSharpAnalyzers_ProjectOptions>
     </PropertyGroup>
 
     <Target Name="_AnalyzeFSharpProject">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
         <Exec
-                ContinueOnError="true"
+                ContinueOnError="$(FSharpAnalyzers_ContinueOnError)"
                 IgnoreExitCode="true"
-                Command="dotnet fsharp-analyzers $(_AnalyzerProjectOptions) $(FSharpAnalyzersOtherFlags)" />
+                Command="$(FSharpAnalyzers_ExeHost) $(FSharpAnalyzers_Exe) $(_FSharpAnalyzers_ProjectOptions) $(FSharpAnalyzersOtherFlags)" />
     </Target>
 
     <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
@@ -25,22 +28,21 @@
         </PropertyGroup>
     </Target>
 
-    <Target Name="FsharpAnalyzerAfterBuild" DependsOnTargets="_SetupFSharpAnalyzerProjectOptions" AfterTargets="AfterBuild" Condition="'$(RunAnalyzers)' == 'true'">
+    <Target 
+        Name="_FSharpAnalyzerAfterBuild" 
+        DependsOnTargets="_SetupFSharpAnalyzerProjectOptions;CoreCompile" 
+        AfterTargets="AfterBuild" 
+        Condition="'$(RunAnalyzers)' == 'true'">
         <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
-        <!-- 
-            Question: Should we only execute this target if FscCommandLineArgs is not empty? 
-            Argument for Incremental builds may skip CoreCompile if no files changed, so we don't want to run the analyzer in that case.
-            There may be a better way to detect if CoreCompile was skipped but this seems to work.
-            And if someone wants to run the analyzer without FscCommandLineArgs, they can run the AnalyzeFSharpProject target directly.
-        -->
         <PropertyGroup>
-            <_AnalyzerProjectOptions Condition="'@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_AnalyzerProjectOptions>
+            <FSharpAnalyzers_AlwaysRunAfterBuild Condition="$(FSharpAnalyzers_AlwaysRunAfterBuild) == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzers_AlwaysRunAfterBuild>
+            <_FSharpAnalyzers_ProjectOptions Condition="'@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzers_ProjectOptions>
         </PropertyGroup>
         <Exec
-                ContinueOnError="true"
-                IgnoreExitCode="true"
-                Condition="'@(FscCommandLineArgs->Count())' != '0'"
-                Command="dotnet fsharp-analyzers $(_AnalyzerProjectOptions) $(FSharpAnalyzersOtherFlags)" />
-
+                ContinueOnError="$(FSharpAnalyzers_ContinueOnError)"
+                Condition="'$(FSharpAnalyzers_AlwaysRunAfterBuild)' == 'true'"
+                Command="$(FSharpAnalyzers_ExeHost) $(FSharpAnalyzers_Exe) $(_FSharpAnalyzers_ProjectOptions) $(FSharpAnalyzersOtherFlags)" />
     </Target>
+
+    <Target Name="FSharpAnalyzerAfterBuild" DependsOnTargets="_FSharpAnalyzerAfterBuild"/>
 </Project>

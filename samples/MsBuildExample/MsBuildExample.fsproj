@@ -6,11 +6,12 @@
 <PropertyGroup>
     <RunAnalyzers>true</RunAnalyzers>
     <FSharpAnalyzersOtherFlags>--analyzers-path "../../artifacts/bin/OptionAnalyzer/debug" -v d</FSharpAnalyzersOtherFlags>
+    <!-- <FSharpAnalyzers_AlwaysRunAfterBuild>true</FSharpAnalyzers_AlwaysRunAfterBuild> -->
 </PropertyGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
