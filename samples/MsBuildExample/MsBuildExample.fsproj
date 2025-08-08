@@ -6,8 +6,8 @@
 <PropertyGroup>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
     <FSharpAnalyzersOtherFlags>--analyzers-path "../../artifacts/bin/OptionAnalyzer/debug" -v d</FSharpAnalyzersOtherFlags>
-    <FSharpAnalyzers_Exe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzers_Exe>
-    <!-- <FSharpAnalyzers_AlwaysRunAfterBuild>true</FSharpAnalyzers_AlwaysRunAfterBuild> -->
+    <FSharpAnalyzersExe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzersExe>
+    <!-- <FSharpAnalyzersAlwaysRunAfterBuild>true</FSharpAnalyzersAlwaysRunAfterBuild> -->
 </PropertyGroup>
 
   <PropertyGroup>

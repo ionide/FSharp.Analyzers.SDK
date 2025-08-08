@@ -213,11 +213,11 @@ This is reusing the [Roslyn Analyzers variables](https://learn.microsoft.com/en-
 
 This will run after the `CoreCompile` [target](https://github.com/dotnet/fsharp/blob/dd929579fc275ab99fd496da34bbe6bdade73c86/src/FSharp.Build/Microsoft.FSharp.Targets#L279-L280), which is the default target for building F# projects. The benefit of running after the `CoreCompile` target is this will speed up the analyzers execution as it will attempt to re-use the F# Compiler command line args `FscCommandLineArgs` property to run the analyzers without requiring a [design-time build](https://github.com/dotnet/project-system/blob/main/docs/design-time-builds.md). 
 
-However, the `FSharpAnalyzerAfterBuild` target might be skipped if the `CoreCompile` target is not run due to [incremental builds](https://learn.microsoft.com/en-us/visualstudio/msbuild/incremental-builds?view=vs-2022). If you want to run the analyzers after every build, you can set `FSharpAnalyzers_AlwaysRunAfterBuild` to `true`: 
+However, the `FSharpAnalyzerAfterBuild` target might be skipped if the `CoreCompile` target is not run due to [incremental builds](https://learn.microsoft.com/en-us/visualstudio/msbuild/incremental-builds?view=vs-2022). If you want to run the analyzers after every build, you can set `FSharpAnalyzersAlwaysRunAfterBuild` to `true`: 
 
 ```xml
 <PropertyGroup>
-    <FSharpAnalyzers_AlwaysRunAfterBuild>true</FSharpAnalyzers_AlwaysRunAfterBuild>
+    <FSharpAnalyzersAlwaysRunAfterBuild>true</FSharpAnalyzersAlwaysRunAfterBuild>
 </PropertyGroup>
 ```
 
