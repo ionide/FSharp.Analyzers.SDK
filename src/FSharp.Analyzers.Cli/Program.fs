@@ -34,6 +34,7 @@ type ExitErrorCodes =
     | ProjectAndFscArgs = 19
     | InvalidScriptArguments = 20
     | InvalidProjectArguments = 21
+    | UnhandledException = 22
 
 type Arguments =
     | Project of string list
@@ -595,6 +596,19 @@ let main argv =
     logger <- factory.CreateLogger("")
 
     logger.LogInformation("Running in verbose mode")
+
+    AppDomain.CurrentDomain.UnhandledException.Add(fun args ->
+        let ex = args.ExceptionObject :?> exn
+
+        match ex with
+        | :? FileNotFoundException as fnf when fnf.FileName.StartsWith "System.Runtime" -> 
+            // https://github.com/ionide/FSharp.Analyzers.SDK/issues/245
+            logger.LogCritical(ex, "FSharp.Analyzers.Cli could not find {0}. If you're using a preview version of the .NET SDK, you may need to set DOTNET_ROLL_FORWARD_TO_PRERELEASE=1 in your environment before running this tool.", fnf.FileName)
+        | _ ->
+            logger.LogCritical(ex, "Unhandled exception:")
+        factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+        exit (int ExitErrorCodes.UnhandledException)
+    )
 
     let severityMapping =
         {
