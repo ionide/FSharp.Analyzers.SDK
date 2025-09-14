@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+<Import Project="../../src/FSharp.Analyzers.Build/buildMultitargeting/FSharp.Analyzers.Build.targets" />
 
-  <Import Project="../../src/FSharp.Analyzers.Build/buildMultitargeting/FSharp.Analyzers.Build.targets" />
-
-  
 <PropertyGroup>
+    <!-- Set this to true if you'd like the analyzer to run during a build -->
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <!-- Additional flags to pass to the analyzer CLI -->
     <FSharpAnalyzersOtherFlags>--analyzers-path "../../artifacts/bin/OptionAnalyzer/debug" -v d</FSharpAnalyzersOtherFlags>
+    <!-- Point to the dotnet tool or the FSharp.Analyzers.Cli.dll for debugging. -->
     <FSharpAnalyzersExe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzersExe>
+    <!-- Uncomment to always run the analyzer after a build, even if CoreCompile did not run -->
     <!-- <FSharpAnalyzersAlwaysRunAfterBuild>true</FSharpAnalyzersAlwaysRunAfterBuild> -->
 </PropertyGroup>
 
