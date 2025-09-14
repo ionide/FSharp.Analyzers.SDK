@@ -197,7 +197,7 @@ Run `dotnet msbuild YourProject.fsproj /t:Dump` and verify that `CodeRoot` has a
 
 ## Analyze FSharp Projects After Build
 
-If you'd like the analyzer to be ran after a build, you can set `RunAnalyzersDuringBuild` or `RunAnalyzers` to `true` in your project file:
+If you'd like the analyzer to be run after a `dotnet build`, you can set `RunAnalyzersDuringBuild` or `RunAnalyzers` to `true` in your project file:
 
 ```xml
 <PropertyGroup>
