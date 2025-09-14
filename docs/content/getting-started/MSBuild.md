@@ -221,4 +221,15 @@ However, the `FSharpAnalyzerAfterBuild` target might be skipped if the `CoreComp
 </PropertyGroup>
 ```
 
+### Treating Warnings as Errors
+
+You can use the standard [WarningsAsErrors](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/errors-warnings#warningsaserrors-and-warningsnotaserrors) MSBuild property to treat specific warnings as errors. For example, to treat all warnings from the `OptionAnalyzer` (OV001) as errors, you can add the following to your project file:
+
+```xml
+<PropertyGroup>
+    <WarningsAsErrors>OV001</WarningsAsErrors>
+</PropertyGroup>
+```
+
+
 [Next]({{fsdocs-next-page-link}})

@@ -10,6 +10,8 @@
     <FSharpAnalyzersExe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzersExe>
     <!-- Uncomment to always run the analyzer after a build, even if CoreCompile did not run -->
     <!-- <FSharpAnalyzersAlwaysRunAfterBuild>true</FSharpAnalyzersAlwaysRunAfterBuild> -->
+    <!-- Uncomment to Treat OV001 (OptionAnalyzer) warnings as errors -->
+    <!-- <WarningsAsErrors>OV001</WarningsAsErrors> -->
 </PropertyGroup>
 
   <PropertyGroup>
