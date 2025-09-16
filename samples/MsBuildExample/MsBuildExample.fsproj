@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+<Import Project="../../src/FSharp.Analyzers.Build/buildMultitargeting/FSharp.Analyzers.Build.targets" />
+
+<PropertyGroup>
+    <!-- Set this to true if you'd like the analyzer to run during a build -->
+    <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <!-- Additional flags to pass to the analyzer CLI -->
+    <FSharpAnalyzersOtherFlags>--analyzers-path "../../artifacts/bin/OptionAnalyzer/debug" -v d</FSharpAnalyzersOtherFlags>
+    <!-- Point to the dotnet tool or the FSharp.Analyzers.Cli.dll for debugging. -->
+    <FSharpAnalyzersExe>../../artifacts/bin/FSharp.Analyzers.Cli/debug/FSharp.Analyzers.Cli.dll</FSharpAnalyzersExe>
+    <!-- Uncomment to always run the analyzer after a build, even if CoreCompile did not run -->
+    <!-- <FSharpAnalyzersAlwaysRunAfterBuild>true</FSharpAnalyzersAlwaysRunAfterBuild> -->
+    <!-- Uncomment to Treat OV001 (OptionAnalyzer) warnings as errors -->
+    <!-- <WarningsAsErrors>OV001</WarningsAsErrors> -->
+</PropertyGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OptionAnalyzer/OptionAnalyzer.fsproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
