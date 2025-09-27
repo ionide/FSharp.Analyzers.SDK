@@ -2,7 +2,7 @@
 
 This is the changelog for the `FSharp.Analyzers.Build` package specifically. It's distinct from that of the overall libraries and command-line tool.
 
-## [0.4.0]
+## [0.4.0] - 2025-09-27
 
 ### Changed
 - [Utilize RunAnalyzer and Fsc args in msbuild analyze if available](https://github.com/ionide/FSharp.Analyzers.SDK/pull/241) (thanks @TheAngryByrd)
@@ -17,7 +17,7 @@ This is the changelog for the `FSharp.Analyzers.Build` package specifically. It'
 ### Removed
 - [Remove AnalyzeFSharpProjectUsingFscArgs](https://github.com/ionide/FSharp.Analyzers.SDK/pull/164).
 
-### Fixed'
+### Fixed
 - Add additional properties to trigger design time build.
 
 ## [0.1.0] - 2023-11-15
