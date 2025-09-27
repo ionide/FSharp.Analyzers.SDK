@@ -32,6 +32,7 @@ jobs:
 
       - name: Get Changelog Entry
         id: changelog_reader
+        if: ${{ !contains(steps.tag_name.outputs.current_version, '-MsBuild') }}
         uses: mindsers/changelog-reader-action@v2
         with:
           validation_level: warn
@@ -40,6 +41,7 @@ jobs:
 
       - name: Create Release
         uses: ncipollo/release-action@v1
+        if: ${{ !contains(steps.tag_name.outputs.current_version, '-MsBuild') }}
         with:
           artifacts: "**/*.nupkg"
           token: ${{ secrets.GITHUB_TOKEN }}
