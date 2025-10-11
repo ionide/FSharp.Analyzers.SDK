@@ -8,6 +8,11 @@ open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 
+type AnalyzerIgnoreRange =
+    | File
+    | Range of commentStart: int * commentEnd: int
+    | SingleLine of commentLine: int
+
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
 type AnalyzerAttribute =
@@ -89,6 +94,8 @@ type CliContext =
         CheckProjectResults: FSharpCheckProjectResults
         /// Options related to the project being analyzed.
         ProjectOptions: AnalyzerProjectOptions
+        /// Ranges in the file to ignore for specific analyzers codes
+        AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
     interface Context
@@ -123,6 +130,8 @@ type EditorContext =
         CheckProjectResults: FSharpCheckProjectResults option
         // Options related to the project being analyzed.
         ProjectOptions: AnalyzerProjectOptions
+        /// Ranges in the file to ignore for specific analyzers codes
+        AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
     interface Context

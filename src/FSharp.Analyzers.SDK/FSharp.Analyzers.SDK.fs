@@ -10,6 +10,96 @@ open FSharp.Compiler.EditorServices
 open System.Reflection
 open System.Runtime.InteropServices
 open FSharp.Compiler.Text
+open FSharp.Compiler.SyntaxTrivia
+
+[<RequireQualifiedAccess>]
+type IgnoreComment =
+    | SingleLine of line: int * codes: string list
+    | File of codes: string list
+    | RangeStart of startLine: int * codes: string list
+    | RangeEnd of endLine: int
+
+type AnalyzerIgnoreRange = 
+    | File
+    | Range of commentStart: int * commentEnd: int
+    | SingleLine of commentLine: int
+
+module Ignore =
+
+    open FSharp.Compiler.Syntax
+    open System.Text.RegularExpressions
+
+    let getCodeComments input =
+        match input with
+        | ParsedInput.ImplFile parsedFileInput -> parsedFileInput.Trivia.CodeComments
+        | ParsedInput.SigFile parsedSigFileInput -> parsedSigFileInput.Trivia.CodeComments
+
+    [<return: Struct>]
+    let (|ParseRegexWithOptions|_|) options (pattern: string) (s: string) =
+        match Regex.Match(s, pattern, options) with
+        | m when m.Success -> List.tail [ for x in m.Groups -> x.Value ] |> ValueSome
+        | _ -> ValueNone
+
+    [<return: Struct>]
+    let (|ParseRegexCompiled|_|) = (|ParseRegexWithOptions|_|) RegexOptions.Compiled
+
+    [<return: Struct>]
+    let (|SplitBy|_|) x (text: string) =
+        text.Split(x) |> Array.toList |> ValueSome
+
+    let trimCodes (codes: string list) =
+        codes |> List.map (fun s -> s.Trim())
+
+    let tryGetIgnoreComment splitBy (sourceText: ISourceText) (ct: CommentTrivia) =
+        match ct with
+        | CommentTrivia.BlockComment r
+        | CommentTrivia.LineComment r ->
+            match sourceText.GetLineString(r.StartLine - 1) with
+            | ParseRegexCompiled @"IGNORE\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
+                Some <| IgnoreComment.SingleLine(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"IGNORE FILE\s*:\s*(.*)$" [ SplitBy splitBy codes ] -> 
+                Some <| IgnoreComment.File (trimCodes codes)
+            | ParseRegexCompiled @"IGNORE START\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
+                Some <| IgnoreComment.RangeStart(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"IGNORE END(.*)$" _ -> Some <| IgnoreComment.RangeEnd r.StartLine
+            | _ -> None
+
+    let getIgnoreComments (sourceText: ISourceText) (comments: CommentTrivia list) =
+        comments
+        |> List.choose (tryGetIgnoreComment [| ',' |] sourceText)
+
+    let getIgnoreRanges (ignoreComments: IgnoreComment list) : Map<string, AnalyzerIgnoreRange list> =
+        let mutable codeToRanges = Map.empty<string, AnalyzerIgnoreRange list>
+        
+        let addRangeForCodes (codes: string list) (range: AnalyzerIgnoreRange) =
+            for code in codes do
+                let existingRanges = Map.tryFind code codeToRanges |> Option.defaultValue []
+                codeToRanges <- Map.add code (range :: existingRanges) codeToRanges
+        
+        let mutable rangeStack = []
+        
+        for comment in ignoreComments do
+            match comment with
+            | IgnoreComment.File codes ->
+                addRangeForCodes codes File
+                
+            | IgnoreComment.SingleLine (line, codes) ->
+                addRangeForCodes codes (SingleLine line)
+                
+            | IgnoreComment.RangeStart (startLine, codes) ->
+                rangeStack <- (startLine, codes) :: rangeStack
+                
+            | IgnoreComment.RangeEnd endLine ->
+                match rangeStack with
+                | [] -> 
+                    // Ignore END without matching START - do nothing
+                    // to-do: create analyzer for finding unmatched END comments
+                    ()
+                | (startLine, codes) :: rest ->
+                    rangeStack <- rest
+                    addRangeForCodes codes (Range (startLine, endLine))
+        
+        codeToRanges
 
 module EntityCache =
     let private entityCache = EntityCache()
@@ -149,7 +239,6 @@ type AnalyzerProjectOptions =
         | BackgroundCompilerOptions(options) -> options.OtherOptions |> Array.toList
         | TransparentCompilerOptions(snapshot) -> snapshot.OtherOptions
 
-
 type CliContext =
     {
         FileName: string
@@ -159,6 +248,7 @@ type CliContext =
         TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults
         ProjectOptions: AnalyzerProjectOptions
+        AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
     interface Context
@@ -181,6 +271,7 @@ type EditorContext =
         TypedTree: FSharpImplementationFileContents option
         CheckProjectResults: FSharpCheckProjectResults option
         ProjectOptions: AnalyzerProjectOptions
+        AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
     interface Context
@@ -266,6 +357,11 @@ module Utils =
             TypedTree = checkFileResults.ImplementationFile
             CheckProjectResults = checkProjectResults
             ProjectOptions = projectOptions
+            AnalyzerIgnoreRanges =
+                parseFileResults.ParseTree
+                |> Ignore.getCodeComments
+                |> Ignore.getIgnoreComments sourceText
+                |> Ignore.getIgnoreRanges
         }
 
     let createFCS documentSource =
