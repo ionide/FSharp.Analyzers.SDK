@@ -57,11 +57,11 @@ module Ignore =
             match sourceText.GetLineString(r.StartLine - 1) with
             | ParseRegexCompiled @"IGNORE\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
                 Some <| IgnoreComment.SingleLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"IGNORE FILE\s*:\s*(.*)$" [ SplitBy splitBy codes ] -> 
+            | ParseRegexCompiled @"IGNORE\s+FILE\s*:\s*(.*)$" [ SplitBy splitBy codes ] -> 
                 Some <| IgnoreComment.File (trimCodes codes)
-            | ParseRegexCompiled @"IGNORE START\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
+            | ParseRegexCompiled @"IGNORE\s+START\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
                 Some <| IgnoreComment.RangeStart(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"IGNORE END(.*)$" _ -> Some <| IgnoreComment.RangeEnd r.StartLine
+            | ParseRegexCompiled @"IGNORE\s+END(.*)$" _ -> Some <| IgnoreComment.RangeEnd r.StartLine
             | _ -> None
 
     let getIgnoreComments (sourceText: ISourceText) (comments: CommentTrivia list) =

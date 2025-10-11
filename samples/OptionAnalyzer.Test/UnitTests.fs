@@ -274,3 +274,55 @@ let x = 1
         ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
         ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [SingleLine 3]
     }
+
+[<Test>]
+let ``file ignore handles tight spacing`` () =
+    async {
+        let source = """
+module M
+// IGNORE FILE:IONIDE-001
+let x = 1
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [File]
+    }
+
+[<Test>]
+let ``file ignore handles loose spacing`` () =
+    async {
+        let source = """
+module M
+// IGNORE FILE :     IONIDE-001
+let x = 1
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [File]
+    }
+
+
+
+[<Test>]
+let ``range ignore handles tight spacing`` () =
+    async {
+        let source = """
+module M
+// IGNORE START:IONIDE-001
+let x = 1
+// IGNORE END
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
+    }
+
+[<Test>]
+let ``range ignore handles loose spacing`` () =
+    async {
+        let source = """
+module M
+// IGNORE START   :     IONIDE-001
+let x = 1
+// IGNORE END
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
+    }
