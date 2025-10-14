@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <MsBuildPackageVersion>17.2.0</MsBuildPackageVersion>
+    <MsBuildPackageVersion>17.8.29</MsBuildPackageVersion>
     <NuGetAuditMode>direct</NuGetAuditMode>
   </PropertyGroup>
   <ItemGroup>
