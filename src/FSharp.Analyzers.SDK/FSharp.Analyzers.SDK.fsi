@@ -50,7 +50,8 @@ type EditorAnalyzerAttribute =
     member Name: string
 
 /// Marker interface which both the CliContext and EditorContext implement
-type Context = interface end
+type Context =
+    abstract member AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
 
 /// Options related to the project being analyzed.
 type AnalyzerProjectOptions =

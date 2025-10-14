@@ -199,7 +199,8 @@ type EditorAnalyzerAttribute
 
     member _.Name = name
 
-type Context = interface end
+type Context =
+    abstract member AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
 
 type AnalyzerProjectOptions =
     | BackgroundCompilerOptions of FSharpProjectOptions
@@ -251,7 +252,9 @@ type CliContext =
         AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
-    interface Context
+    interface Context with
+
+        member x.AnalyzerIgnoreRanges = x.AnalyzerIgnoreRanges
 
     member x.GetAllEntities(publicOnly: bool) =
         EntityCache.getEntities publicOnly x.CheckFileResults
@@ -274,7 +277,9 @@ type EditorContext =
         AnalyzerIgnoreRanges: Map<string, AnalyzerIgnoreRange list>
     }
 
-    interface Context
+    interface Context with
+
+        member x.AnalyzerIgnoreRanges = x.AnalyzerIgnoreRanges
 
     member x.GetAllEntities(publicOnly: bool) : AssemblySymbol list =
         match x.CheckFileResults with
