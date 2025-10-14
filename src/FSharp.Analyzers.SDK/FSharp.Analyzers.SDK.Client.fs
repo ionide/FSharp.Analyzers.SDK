@@ -117,8 +117,13 @@ module Client =
                         true
                     else
                         false
-                | SingleLine line ->
+                | NextLine line ->
                     if message.Range.StartLine - 1 = line then
+                        true
+                    else
+                        false
+                | CurrentLine line ->
+                    if message.Range.StartLine = line then
                         true
                     else
                         false

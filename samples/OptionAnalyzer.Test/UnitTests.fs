@@ -88,28 +88,51 @@ let tryCompareRanges code expected (results: Map<string, AnalyzerIgnoreRange lis
         Assert.That(ranges, Is.EquivalentTo(expected))
 
 [<Test>]
-let ``get single line scoped ignore with one code`` () =
+let ``get next line scoped ignore with one code`` () =
     async {
         let source = """
 module M
-// IGNORE: IONIDE-001
+// fsharpanalyzer: ignore-line-next IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [NextLine 3]
     }
 
 [<Test>]
-let ``get single line scoped ignore with multiple codes`` () =
+let ``get next line scoped ignore with multiple codes`` () =
     async {
         let source = """
 module M
-// IGNORE: IONIDE-001, IONIDE-002
+// fsharpanalyzer: ignore-line-next IONIDE-001, IONIDE-002
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [SingleLine 3]
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [NextLine 3]
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [NextLine 3]
+    }
+
+[<Test>]
+let ``get current line scoped ignore with one code`` () =
+    async {
+        let source = """
+module M
+let x = 1 // fsharpanalyzer: ignore-line IONIDE-001
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [CurrentLine 3]
+    }
+
+[<Test>]
+let ``get current line scoped ignore with multiple codes`` () =
+    async {
+        let source = """
+module M
+let x = 1 // fsharpanalyzer: ignore-line IONIDE-001, IONIDE-002
+"""
+        let ctx = getContext projectOptions source
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [CurrentLine 3]
+        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [CurrentLine 3]
     }
 
 [<Test>]
@@ -117,7 +140,7 @@ let ``get file scoped ignore`` () =
     async {
         let source = """
 module M
-// IGNORE FILE: IONIDE-001
+// fsharpanalyzer: ignore-file IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
@@ -129,7 +152,7 @@ let ``get file scoped ignore with multiple codes`` () =
     async {
         let source = """
 module M
-// IGNORE FILE: IONIDE-001, IONIDE-002, IONIDE-003
+// fsharpanalyzer: ignore-file IONIDE-001, IONIDE-002, IONIDE-003
 let x = 1
 """
         let ctx = getContext projectOptions source
@@ -143,9 +166,9 @@ let ``get range scoped ignore`` () =
     async {
         let source = """
 module M
-// IGNORE START: IONIDE-001
+// fsharpanalyzer: ignore-region-start IONIDE-001
 let x = 1
-// IGNORE END
+// fsharpanalyzer: ignore-region-end
 """
         let ctx = getContext projectOptions source
         ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
@@ -156,9 +179,9 @@ let ``get range scoped ignore with multiple codes`` () =
     async {
         let source = """
 module M
-// IGNORE START: IONIDE-001, IONIDE-002
+// fsharpanalyzer: ignore-region-start IONIDE-001, IONIDE-002
 let x = 1
-// IGNORE END
+// fsharpanalyzer: ignore-region-end
 """
         let ctx = getContext projectOptions source
         ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
@@ -170,11 +193,11 @@ let ``get range scoped ignore handles nested ignores`` () =
     async {
         let source = """
 module M
-// IGNORE START: IONIDE-001
-// IGNORE START: IONIDE-002
+// fsharpanalyzer: ignore-region-start IONIDE-001
+// fsharpanalyzer: ignore-region-start IONIDE-002
 let x = 1
-// IGNORE END
-// IGNORE END
+// fsharpanalyzer: ignore-region-end
+// fsharpanalyzer: ignore-region-end
 """
         let ctx = getContext projectOptions source
         ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 7)]
@@ -186,7 +209,7 @@ let ``ignores unclosed range scoped ignore`` () =
     async {
         let source = """
 module M
-// IGNORE START: IONIDE-001
+// fsharpanalyzer: ignore-region-start IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
@@ -199,7 +222,7 @@ let ``ignores unopened range scoped ignore`` () =
         let source = """
 module M
 let x = 1
-// IGNORE END
+// fsharpanalyzer: ignore-region-end
 """
         let ctx = getContext projectOptions source
         Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
@@ -209,70 +232,68 @@ let x = 1
 let ``code can have multiple ranges for one code`` () =
     async {
         let source = """
-// IGNORE FILE: IONIDE-001
+// fsharpanalyzer: ignore-file IONIDE-001
 module M
-// IGNORE START: IONIDE-001
-// IGNORE: IONIDE-001
+// fsharpanalyzer: ignore-region-start IONIDE-001
+// fsharpanalyzer: ignore-line-next IONIDE-001
 let x = 1
-// IGNORE END
+// fsharpanalyzer: ignore-region-end
 """
         let ctx = getContext projectOptions source
         ctx.AnalyzerIgnoreRanges 
         |> tryCompareRanges "IONIDE-001" [
             File
-            SingleLine 5
+            NextLine 5
             Range (4, 7)
         ]
     }
 
 [<Test>]
-let ``single line ignore handles tight spacing`` () =
+let ``next line ignore handles tight spacing`` () =
     async {
         let source = """
 module M
-// IGNORE:IONIDE-001
+// fsharpanalyzer:ignore-line-next IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
-let ``single line ignore handles loose spacing`` () =
+let ``next line ignore handles loose spacing`` () =
     async {
         let source = """
 module M
-// IGNORE    :     IONIDE-001
+// fsharpanalyzer     :      ignore-line-next     IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
-let ``single line, multi-code ignore handles tight spacing`` () =
+let ``next line, multi-code ignore handles tight spacing`` () =
     async {
         let source = """
 module M
-// IGNORE:IONIDE-001,IONIDE-002
+// fsharpanalyzer:ignore-line-next IONIDE-001,IONIDE-002
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [SingleLine 3]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
-let ``single line, multi-code ignore handles loose spacing`` () =
+let ``next line, multi-code ignore handles loose spacing`` () =
     async {
         let source = """
 module M
-// IGNORE    :     IONIDE-001   ,    IONIDE-002
+// fsharpanalyzer   :     ignore-line-next    IONIDE-001   ,    IONIDE-002
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [SingleLine 3]
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [SingleLine 3]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
@@ -280,11 +301,11 @@ let ``file ignore handles tight spacing`` () =
     async {
         let source = """
 module M
-// IGNORE FILE:IONIDE-001
+// fsharpanalyzer:ignore-file IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [File]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
@@ -292,11 +313,11 @@ let ``file ignore handles loose spacing`` () =
     async {
         let source = """
 module M
-// IGNORE FILE :     IONIDE-001
+// fsharpanalyzer    :    ignore-file     IONIDE-001
 let x = 1
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [File]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 
@@ -306,12 +327,12 @@ let ``range ignore handles tight spacing`` () =
     async {
         let source = """
 module M
-// IGNORE START:IONIDE-001
+// fsharpanalyzer:ignore-region-start IONIDE-001
 let x = 1
-// IGNORE END
+// fsharpanalyzer:ignore-region-end
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }
 
 [<Test>]
@@ -319,10 +340,10 @@ let ``range ignore handles loose spacing`` () =
     async {
         let source = """
 module M
-// IGNORE START   :     IONIDE-001
+// fsharpanalyzer      :   ignore-region-start     IONIDE-001
 let x = 1
-// IGNORE END
+// fsharpanalyzer    :    ignore-region-start
 """
         let ctx = getContext projectOptions source
-        ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [Range (3, 5)]
+        Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
     }

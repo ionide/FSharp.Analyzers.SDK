@@ -14,15 +14,17 @@ open FSharp.Compiler.SyntaxTrivia
 
 [<RequireQualifiedAccess>]
 type IgnoreComment =
-    | SingleLine of line: int * codes: string list
+    | CurrentLine of line: int * codes: string list
+    | NextLine of line: int * codes: string list
     | File of codes: string list
-    | RangeStart of startLine: int * codes: string list
-    | RangeEnd of endLine: int
+    | RegionStart of startLine: int * codes: string list
+    | RegionEnd of endLine: int
 
 type AnalyzerIgnoreRange = 
     | File
     | Range of commentStart: int * commentEnd: int
-    | SingleLine of commentLine: int
+    | NextLine of commentLine: int
+    | CurrentLine of commentLine: int
 
 module Ignore =
 
@@ -54,14 +56,18 @@ module Ignore =
         match ct with
         | CommentTrivia.BlockComment r
         | CommentTrivia.LineComment r ->
+            // pattern to match is:
+            // prefix: command [codes]
             match sourceText.GetLineString(r.StartLine - 1) with
-            | ParseRegexCompiled @"IGNORE\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
-                Some <| IgnoreComment.SingleLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"IGNORE\s+FILE\s*:\s*(.*)$" [ SplitBy splitBy codes ] -> 
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
+                Some <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*)$" [ SplitBy splitBy codes ] ->
+                Some <| IgnoreComment.CurrentLine(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] -> 
                 Some <| IgnoreComment.File (trimCodes codes)
-            | ParseRegexCompiled @"IGNORE\s+START\s*:\s*(.*)$" [ SplitBy splitBy codes ] ->
-                Some <| IgnoreComment.RangeStart(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"IGNORE\s+END(.*)$" _ -> Some <| IgnoreComment.RangeEnd r.StartLine
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*)$" [ SplitBy splitBy codes ] ->
+                Some <| IgnoreComment.RegionStart(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ -> Some <| IgnoreComment.RegionEnd r.StartLine
             | _ -> None
 
     let getIgnoreComments (sourceText: ISourceText) (comments: CommentTrivia list) =
@@ -83,13 +89,16 @@ module Ignore =
             | IgnoreComment.File codes ->
                 addRangeForCodes codes File
                 
-            | IgnoreComment.SingleLine (line, codes) ->
-                addRangeForCodes codes (SingleLine line)
+            | IgnoreComment.NextLine (line, codes) ->
+                addRangeForCodes codes (NextLine line)
+            
+            | IgnoreComment.CurrentLine (line, codes) ->
+                addRangeForCodes codes (CurrentLine line)
                 
-            | IgnoreComment.RangeStart (startLine, codes) ->
+            | IgnoreComment.RegionStart (startLine, codes) ->
                 rangeStack <- (startLine, codes) :: rangeStack
                 
-            | IgnoreComment.RangeEnd endLine ->
+            | IgnoreComment.RegionEnd endLine ->
                 match rangeStack with
                 | [] -> 
                     // Ignore END without matching START - do nothing

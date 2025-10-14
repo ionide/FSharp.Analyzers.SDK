@@ -8,10 +8,11 @@ open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 
-type AnalyzerIgnoreRange =
+type AnalyzerIgnoreRange = 
     | File
     | Range of commentStart: int * commentEnd: int
-    | SingleLine of commentLine: int
+    | NextLine of commentLine: int
+    | CurrentLine of commentLine: int
 
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
