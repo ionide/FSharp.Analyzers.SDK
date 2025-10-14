@@ -57,7 +57,6 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
     member RunAnalyzersSafely: ctx: 'TContext -> Async<AnalysisResult list>
 
-    
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
     member RunAnalyzersSafely: ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) -> Async<AnalysisResult list>
