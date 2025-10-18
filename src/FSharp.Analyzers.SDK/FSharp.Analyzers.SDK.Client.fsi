@@ -8,6 +8,16 @@ type AnalysisResult =
         Output: Result<Message list, exn>
     }
 
+module Client =
+    type RegisteredAnalyzer<'TContext when 'TContext :> Context> =
+        {
+            AssemblyPath: string
+            Name: string
+            Analyzer: Analyzer<'TContext>
+            ShortDescription: string option
+            HelpUri: string option
+        }
+
 type AssemblyLoadStats =
     {
         /// The number of DLLs from which we tried to load analyzers.
@@ -35,8 +45,23 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
     member LoadAnalyzers: dir: string * ?excludeInclude: ExcludeInclude -> AssemblyLoadStats
     /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <param name="ctx">The context (file) to analyze.</param>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
     member RunAnalyzers: ctx: 'TContext -> Async<AnalyzerMessage list>
+
     /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <param name="ctx">The context (file) to analyze.</param>
+    /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
+    /// <returns>list of messages. Ignores errors from the analyzers</returns>
+    member RunAnalyzers: ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) -> Async<AnalyzerMessage list>
+
+    /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <param name="ctx">The context (file) to analyze.</param>
     /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
     member RunAnalyzersSafely: ctx: 'TContext -> Async<AnalysisResult list>
+
+    /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <param name="ctx">The context (file) to analyze.</param>
+    /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
+    /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
+    member RunAnalyzersSafely: ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) -> Async<AnalysisResult list>

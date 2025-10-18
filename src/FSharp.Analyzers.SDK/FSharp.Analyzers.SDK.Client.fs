@@ -9,9 +9,11 @@ open System.Text.RegularExpressions
 open McMaster.NETCore.Plugins
 open Microsoft.Extensions.Logging
 
+type AnalyzerName = string
+
 type AnalysisResult =
     {
-        AnalyzerName: string
+        AnalyzerName: AnalyzerName
         Output: Result<Message list, exn>
     }
 
@@ -20,7 +22,7 @@ module Client =
     type RegisteredAnalyzer<'TContext when 'TContext :> Context> =
         {
             AssemblyPath: string
-            Name: string
+            Name: AnalyzerName
             Analyzer: Analyzer<'TContext>
             ShortDescription: string option
             HelpUri: string option
@@ -135,8 +137,8 @@ type AssemblyLoadStats =
     }
 
 type ExcludeInclude =
-    | ExcludeFilter of (string -> bool)
-    | IncludeFilter of (string -> bool)
+    | ExcludeFilter of (AnalyzerName -> bool)
+    | IncludeFilter of (AnalyzerName -> bool)
 
 type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>(logger: ILogger) =
     do TASTCollecting.logger <- logger
@@ -263,8 +265,11 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
             }
 
     member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
+        x.RunAnalyzers(ctx, fun _ -> true)
+
+    member x.RunAnalyzers(ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool) : Async<AnalyzerMessage list> =
         async {
-            let analyzers = registeredAnalyzers.Values |> Seq.collect id
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id |> Seq.filter analyzerPredicate
 
             let! messagesPerAnalyzer =
                 analyzers
@@ -298,8 +303,11 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
         }
 
     member x.RunAnalyzersSafely(ctx: 'TContext) : Async<AnalysisResult list> =
+        x.RunAnalyzersSafely(ctx, fun _ -> true)
+
+    member x.RunAnalyzersSafely(ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool) : Async<AnalysisResult list> =
         async {
-            let analyzers = registeredAnalyzers.Values |> Seq.collect id
+            let analyzers = registeredAnalyzers.Values |> Seq.collect id |> Seq.filter analyzerPredicate
 
             let! results =
                 analyzers
