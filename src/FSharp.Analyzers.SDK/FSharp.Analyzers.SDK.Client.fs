@@ -108,6 +108,30 @@ module Client =
             | None -> None
         | None -> None
 
+    let shouldIgnoreMessage (ctx: 'Context :> #Context) message =
+        match ctx.AnalyzerIgnoreRanges |> Map.tryFind message.Code with
+        | Some ignoreRanges ->
+            ignoreRanges
+            |> List.exists (function
+                | File -> true
+                | Range (commentStart, commentEnd) ->
+                    if message.Range.StartLine - 1 >= commentStart && message.Range.EndLine - 1 <= commentEnd then
+                        true
+                    else
+                        false
+                | NextLine line ->
+                    if message.Range.StartLine - 1 = line then
+                        true
+                    else
+                        false
+                | CurrentLine line ->
+                    if message.Range.StartLine = line then
+                        true
+                    else
+                        false
+            )
+        | None -> false
+
     let analyzersFromType<'TAnalyzerAttribute, 'TContext
         when 'TAnalyzerAttribute :> AnalyzerAttribute and 'TContext :> Context>
         (path: string)
@@ -280,14 +304,20 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                             return
                                 messages
-                                |> List.map (fun message ->
-                                    {
-                                        Message = message
-                                        Name = registeredAnalyzer.Name
-                                        AssemblyPath = registeredAnalyzer.AssemblyPath
-                                        ShortDescription = registeredAnalyzer.ShortDescription
-                                        HelpUri = registeredAnalyzer.HelpUri
-                                    }
+                                |> List.choose (fun message ->
+                                    let analyzerMessage = 
+                                        {
+                                            Message = message
+                                            Name = registeredAnalyzer.Name
+                                            AssemblyPath = registeredAnalyzer.AssemblyPath
+                                            ShortDescription = registeredAnalyzer.ShortDescription
+                                            HelpUri = registeredAnalyzer.HelpUri
+                                        }
+                                    
+                                    if Client.shouldIgnoreMessage ctx message then
+                                        None
+                                    else
+                                        Some analyzerMessage
                                 )
                         }
                     with error ->
@@ -314,12 +344,16 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 |> Seq.map (fun registeredAnalyzer ->
                     async {
                         try
-                            let! result = registeredAnalyzer.Analyzer ctx
+                            let! messages = 
+                                registeredAnalyzer.Analyzer ctx
+                                
+                            let messages =
+                                messages |> List.filter (Client.shouldIgnoreMessage ctx >> not)
 
                             return
                                 {
                                     AnalyzerName = registeredAnalyzer.Name
-                                    Output = Result.Ok result
+                                    Output = Result.Ok messages
                                 }
                         with error ->
                             return
