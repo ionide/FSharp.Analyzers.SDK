@@ -1,12 +1,18 @@
 module FSharp.Analyzers.Cli.Result
 
-let allOkOrError<'ok, 'err> (results: Result<'ok, 'err> list) : Result<'ok list, 'ok list * 'err list> =
+let allOkOrError<'ok, 'err>
+    (results: Result<'ok, 'err> list)
+    : Result<'ok list, 'ok list * 'err list>
+    =
     let oks, errs =
         (([], []), results)
         ||> List.fold (fun (oks, errs) result ->
             match result with
             | Ok ok -> ok :: oks, errs
-            | Error err -> oks, err :: errs
+            | Error err ->
+                oks,
+                err
+                :: errs
         )
 
     let oks = List.rev oks

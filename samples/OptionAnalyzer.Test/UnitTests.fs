@@ -79,7 +79,11 @@ let notUsed() =
 
         let ctx = getContext projectOptions source
         let! msgs = optionValueAnalyzer ctx
-        Assert.IsTrue(msgs |> List.contains expectedMsg)
+
+        Assert.IsTrue(
+            msgs
+            |> List.contains expectedMsg
+        )
     }
 
 module IgnoreRangeTests =
@@ -100,7 +104,9 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
         }
 
     [<Test>]
@@ -114,8 +120,12 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ NextLine 3 ]
         }
 
     [<Test>]
@@ -128,7 +138,9 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ CurrentLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ CurrentLine 3 ]
         }
 
     [<Test>]
@@ -141,8 +153,12 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ CurrentLine 3 ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [ CurrentLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ CurrentLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ CurrentLine 3 ]
         }
 
     [<Test>]
@@ -156,7 +172,9 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ File ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ File ]
         }
 
     [<Test>]
@@ -170,9 +188,15 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ File ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [ File ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-003" [ File ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ File ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ File ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-003" [ File ]
         }
 
     [<Test>]
@@ -187,7 +211,9 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ Range(3, 5) ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ Range(3, 5) ]
         }
 
     [<Test>]
@@ -202,8 +228,12 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ Range(3, 5) ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [ Range(3, 5) ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ Range(3, 5) ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ Range(3, 5) ]
         }
 
     [<Test>]
@@ -220,8 +250,12 @@ module IgnoreRangeTests =
     """
 
             let ctx = getContext projectOptions source
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-001" [ Range(3, 7) ]
-            ctx.AnalyzerIgnoreRanges |> tryCompareRanges "IONIDE-002" [ Range(4, 6) ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ Range(3, 7) ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ Range(4, 6) ]
         }
 
     [<Test>]
@@ -268,7 +302,13 @@ module IgnoreRangeTests =
             let ctx = getContext projectOptions source
 
             ctx.AnalyzerIgnoreRanges
-            |> tryCompareRanges "IONIDE-001" [ File; NextLine 5; Range(4, 7) ]
+            |> tryCompareRanges
+                "IONIDE-001"
+                [
+                    File
+                    NextLine 5
+                    Range(4, 7)
+                ]
         }
 
     [<Test>]
@@ -428,7 +468,7 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
 
                 match List.tryHead messages with
@@ -457,14 +497,15 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
 
                 match List.tryHead messages with
                 | Some message ->
                     match message.Output with
                     | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex -> Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
+                    | Error ex ->
+                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
                 | None -> Assert.Fail("Expected at least one analyzer result")
             }
 
@@ -487,15 +528,16 @@ module ClientTests =
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
-                
+
                 match List.tryHead messages with
                 | Some message ->
                     match message.Output with
                     | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex -> Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
+                    | Error ex ->
+                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
                 | None -> Assert.Fail("Expected at least one analyzer result")
             }
-        
+
         [<Test>]
         let ``run analyzer safely ignores file comment properly`` () =
             async {
@@ -514,17 +556,18 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
-                
+
                 match List.tryHead messages with
                 | Some message ->
                     match message.Output with
                     | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex -> Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
+                    | Error ex ->
+                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
                 | None -> Assert.Fail("Expected at least one analyzer result")
             }
-        
+
         [<Test>]
         let ``run analyzer safely ignores range comment properly`` () =
             async {
@@ -544,14 +587,15 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
-                
+
                 match List.tryHead messages with
                 | Some message ->
                     match message.Output with
                     | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex -> Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
+                    | Error ex ->
+                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
                 | None -> Assert.Fail("Expected at least one analyzer result")
             }
 
@@ -596,7 +640,7 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
                 Assert.That(messages, Is.Not.Empty)
             }
@@ -619,7 +663,7 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
                 Assert.That(messages, Is.Empty)
             }
@@ -645,7 +689,7 @@ module ClientTests =
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
                 Assert.That(messages, Is.Empty)
             }
-        
+
         [<Test>]
         let ``run analyzer ignores file comment properly`` () =
             async {
@@ -664,11 +708,11 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
                 Assert.That(messages, Is.Empty)
             }
-        
+
         [<Test>]
         let ``run analyzer ignores range comment properly`` () =
             async {
@@ -688,7 +732,7 @@ module ClientTests =
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
-                
+
                 Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
                 Assert.That(messages, Is.Empty)
             }

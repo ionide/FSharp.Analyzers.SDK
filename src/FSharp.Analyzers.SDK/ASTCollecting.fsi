@@ -9,8 +9,11 @@ module ASTCollecting =
         new: unit -> SyntaxCollectorBase
 
         /// Overwriting this member hooks up a custom operation for a module or namespace syntax element.
-        abstract WalkSynModuleOrNamespace: path: SyntaxVisitorPath * moduleOrNamespace: SynModuleOrNamespace -> unit
-        default WalkSynModuleOrNamespace: path: SyntaxVisitorPath * moduleOrNamespace: SynModuleOrNamespace -> unit
+        abstract WalkSynModuleOrNamespace:
+            path: SyntaxVisitorPath * moduleOrNamespace: SynModuleOrNamespace -> unit
+
+        default WalkSynModuleOrNamespace:
+            path: SyntaxVisitorPath * moduleOrNamespace: SynModuleOrNamespace -> unit
 
         /// Overwriting this member hooks up a custom operation for a module or namespace syntax element in a signature file.
         abstract WalkSynModuleOrNamespaceSig:
@@ -28,8 +31,11 @@ module ASTCollecting =
         default WalkSynModuleDecl: path: SyntaxVisitorPath * moduleDecl: SynModuleDecl -> unit
 
         /// Overwriting this member hooks up a custom operation for declarations inside a module or namespace in a signature file.
-        abstract WalkSynModuleSigDecl: path: SyntaxVisitorPath * moduleSigDecl: SynModuleSigDecl -> unit
-        default WalkSynModuleSigDecl: path: SyntaxVisitorPath * moduleSigDecl: SynModuleSigDecl -> unit
+        abstract WalkSynModuleSigDecl:
+            path: SyntaxVisitorPath * moduleSigDecl: SynModuleSigDecl -> unit
+
+        default WalkSynModuleSigDecl:
+            path: SyntaxVisitorPath * moduleSigDecl: SynModuleSigDecl -> unit
 
         /// Overwriting this member hooks up a custom operation for syntax expressions.
         abstract WalkExpr: path: SyntaxVisitorPath * expr: SynExpr -> unit
@@ -44,8 +50,11 @@ module ASTCollecting =
         default WalkTyparDecl: path: SyntaxVisitorPath * typarDecl: SynTyparDecl -> unit
 
         /// Overwriting this member hooks up a custom operation for type constraints.
-        abstract WalkTypeConstraint: path: SyntaxVisitorPath * typeConstraint: SynTypeConstraint -> unit
-        default WalkTypeConstraint: path: SyntaxVisitorPath * typeConstraint: SynTypeConstraint -> unit
+        abstract WalkTypeConstraint:
+            path: SyntaxVisitorPath * typeConstraint: SynTypeConstraint -> unit
+
+        default WalkTypeConstraint:
+            path: SyntaxVisitorPath * typeConstraint: SynTypeConstraint -> unit
 
         /// Overwriting this member hooks up a custom operation for types.
         abstract WalkType: path: SyntaxVisitorPath * ``type``: SynType -> unit
@@ -60,7 +69,9 @@ module ASTCollecting =
         default WalkPat: path: SyntaxVisitorPath * pat: SynPat -> unit
 
         /// Overwriting this member hooks up a custom operation for type parameters for a member of function.
-        abstract WalkValTyparDecls: path: SyntaxVisitorPath * valTyparDecls: SynValTyparDecls -> unit
+        abstract WalkValTyparDecls:
+            path: SyntaxVisitorPath * valTyparDecls: SynValTyparDecls -> unit
+
         default WalkValTyparDecls: path: SyntaxVisitorPath * valTyparDecls: SynValTyparDecls -> unit
 
         /// Overwriting this member hooks up a custom operation for a binding of a 'let' or 'member' declaration.
@@ -72,7 +83,9 @@ module ASTCollecting =
         default WalkSimplePat: path: SyntaxVisitorPath * simplePat: SynSimplePat -> unit
 
         /// Overwriting this member hooks up a custom operation for interface implementations.
-        abstract WalkInterfaceImpl: path: SyntaxVisitorPath * interfaceImpl: SynInterfaceImpl -> unit
+        abstract WalkInterfaceImpl:
+            path: SyntaxVisitorPath * interfaceImpl: SynInterfaceImpl -> unit
+
         default WalkInterfaceImpl: path: SyntaxVisitorPath * interfaceImpl: SynInterfaceImpl -> unit
 
         /// Overwriting this member hooks up a custom operation for clauses in a 'match' expression.
@@ -91,15 +104,22 @@ module ASTCollecting =
         default WalkMeasure: path: SyntaxVisitorPath * measure: SynMeasure -> unit
 
         /// Overwriting this member hooks up a custom operation for the name of a type definition or module.
-        abstract WalkComponentInfo: path: SyntaxVisitorPath * componentInfo: SynComponentInfo -> unit
+        abstract WalkComponentInfo:
+            path: SyntaxVisitorPath * componentInfo: SynComponentInfo -> unit
+
         default WalkComponentInfo: path: SyntaxVisitorPath * componentInfo: SynComponentInfo -> unit
 
         /// Overwriting this member hooks up a custom operation for the right-hand-side of a type definition.
-        abstract WalkTypeDefnSigRepr: path: SyntaxVisitorPath * typeDefnSigRepr: SynTypeDefnSigRepr -> unit
-        default WalkTypeDefnSigRepr: path: SyntaxVisitorPath * typeDefnSigRepr: SynTypeDefnSigRepr -> unit
+        abstract WalkTypeDefnSigRepr:
+            path: SyntaxVisitorPath * typeDefnSigRepr: SynTypeDefnSigRepr -> unit
+
+        default WalkTypeDefnSigRepr:
+            path: SyntaxVisitorPath * typeDefnSigRepr: SynTypeDefnSigRepr -> unit
 
         /// Overwriting this member hooks up a custom operation for the right-hand-side of union definition, excluding members.
-        abstract WalkUnionCaseType: path: SyntaxVisitorPath * unionCaseKind: SynUnionCaseKind -> unit
+        abstract WalkUnionCaseType:
+            path: SyntaxVisitorPath * unionCaseKind: SynUnionCaseKind -> unit
+
         default WalkUnionCaseType: path: SyntaxVisitorPath * unionCaseKind: SynUnionCaseKind -> unit
 
         /// Overwriting this member hooks up a custom operation for the cases of an enum definition.
@@ -111,8 +131,11 @@ module ASTCollecting =
         default WalkField: path: SyntaxVisitorPath * field: SynField -> unit
 
         /// Overwriting this member hooks up a custom operation for the core of a simple type definition.
-        abstract WalkTypeDefnSimple: path: SyntaxVisitorPath * typeDefnSimpleRepr: SynTypeDefnSimpleRepr -> unit
-        default WalkTypeDefnSimple: path: SyntaxVisitorPath * typeDefnSimpleRepr: SynTypeDefnSimpleRepr -> unit
+        abstract WalkTypeDefnSimple:
+            path: SyntaxVisitorPath * typeDefnSimpleRepr: SynTypeDefnSimpleRepr -> unit
+
+        default WalkTypeDefnSimple:
+            path: SyntaxVisitorPath * typeDefnSimpleRepr: SynTypeDefnSimpleRepr -> unit
 
         /// Overwriting this member hooks up a custom operation for a 'val' definition in an abstract slot or a signature file.
         abstract WalkValSig: path: SyntaxVisitorPath * valSig: SynValSig -> unit

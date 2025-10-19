@@ -16,7 +16,8 @@ exception CompilerDiagnosticErrors of FSharpDiagnostic array
 /// <param name="framework">The target framework for the tested code to use. E.g. net6.0, net7.0</param>
 /// <param name="additionalPkgs">A list of additional packages that should be referenced. The tested code can use these.</param>
 /// <returns>FSharpProjectOptions</returns>
-val mkOptionsFromProject: framework: string -> additionalPkgs: Package list -> Task<FSharpProjectOptions>
+val mkOptionsFromProject:
+    framework: string -> additionalPkgs: Package list -> Task<FSharpProjectOptions>
 
 val getContext: opts: FSharpProjectOptions -> source: string -> CliContext
 val getContextForSignature: opts: FSharpProjectOptions -> source: string -> CliContext

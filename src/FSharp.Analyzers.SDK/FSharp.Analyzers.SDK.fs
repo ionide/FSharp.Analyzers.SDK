@@ -20,7 +20,7 @@ type IgnoreComment =
     | RegionStart of startLine: int * codes: string list
     | RegionEnd of endLine: int
 
-type AnalyzerIgnoreRange = 
+type AnalyzerIgnoreRange =
     | File
     | Range of commentStart: int * commentEnd: int
     | NextLine of commentLine: int
@@ -39,7 +39,9 @@ module Ignore =
     [<return: Struct>]
     let (|ParseRegexWithOptions|_|) options (pattern: string) (s: string) =
         match Regex.Match(s, pattern, options) with
-        | m when m.Success -> List.tail [ for x in m.Groups -> x.Value ] |> ValueSome
+        | m when m.Success ->
+            List.tail [ for x in m.Groups -> x.Value ]
+            |> ValueSome
         | _ -> ValueNone
 
     [<return: Struct>]
@@ -47,10 +49,13 @@ module Ignore =
 
     [<return: Struct>]
     let (|SplitBy|_|) x (text: string) =
-        text.Split(x) |> Array.toList |> ValueSome
+        text.Split(x)
+        |> Array.toList
+        |> ValueSome
 
     let trimCodes (codes: string list) =
-        codes |> List.map (fun s -> s.Trim())
+        codes
+        |> List.map (fun s -> s.Trim())
 
     let tryGetIgnoreComment splitBy (sourceText: ISourceText) (ct: CommentTrivia) =
         match ct with
@@ -58,56 +63,77 @@ module Ignore =
         | CommentTrivia.LineComment r ->
             // pattern to match is:
             // prefix: command [codes]
-            match sourceText.GetLineString(r.StartLine - 1) with
+            match
+                sourceText.GetLineString(
+                    r.StartLine
+                    - 1
+                )
+            with
             | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
+                Some
+                <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
             | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some <| IgnoreComment.CurrentLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] -> 
-                Some <| IgnoreComment.File (trimCodes codes)
+                Some
+                <| IgnoreComment.CurrentLine(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] ->
+                Some
+                <| IgnoreComment.File(trimCodes codes)
             | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some <| IgnoreComment.RegionStart(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ -> Some <| IgnoreComment.RegionEnd r.StartLine
+                Some
+                <| IgnoreComment.RegionStart(r.StartLine, trimCodes codes)
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ ->
+                Some
+                <| IgnoreComment.RegionEnd r.StartLine
             | _ -> None
 
     let getIgnoreComments (sourceText: ISourceText) (comments: CommentTrivia list) =
         comments
         |> List.choose (tryGetIgnoreComment [| ',' |] sourceText)
 
-    let getIgnoreRanges (ignoreComments: IgnoreComment list) : Map<string, AnalyzerIgnoreRange list> =
+    let getIgnoreRanges
+        (ignoreComments: IgnoreComment list)
+        : Map<string, AnalyzerIgnoreRange list>
+        =
         let mutable codeToRanges = Map.empty<string, AnalyzerIgnoreRange list>
-        
+
         let addRangeForCodes (codes: string list) (range: AnalyzerIgnoreRange) =
             for code in codes do
-                let existingRanges = Map.tryFind code codeToRanges |> Option.defaultValue []
-                codeToRanges <- Map.add code (range :: existingRanges) codeToRanges
-        
+                let existingRanges =
+                    Map.tryFind code codeToRanges
+                    |> Option.defaultValue []
+
+                codeToRanges <-
+                    Map.add
+                        code
+                        (range
+                         :: existingRanges)
+                        codeToRanges
+
         let mutable rangeStack = []
-        
+
         for comment in ignoreComments do
             match comment with
-            | IgnoreComment.File codes ->
-                addRangeForCodes codes File
-                
-            | IgnoreComment.NextLine (line, codes) ->
-                addRangeForCodes codes (NextLine line)
-            
-            | IgnoreComment.CurrentLine (line, codes) ->
-                addRangeForCodes codes (CurrentLine line)
-                
-            | IgnoreComment.RegionStart (startLine, codes) ->
-                rangeStack <- (startLine, codes) :: rangeStack
-                
+            | IgnoreComment.File codes -> addRangeForCodes codes File
+
+            | IgnoreComment.NextLine(line, codes) -> addRangeForCodes codes (NextLine line)
+
+            | IgnoreComment.CurrentLine(line, codes) -> addRangeForCodes codes (CurrentLine line)
+
+            | IgnoreComment.RegionStart(startLine, codes) ->
+                rangeStack <-
+                    (startLine, codes)
+                    :: rangeStack
+
             | IgnoreComment.RegionEnd endLine ->
                 match rangeStack with
-                | [] -> 
+                | [] ->
                     // Ignore END without matching START - do nothing
                     // to-do: create analyzer for finding unmatched END comments
                     ()
                 | (startLine, codes) :: rest ->
                     rangeStack <- rest
-                    addRangeForCodes codes (Range (startLine, endLine))
-        
+                    addRangeForCodes codes (Range(startLine, endLine))
+
         codeToRanges
 
 module EntityCache =
@@ -139,7 +165,11 @@ module EntityCache =
                                 AssemblyContentType.Full
 
                         let content =
-                            AssemblyContent.GetAssemblyContent entityCache.Locking contentType fileName signatures
+                            AssemblyContent.GetAssemblyContent
+                                entityCache.Locking
+                                contentType
+                                fileName
+                                signatures
 
                         yield! content
                 ]
@@ -156,18 +186,24 @@ module Extensions =
 
         member x.ProjectFilePath =
             match x with
-            | FSharpReferencedProjectSnapshot.FSharpReference(snapshot = snapshot) -> snapshot.ProjectFileName |> Some
+            | FSharpReferencedProjectSnapshot.FSharpReference(snapshot = snapshot) ->
+                snapshot.ProjectFileName
+                |> Some
             | _ -> None
 
     type FSharpReferencedProject with
 
         member x.ProjectFilePath =
             match x with
-            | FSharpReferencedProject.FSharpReference(options = options) -> options.ProjectFileName |> Some
+            | FSharpReferencedProject.FSharpReference(options = options) ->
+                options.ProjectFileName
+                |> Some
             | _ -> None
 
 [<AbstractClass>]
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type AnalyzerAttribute(name: string, shortDescription: string, helpUri: string) =
     inherit Attribute()
     member val Name: string = name
@@ -184,7 +220,9 @@ type AnalyzerAttribute(name: string, shortDescription: string, helpUri: string) 
         else
             Some helpUri
 
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type CliAnalyzerAttribute
     (
         [<Optional; DefaultParameterValue "Analyzer">] name: string,
@@ -196,7 +234,9 @@ type CliAnalyzerAttribute
 
     member _.Name = name
 
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type EditorAnalyzerAttribute
     (
         [<Optional; DefaultParameterValue "Analyzer">] name: string,
@@ -227,17 +267,23 @@ type AnalyzerProjectOptions =
 
     member x.SourceFiles =
         match x with
-        | BackgroundCompilerOptions(options) -> options.SourceFiles |> Array.toList
-        | TransparentCompilerOptions(snapshot) -> snapshot.SourceFiles |> List.map (fun f -> f.FileName)
+        | BackgroundCompilerOptions(options) ->
+            options.SourceFiles
+            |> Array.toList
+        | TransparentCompilerOptions(snapshot) ->
+            snapshot.SourceFiles
+            |> List.map (fun f -> f.FileName)
         |> List.map System.IO.Path.GetFullPath
 
     member x.ReferencedProjectsPath =
         match x with
         | BackgroundCompilerOptions(options) ->
-          options.ReferencedProjects
-          |> Array.choose (fun p -> p.ProjectFilePath)
-          |> Array.toList
-        | TransparentCompilerOptions(snapshot) -> snapshot.ReferencedProjects |> List.choose (fun p -> p.ProjectFilePath)
+            options.ReferencedProjects
+            |> Array.choose (fun p -> p.ProjectFilePath)
+            |> Array.toList
+        | TransparentCompilerOptions(snapshot) ->
+            snapshot.ReferencedProjects
+            |> List.choose (fun p -> p.ProjectFilePath)
 
     member x.LoadTime =
         match x with
@@ -246,7 +292,9 @@ type AnalyzerProjectOptions =
 
     member x.OtherOptions =
         match x with
-        | BackgroundCompilerOptions(options) -> options.OtherOptions |> Array.toList
+        | BackgroundCompilerOptions(options) ->
+            options.OtherOptions
+            |> Array.toList
         | TransparentCompilerOptions(snapshot) -> snapshot.OtherOptions
 
 type CliContext =
@@ -349,7 +397,10 @@ module Utils =
     let currentFSharpCoreVersion =
         let currentAssembly = Assembly.GetExecutingAssembly()
         let references = currentAssembly.GetReferencedAssemblies()
-        let fc = references |> Array.tryFind (fun ra -> ra.Name = "FSharp.Core")
+
+        let fc =
+            references
+            |> Array.tryFind (fun ra -> ra.Name = "FSharp.Core")
 
         match fc with
         | None -> failwith "FSharp.Core could not be found as a reference assembly of the SDK."

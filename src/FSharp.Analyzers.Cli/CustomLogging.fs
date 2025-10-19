@@ -27,7 +27,11 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
     member private _.ReloadLoggerOptions(opts: CustomOptions) = formatterOptions <- opts
 
     override this.Write<'TState>
-        (logEntry: inref<LogEntry<'TState>>, _scopeProvider: IExternalScopeProvider, textWriter: TextWriter)
+        (
+            logEntry: inref<LogEntry<'TState>>,
+            _scopeProvider: IExternalScopeProvider,
+            textWriter: TextWriter
+        )
         =
         let message = logEntry.Formatter.Invoke(logEntry.State, logEntry.Exception)
 
@@ -89,7 +93,10 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
 type ConsoleLoggerExtensions =
 
     [<Extension>]
-    static member AddCustomFormatter(builder: ILoggingBuilder, configure: Action<CustomOptions>) : ILoggingBuilder =
+    static member AddCustomFormatter
+        (builder: ILoggingBuilder, configure: Action<CustomOptions>)
+        : ILoggingBuilder
+        =
         builder
             .AddConsole(fun options -> options.FormatterName <- "customName")
             .AddConsoleFormatter<CustomFormatter, CustomOptions>(configure)

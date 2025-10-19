@@ -37,34 +37,49 @@ let private topologicallySortedOpenStatementsAnalyzer
             let allOpenStatements = ResizeArray<string list * range>()
 
             let (|LongIdentAsString|) (lid: SynLongIdent) =
-                lid.LongIdent |> List.map (fun ident -> ident.idText)
+                lid.LongIdent
+                |> List.map (fun ident -> ident.idText)
 
             let walker =
                 { new SyntaxCollectorBase() with
                     override _.WalkSynModuleSigDecl(_, decl: SynModuleSigDecl) =
                         match decl with
                         | SynModuleSigDecl.Open(
-                            target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
+                            target = SynOpenDeclTarget.ModuleOrNamespace(
+                                longId = LongIdentAsString value; range = mOpen)) ->
                             allOpenStatements.Add(value, mOpen)
                         | _ -> ()
 
                     override _.WalkSynModuleDecl(_, decl: SynModuleDecl) =
                         match decl with
                         | SynModuleDecl.Open(
-                            target = SynOpenDeclTarget.ModuleOrNamespace(longId = LongIdentAsString value; range = mOpen)) ->
+                            target = SynOpenDeclTarget.ModuleOrNamespace(
+                                longId = LongIdentAsString value; range = mOpen)) ->
                             allOpenStatements.Add(value, mOpen)
                         | _ -> ()
                 }
 
             ASTCollecting.walkAst walker untypedTree
 
-            allOpenStatements |> Seq.toList
+            allOpenStatements
+            |> Seq.toList
 
         let isSystemOpenStatement (openStatement: string list, mOpen: range) =
             let isFromBCL () =
-                let line = sourceText.GetLineString(mOpen.EndLine - 1)
+                let line =
+                    sourceText.GetLineString(
+                        mOpen.EndLine
+                        - 1
+                    )
 
-                match checkResults.GetSymbolUseAtLocation(mOpen.EndLine, mOpen.EndColumn, line, openStatement) with
+                match
+                    checkResults.GetSymbolUseAtLocation(
+                        mOpen.EndLine,
+                        mOpen.EndColumn,
+                        line,
+                        openStatement
+                    )
+                with
                 | Some symbolUse ->
                     match symbolUse.Symbol.Assembly.FileName with
                     | None -> false
@@ -73,19 +88,25 @@ let private topologicallySortedOpenStatementsAnalyzer
                         assemblyPath.ToLower().Contains "microsoft.netcore.app.ref"
                 | _ -> false
 
-            openStatement.[0].StartsWith("System") && isFromBCL ()
+            openStatement.[0].StartsWith("System")
+            && isFromBCL ()
 
-        let nonSystemOpens = allOpenStatements |> List.skipWhile isSystemOpenStatement
+        let nonSystemOpens =
+            allOpenStatements
+            |> List.skipWhile isSystemOpenStatement
 
         return
             nonSystemOpens
             |> List.filter isSystemOpenStatement
             |> List.map (fun (openStatement, mOpen) ->
-                let openStatementText = openStatement |> String.concat "."
+                let openStatementText =
+                    openStatement
+                    |> String.concat "."
 
                 {
                     Type = "Unsorted System open statement"
-                    Message = $"%s{openStatementText} was found after non System namespaces where opened!"
+                    Message =
+                        $"%s{openStatementText} was found after non System namespaces where opened!"
                     Code = "SOT001"
                     Severity = Severity.Warning
                     Range = mOpen
@@ -96,7 +117,10 @@ let private topologicallySortedOpenStatementsAnalyzer
 
 [<CliAnalyzer "Topologically sorted open statements">]
 let cliAnalyzer (ctx: CliContext) : Async<Message list> =
-    topologicallySortedOpenStatementsAnalyzer ctx.SourceText ctx.ParseFileResults.ParseTree ctx.CheckFileResults
+    topologicallySortedOpenStatementsAnalyzer
+        ctx.SourceText
+        ctx.ParseFileResults.ParseTree
+        ctx.CheckFileResults
 
 [<EditorAnalyzer "Topologically sorted open statements">]
 let editorAnalyzer (ctx: EditorContext) : Async<Message list> =
@@ -104,7 +128,10 @@ let editorAnalyzer (ctx: EditorContext) : Async<Message list> =
     // The editor might not have any check results for a given file. So we don't return any messages.
     | None -> async.Return []
     | Some checkResults ->
-        topologicallySortedOpenStatementsAnalyzer ctx.SourceText ctx.ParseFileResults.ParseTree checkResults
+        topologicallySortedOpenStatementsAnalyzer
+            ctx.SourceText
+            ctx.ParseFileResults.ParseTree
+            checkResults
 
 (**
 Both analyzers will follow the same code path: the console application will always have the required data, while the editor needs to be more careful.  

@@ -53,7 +53,9 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <param name="ctx">The context (file) to analyze.</param>
     /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
     /// <returns>list of messages. Ignores errors from the analyzers</returns>
-    member RunAnalyzers: ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) -> Async<AnalyzerMessage list>
+    member RunAnalyzers:
+        ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) ->
+            Async<AnalyzerMessage list>
 
     /// <summary>Runs all registered analyzers for given context (file).</summary>
     /// <param name="ctx">The context (file) to analyze.</param>
@@ -64,4 +66,6 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <param name="ctx">The context (file) to analyze.</param>
     /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
     /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
-    member RunAnalyzersSafely: ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) -> Async<AnalysisResult list>
+    member RunAnalyzersSafely:
+        ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) ->
+            Async<AnalysisResult list>

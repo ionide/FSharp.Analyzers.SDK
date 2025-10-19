@@ -5,13 +5,24 @@ module ASTCollecting =
 
     /// A pattern that collects all attributes from a `SynAttributes` into a single flat list
     let (|AllAttrs|) (attrs: SynAttributes) =
-        attrs |> List.collect (fun attrList -> attrList.Attributes)
+        attrs
+        |> List.collect (fun attrList -> attrList.Attributes)
 
     /// An recursive pattern that collect all sequential expressions to avoid StackOverflowException
     let (|Sequentials|_|) e =
-        let rec visit (e: SynExpr) (finalContinuation: SynExpr list -> SynExpr list) : SynExpr list =
+        let rec visit
+            (e: SynExpr)
+            (finalContinuation: SynExpr list -> SynExpr list)
+            : SynExpr list
+            =
             match e with
-            | SynExpr.Sequential(expr1 = e1; expr2 = e2) -> visit e2 (fun xs -> e1 :: xs |> finalContinuation)
+            | SynExpr.Sequential(expr1 = e1; expr2 = e2) ->
+                visit
+                    e2
+                    (fun xs ->
+                        e1 :: xs
+                        |> finalContinuation
+                    )
             | e -> finalContinuation [ e ]
 
         match e with
@@ -23,12 +34,17 @@ module ASTCollecting =
     let (|ConstructorPats|) =
         function
         | SynArgPats.Pats ps -> ps
-        | SynArgPats.NamePatPairs(pats = xs) -> xs |> List.map (fun (_, _, pat) -> pat)
+        | SynArgPats.NamePatPairs(pats = xs) ->
+            xs
+            |> List.map (fun (_, _, pat) -> pat)
 
     type SyntaxCollectorBase() =
         abstract WalkSynModuleOrNamespace: path: SyntaxVisitorPath * SynModuleOrNamespace -> unit
         default _.WalkSynModuleOrNamespace(_, _) = ()
-        abstract WalkSynModuleOrNamespaceSig: path: SyntaxVisitorPath * SynModuleOrNamespaceSig -> unit
+
+        abstract WalkSynModuleOrNamespaceSig:
+            path: SyntaxVisitorPath * SynModuleOrNamespaceSig -> unit
+
         default _.WalkSynModuleOrNamespaceSig(_, _) = ()
         abstract WalkAttribute: path: SyntaxVisitorPath * SynAttribute -> unit
         default _.WalkAttribute(_, _) = ()
@@ -60,7 +76,10 @@ module ASTCollecting =
         default _.WalkInterfaceImpl(_, _) = ()
         abstract WalkClause: path: SyntaxVisitorPath * SynMatchClause -> unit
         default _.WalkClause(_, _) = ()
-        abstract WalkInterpolatedStringPart: path: SyntaxVisitorPath * SynInterpolatedStringPart -> unit
+
+        abstract WalkInterpolatedStringPart:
+            path: SyntaxVisitorPath * SynInterpolatedStringPart -> unit
+
         default _.WalkInterpolatedStringPart(_, _) = ()
         abstract WalkMeasure: path: SyntaxVisitorPath * SynMeasure -> unit
         default _.WalkMeasure(_, _) = ()
@@ -97,7 +116,9 @@ module ASTCollecting =
         and walkSigFileInput (ParsedSigFileInput(contents = moduleOrNamespaceList)) =
             List.iter walkSynModuleOrNamespaceSig moduleOrNamespaceList
 
-        and walkSynModuleOrNamespace (SynModuleOrNamespace(decls = decls; attribs = AllAttrs attrs; range = _) as s) =
+        and walkSynModuleOrNamespace
+            (SynModuleOrNamespace(decls = decls; attribs = AllAttrs attrs; range = _) as s)
+            =
             walker.WalkSynModuleOrNamespace([], s)
             let path = [ SyntaxNode.SynModuleOrNamespace s ]
             List.iter (walkAttribute path) attrs
@@ -111,7 +132,8 @@ module ASTCollecting =
             List.iter (walkAttribute path) attrs
             List.iter (walkSynModuleSigDecl path) decls
 
-        and walkAttribute (path: SyntaxVisitorPath) (attr: SynAttribute) = walkExpr path attr.ArgExpr
+        and walkAttribute (path: SyntaxVisitorPath) (attr: SynAttribute) =
+            walkExpr path attr.ArgExpr
 
         and walkTyparDecl
             (path: SyntaxVisitorPath)
@@ -122,8 +144,11 @@ module ASTCollecting =
             List.iter (walkType path) ts
 
         and walkTyparDecls (path: SyntaxVisitorPath) (typars: SynTyparDecls) =
-            typars.TyparDecls |> List.iter (walkTyparDecl path)
-            typars.Constraints |> List.iter (walkTypeConstraint path)
+            typars.TyparDecls
+            |> List.iter (walkTyparDecl path)
+
+            typars.Constraints
+            |> List.iter (walkTypeConstraint path)
 
         and walkSynValTyparDecls (path: SyntaxVisitorPath) (SynValTyparDecls(typars, _)) =
             Option.iter (walkTyparDecls path) typars
@@ -155,7 +180,9 @@ module ASTCollecting =
         and walkPat (path: SyntaxVisitorPath) s =
             walker.WalkPat(path, s)
 
-            let nextPath = SyntaxNode.SynPat s :: path
+            let nextPath =
+                SyntaxNode.SynPat s
+                :: path
 
             match s with
             | SynPat.Tuple(elementPats = pats)
@@ -168,7 +195,13 @@ module ASTCollecting =
             | SynPat.Attrib(pat, AllAttrs attrs, _) ->
                 walkPat nextPath pat
                 List.iter (walkAttribute nextPath) attrs
-            | SynPat.Or(lhsPat = pat1; rhsPat = pat2) -> List.iter (walkPat nextPath) [ pat1; pat2 ]
+            | SynPat.Or(lhsPat = pat1; rhsPat = pat2) ->
+                List.iter
+                    (walkPat nextPath)
+                    [
+                        pat1
+                        pat2
+                    ]
             | SynPat.LongIdent(typarDecls = typars; argPats = ConstructorPats pats; range = _) ->
                 Option.iter (walkSynValTyparDecls nextPath) typars
                 List.iter (walkPat nextPath) pats
@@ -193,10 +226,19 @@ module ASTCollecting =
 
         and walkBinding
             (path: SyntaxVisitorPath)
-            (SynBinding(attributes = AllAttrs attrs; headPat = pat; returnInfo = returnInfo; expr = e; range = _) as s)
+            (SynBinding(
+                attributes = AllAttrs attrs
+                headPat = pat
+                returnInfo = returnInfo
+                expr = e
+                range = _) as s)
             =
             walker.WalkBinding(path, s)
-            let nextPath = SyntaxNode.SynBinding s :: path
+
+            let nextPath =
+                SyntaxNode.SynBinding s
+                :: path
+
             List.iter (walkAttribute nextPath) attrs
             walkPat nextPath pat
             walkExpr nextPath e
@@ -208,15 +250,25 @@ module ASTCollecting =
             )
 
         and walkAttributes (path: SyntaxVisitorPath) (attrs: SynAttributes) =
-            List.iter (fun (attrList: SynAttributeList) -> List.iter (walkAttribute path) attrList.Attributes) attrs
+            List.iter
+                (fun (attrList: SynAttributeList) ->
+                    List.iter (walkAttribute path) attrList.Attributes
+                )
+                attrs
 
-        and walkInterfaceImpl (path: SyntaxVisitorPath) (SynInterfaceImpl(bindings = bindings; range = _) as s) =
+        and walkInterfaceImpl
+            (path: SyntaxVisitorPath)
+            (SynInterfaceImpl(bindings = bindings; range = _) as s)
+            =
             walker.WalkInterfaceImpl(path, s)
             List.iter (walkBinding path) bindings
 
         and walkType (path: SyntaxVisitorPath) s =
             walker.WalkType(path, s)
-            let nextPath = SyntaxNode.SynType s :: path
+
+            let nextPath =
+                SyntaxNode.SynType s
+                :: path
 
             match s with
             | SynType.Array(_, t, _)
@@ -258,16 +310,26 @@ module ASTCollecting =
                 Option.iter (walkTypar nextPath) typar
                 List.iter (walkType nextPath) types
 
-        and walkClause (path: SyntaxVisitorPath) (SynMatchClause(pat = pat; whenExpr = e1; resultExpr = e2) as s) =
+        and walkClause
+            (path: SyntaxVisitorPath)
+            (SynMatchClause(pat = pat; whenExpr = e1; resultExpr = e2) as s)
+            =
             walker.WalkClause(path, s)
-            let nextPath = SyntaxNode.SynMatchClause s :: path
+
+            let nextPath =
+                SyntaxNode.SynMatchClause s
+                :: path
+
             walkPat nextPath pat
             walkExpr nextPath e2
-            e1 |> Option.iter (walkExpr nextPath)
+
+            e1
+            |> Option.iter (walkExpr nextPath)
 
         and walkSimplePats (path: SyntaxVisitorPath) =
             function
-            | SynSimplePats.SimplePats(pats = pats; range = _) -> List.iter (walkSimplePat path) pats
+            | SynSimplePats.SimplePats(pats = pats; range = _) ->
+                List.iter (walkSimplePat path) pats
 
         and walkInterpolatedStringPart (path: SyntaxVisitorPath) s =
             walker.WalkInterpolatedStringPart(path, s)
@@ -279,7 +341,9 @@ module ASTCollecting =
         and walkExpr (path: SyntaxVisitorPath) s =
             walker.WalkExpr(path, s)
 
-            let nextPath = SyntaxNode.SynExpr s :: path
+            let nextPath =
+                SyntaxNode.SynExpr s
+                :: path
 
             match s with
             | SynExpr.Typed(expr = e) -> walkExpr nextPath e
@@ -314,22 +378,45 @@ module ASTCollecting =
             | SynExpr.ArrayOrList(_, es, _) -> List.iter (walkExpr nextPath) es
             | SynExpr.App(funcExpr = e1; argExpr = e2)
             | SynExpr.TryFinally(tryExpr = e1; finallyExpr = e2)
-            | SynExpr.While(_, e1, e2, _) -> List.iter (walkExpr nextPath) [ e1; e2 ]
+            | SynExpr.While(_, e1, e2, _) ->
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                    ]
             | SynExpr.Record(recordFields = fields) ->
                 fields
-                |> List.iter (fun (SynExprRecordField(expr = e)) -> e |> Option.iter (walkExpr nextPath))
-            | SynExpr.ObjExpr(objType = ty; argOptions = argOpt; bindings = bindings; extraImpls = ifaces) ->
+                |> List.iter (fun (SynExprRecordField(expr = e)) ->
+                    e
+                    |> Option.iter (walkExpr nextPath)
+                )
+            | SynExpr.ObjExpr(
+                objType = ty; argOptions = argOpt; bindings = bindings; extraImpls = ifaces) ->
 
-                argOpt |> Option.iter (fun (e, _) -> walkExpr nextPath e)
+                argOpt
+                |> Option.iter (fun (e, _) -> walkExpr nextPath e)
 
                 walkType nextPath ty
                 List.iter (walkBinding nextPath) bindings
                 List.iter (walkInterfaceImpl nextPath) ifaces
             | SynExpr.For(identBody = e1; toBody = e2; doBody = e3; range = _) ->
-                List.iter (walkExpr nextPath) [ e1; e2; e3 ]
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                        e3
+                    ]
             | SynExpr.ForEach(pat = pat; enumExpr = e1; bodyExpr = e2) ->
                 walkPat nextPath pat
-                List.iter (walkExpr nextPath) [ e1; e2 ]
+
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                    ]
             | SynExpr.MatchLambda(matchClauses = synMatchClauseList) ->
                 List.iter (walkClause nextPath) synMatchClauseList
             | SynExpr.Match(expr = e; clauses = synMatchClauseList; range = _) ->
@@ -345,8 +432,15 @@ module ASTCollecting =
                 List.iter (walkClause nextPath) clauses
                 walkExpr nextPath e
             | SynExpr.IfThenElse(ifExpr = e1; thenExpr = e2; elseExpr = e3; range = _) ->
-                List.iter (walkExpr nextPath) [ e1; e2 ]
-                e3 |> Option.iter (walkExpr nextPath)
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                    ]
+
+                e3
+                |> Option.iter (walkExpr nextPath)
             | SynExpr.LongIdentSet(expr = e)
             | SynExpr.DotGet(expr = e) -> walkExpr nextPath e
             | SynExpr.DotSet(targetExpr = e1; rhsExpr = e2) ->
@@ -359,10 +453,28 @@ module ASTCollecting =
                 walkExpr nextPath e1
                 walkExpr nextPath args
                 walkExpr nextPath e2
-            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) -> List.iter (walkExpr nextPath) [ e1; e2 ]
+            | SynExpr.NamedIndexedPropertySet(_, e1, e2, _) ->
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                    ]
             | SynExpr.DotNamedIndexedPropertySet(targetExpr = e1; argExpr = e2; rhsExpr = e3) ->
-                List.iter (walkExpr nextPath) [ e1; e2; e3 ]
-            | SynExpr.JoinIn(lhsExpr = e1; rhsExpr = e2) -> List.iter (walkExpr nextPath) [ e1; e2 ]
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                        e3
+                    ]
+            | SynExpr.JoinIn(lhsExpr = e1; rhsExpr = e2) ->
+                List.iter
+                    (walkExpr nextPath)
+                    [
+                        e1
+                        e2
+                    ]
             | SynExpr.LetOrUseBang(pat = pat; rhs = e1; andBangs = ands; body = e2; range = _) ->
                 walkPat nextPath pat
                 walkExpr nextPath e1
@@ -441,34 +553,52 @@ module ASTCollecting =
                 walkType path t
             | SynSimplePat.Id _ -> ()
 
-        and walkField (path: SyntaxVisitorPath) (SynField(attributes = AllAttrs attrs; fieldType = t; range = _) as s) =
+        and walkField
+            (path: SyntaxVisitorPath)
+            (SynField(attributes = AllAttrs attrs; fieldType = t; range = _) as s)
+            =
             walker.WalkField(path, s)
             List.iter (walkAttribute path) attrs
             walkType path t
 
         and walkValSig
             (path: SyntaxVisitorPath)
-            (SynValSig(attributes = AllAttrs attrs; synType = t; arity = SynValInfo(argInfos, argInfo); range = _) as s)
+            (SynValSig(
+                attributes = AllAttrs attrs
+                synType = t
+                arity = SynValInfo(argInfos, argInfo)
+                range = _) as s)
             =
             walker.WalkValSig(path, s)
-            let nextPath = SyntaxNode.SynValSig s :: path
+
+            let nextPath =
+                SyntaxNode.SynValSig s
+                :: path
+
             List.iter (walkAttribute nextPath) attrs
             walkType nextPath t
 
-            argInfo :: (argInfos |> List.concat)
+            argInfo
+            :: (argInfos
+                |> List.concat)
             |> List.collect (fun (SynArgInfo(attributes = AllAttrs attrs)) -> attrs)
             |> List.iter (walkAttribute nextPath)
 
         and walkMemberSig (path: SyntaxVisitorPath) s =
             walker.WalkMemberSig(path, s)
-            let nextPath = SyntaxNode.SynMemberSig s :: path
+
+            let nextPath =
+                SyntaxNode.SynMemberSig s
+                :: path
 
             match s with
             | SynMemberSig.Inherit(t, _)
             | SynMemberSig.Interface(t, _) -> walkType nextPath t
             | SynMemberSig.Member(memberSig = vs) -> walkValSig nextPath vs
             | SynMemberSig.ValField(f, _) -> walkField nextPath f
-            | SynMemberSig.NestedType(SynTypeDefnSig(typeInfo = info; typeRepr = repr; members = memberSigs), _) ->
+            | SynMemberSig.NestedType(SynTypeDefnSig(
+                                          typeInfo = info; typeRepr = repr; members = memberSigs),
+                                      _) ->
 
                 let isTypeExtensionOrAlias =
                     match repr with
@@ -483,7 +613,10 @@ module ASTCollecting =
 
         and walkMember (path: SyntaxVisitorPath) s =
             walker.WalkMember(path, s)
-            let nextPath = SyntaxNode.SynMemberDefn s :: path
+
+            let nextPath =
+                SyntaxNode.SynMemberDefn s
+                :: path
 
             match s with
             | SynMemberDefn.AbstractSlot(slotSig = valSig) -> walkValSig nextPath valSig
@@ -494,23 +627,33 @@ module ASTCollecting =
             | SynMemberDefn.ImplicitInherit(inheritType = t; inheritArgs = e) ->
                 walkType nextPath t
                 walkExpr nextPath e
-            | SynMemberDefn.LetBindings(bindings = bindings) -> List.iter (walkBinding nextPath) bindings
+            | SynMemberDefn.LetBindings(bindings = bindings) ->
+                List.iter (walkBinding nextPath) bindings
             | SynMemberDefn.Interface(t, _, members, _) ->
                 walkType nextPath t
-                members |> Option.iter (List.iter (walkMember nextPath))
-            | SynMemberDefn.Inherit(baseType = t) -> t |> Option.iter (walkType nextPath)
+
+                members
+                |> Option.iter (List.iter (walkMember nextPath))
+            | SynMemberDefn.Inherit(baseType = t) ->
+                t
+                |> Option.iter (walkType nextPath)
             | SynMemberDefn.ValField(field, _) -> walkField nextPath field
             | SynMemberDefn.NestedType(typeDefn = tdef) -> walkTypeDefn nextPath tdef
-            | SynMemberDefn.AutoProperty(attributes = AllAttrs attrs; typeOpt = t; synExpr = e; range = _) ->
+            | SynMemberDefn.AutoProperty(
+                attributes = AllAttrs attrs; typeOpt = t; synExpr = e; range = _) ->
                 List.iter (walkAttribute nextPath) attrs
                 Option.iter (walkType nextPath) t
                 walkExpr nextPath e
             | SynMemberDefn.Open _ -> ()
-            | SynMemberDefn.GetSetMember(memberDefnForGet = getter; memberDefnForSet = setter; range = _) ->
+            | SynMemberDefn.GetSetMember(
+                memberDefnForGet = getter; memberDefnForSet = setter; range = _) ->
                 Option.iter (walkBinding nextPath) getter
                 Option.iter (walkBinding nextPath) setter
 
-        and walkEnumCase (path: SyntaxVisitorPath) (SynEnumCase(attributes = AllAttrs attrs; range = _) as s) =
+        and walkEnumCase
+            (path: SyntaxVisitorPath)
+            (SynEnumCase(attributes = AllAttrs attrs; range = _) as s)
+            =
             walker.WalkEnumCase(path, s)
             List.iter (walkAttribute path) attrs
 
@@ -546,7 +689,11 @@ module ASTCollecting =
             (path: SyntaxVisitorPath)
             _
             (SynComponentInfo(
-                attributes = AllAttrs attrs; typeParams = typars; constraints = constraints; longId = _; range = _) as s)
+                attributes = AllAttrs attrs
+                typeParams = typars
+                constraints = constraints
+                longId = _
+                range = _) as s)
             =
             walker.WalkComponentInfo(path, s)
             List.iter (walkAttribute path) attrs
@@ -571,10 +718,17 @@ module ASTCollecting =
 
         and walkTypeDefn
             (path: SyntaxVisitorPath)
-            (SynTypeDefn(typeInfo = info; typeRepr = repr; members = members; implicitConstructor = implicitCtor) as s)
+            (SynTypeDefn(
+                typeInfo = info
+                typeRepr = repr
+                members = members
+                implicitConstructor = implicitCtor) as s)
             =
             walker.WalkTypeDefn(path, s)
-            let nextPath = SyntaxNode.SynTypeDefn s :: path
+
+            let nextPath =
+                SyntaxNode.SynTypeDefn s
+                :: path
 
             let isTypeExtensionOrAlias =
                 match repr with
@@ -593,7 +747,10 @@ module ASTCollecting =
             (SynTypeDefnSig(typeInfo = info; typeRepr = repr; members = members) as s)
             =
             walker.WalkTypeDefnSig(path, s)
-            let nextPath = SyntaxNode.SynTypeDefnSig s :: path
+
+            let nextPath =
+                SyntaxNode.SynTypeDefnSig s
+                :: path
 
             let isTypeExtensionOrAlias =
                 match repr with
@@ -608,27 +765,35 @@ module ASTCollecting =
 
         and walkSynModuleDecl (path: SyntaxVisitorPath) (decl: SynModuleDecl) =
             walker.WalkSynModuleDecl(path, decl)
-            let nextPath = SyntaxNode.SynModule decl :: path
+
+            let nextPath =
+                SyntaxNode.SynModule decl
+                :: path
 
             match decl with
             | SynModuleDecl.NamespaceFragment fragment -> walkSynModuleOrNamespace fragment
             | SynModuleDecl.NestedModule(moduleInfo = info; decls = modules) ->
                 walkComponentInfo nextPath false info
                 List.iter (walkSynModuleDecl nextPath) modules
-            | SynModuleDecl.Let(bindings = bindings; range = _) -> List.iter (walkBinding nextPath) bindings
+            | SynModuleDecl.Let(bindings = bindings; range = _) ->
+                List.iter (walkBinding nextPath) bindings
             | SynModuleDecl.Expr(expr, _) -> walkExpr nextPath expr
             | SynModuleDecl.Types(types, _) -> List.iter (walkTypeDefn nextPath) types
             | SynModuleDecl.Attributes(attributes = AllAttrs attrs; range = _) ->
                 List.iter (walkAttribute nextPath) attrs
             | SynModuleDecl.ModuleAbbrev _ -> ()
-            | SynModuleDecl.Exception(exnDefn = SynExceptionDefn(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
+            | SynModuleDecl.Exception(
+                exnDefn = SynExceptionDefn(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
                 walkUnionCase nextPath unionCase
             | SynModuleDecl.Open _ -> ()
             | SynModuleDecl.HashDirective(range = _) -> ()
 
         and walkSynModuleSigDecl (path: SyntaxVisitorPath) (decl: SynModuleSigDecl) =
             walker.WalkSynModuleSigDecl(path, decl)
-            let nextPath = SyntaxNode.SynModuleSigDecl decl :: path
+
+            let nextPath =
+                SyntaxNode.SynModuleSigDecl decl
+                :: path
 
             match decl with
             | SynModuleSigDecl.ModuleAbbrev _ -> ()
@@ -637,7 +802,8 @@ module ASTCollecting =
                 List.iter (walkSynModuleSigDecl nextPath) decls
             | SynModuleSigDecl.Val(s, _range) -> walkValSig nextPath s
             | SynModuleSigDecl.Types(types, _) -> List.iter (walkTypeDefnSig nextPath) types
-            | SynModuleSigDecl.Exception(exnSig = SynExceptionSig(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
+            | SynModuleSigDecl.Exception(
+                exnSig = SynExceptionSig(exnRepr = SynExceptionDefnRepr(caseName = unionCase))) ->
                 walkUnionCase nextPath unionCase
             | SynModuleSigDecl.Open _ -> ()
             | SynModuleSigDecl.HashDirective _ -> ()

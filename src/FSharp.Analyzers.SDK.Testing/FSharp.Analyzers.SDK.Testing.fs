@@ -41,7 +41,13 @@ type Package =
 
 exception CompilerDiagnosticErrors of FSharpDiagnostic array
 
-let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
+let fsharpFiles =
+    set
+        [|
+            ".fs"
+            ".fsi"
+            ".fsx"
+        |]
 
 let isFSharpFile (file: string) =
     Set.exists (fun (ext: string) -> file.EndsWith(ext, StringComparison.Ordinal)) fsharpFiles
@@ -80,7 +86,8 @@ let readCompilerArgsFromBinLog (build: Build) =
     )
 
     match args with
-    | None -> failwith $"Could not parse binlog at {build.LogFilePath}, does it contain CoreCompile?"
+    | None ->
+        failwith $"Could not parse binlog at {build.LogFilePath}, does it contain CoreCompile?"
     | Some args ->
         let idx = args.IndexOf("-o:", StringComparison.Ordinal)
         args.Substring(idx).Split [| '\n' |]
@@ -88,10 +95,14 @@ let readCompilerArgsFromBinLog (build: Build) =
 let mkOptions (compilerArgs: string array) =
     let sourceFiles =
         compilerArgs
-        |> Array.filter (fun (line: string) -> isFSharpFile line && File.Exists line)
+        |> Array.filter (fun (line: string) ->
+            isFSharpFile line
+            && File.Exists line
+        )
 
     let otherOptions =
-        compilerArgs |> Array.filter (fun line -> not (isFSharpFile line))
+        compilerArgs
+        |> Array.filter (fun line -> not (isFSharpFile line))
 
     {
         ProjectFileName = "Project"
@@ -123,13 +134,19 @@ let getCachedIfOldBuildSucceeded binLogPath =
     else
         None
 
-let createProject (binLogPath: string) (tmpProjectDir: string) (framework: string) (additionalPkgs: Package list) =
+let createProject
+    (binLogPath: string)
+    (tmpProjectDir: string)
+    (framework: string)
+    (additionalPkgs: Package list)
+    =
     let stdOutBuffer = System.Text.StringBuilder()
     let stdErrBuffer = System.Text.StringBuilder()
 
     task {
         try
-            Directory.CreateDirectory(tmpProjectDir) |> ignore
+            Directory.CreateDirectory(tmpProjectDir)
+            |> ignore
 
             // needed to escape the global.json circle of influence in a unit testing process
             let envDic = Dictionary<string, string>()
@@ -187,7 +204,9 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
 
             let uniqueBinLogName =
                 let packages =
-                    additionalPkgs |> List.map (fun p -> p.ToString()) |> String.concat "_"
+                    additionalPkgs
+                    |> List.map (fun p -> p.ToString())
+                    |> String.concat "_"
 
                 $"v{Utils.currentFSharpAnalyzersSDKVersion}_{framework}_{packages}.binlog"
 
@@ -203,7 +222,9 @@ let mkOptionsFromProject (framework: string) (additionalPkgs: Package list) =
                 | Some f -> task { return f }
                 | None ->
                     task {
-                        Directory.CreateDirectory(binLogCache) |> ignore
+                        Directory.CreateDirectory(binLogCache)
+                        |> ignore
+
                         let! _ = createProject binLogPath tmpProjectDir framework additionalPkgs
                         return BinaryLog.ReadBuild binLogPath
                     }
@@ -219,7 +240,8 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
     let files = Map.ofArray [| (fileName, SourceText.ofString source) |]
 
     let documentSource fileName =
-        Map.tryFind fileName files |> async.Return
+        Map.tryFind fileName files
+        |> async.Return
 
     let fcs = Utils.createFCS (Some documentSource)
     let pathToAnalyzerDlls = Path.GetFullPath(".")
@@ -235,15 +257,21 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
         failwith $"no Analyzers found in {pathToAnalyzerDlls}"
 
     if assemblyLoadStats.FailedAssemblies > 0 then
-        failwith $"failed to load %i{assemblyLoadStats.FailedAssemblies} Analyzers in {pathToAnalyzerDlls}"
+        failwith
+            $"failed to load %i{assemblyLoadStats.FailedAssemblies} Analyzers in {pathToAnalyzerDlls}"
 
     let opts =
         { opts with
             SourceFiles = [| fileName |]
         }
 
-    fcs.NotifyFileChanged(fileName, opts) |> Async.RunSynchronously // workaround for https://github.com/dotnet/fsharp/issues/15960
-    let checkProjectResults = fcs.ParseAndCheckProject(opts) |> Async.RunSynchronously
+    fcs.NotifyFileChanged(fileName, opts)
+    |> Async.RunSynchronously // workaround for https://github.com/dotnet/fsharp/issues/15960
+
+    let checkProjectResults =
+        fcs.ParseAndCheckProject(opts)
+        |> Async.RunSynchronously
+
     let allSymbolUses = checkProjectResults.GetAllUsesOfAllSymbols()
     let analyzerOpts = BackgroundCompilerOptions opts
 
@@ -267,7 +295,13 @@ let getContextFor (opts: FSharpProjectOptions) isSignature source =
             raise (CompilerDiagnosticErrors diagErrors)
 
         let sourceText = SourceText.ofString source
-        Utils.createContext checkProjectResults fileName sourceText (parseFileResults, checkFileResults) analyzerOpts
+
+        Utils.createContext
+            checkProjectResults
+            fileName
+            sourceText
+            (parseFileResults, checkFileResults)
+            analyzerOpts
     | Error e -> failwith $"typechecking file failed: %O{e}"
 
 let getContext (opts: FSharpProjectOptions) source = getContextFor opts false source
@@ -276,7 +310,11 @@ let getContextForSignature (opts: FSharpProjectOptions) source = getContextFor o
 module Assert =
 
     let hasWarningsInLines (expectedLines: Set<int>) (msgs: FSharp.Analyzers.SDK.Message list) =
-        let msgLines = msgs |> List.map (fun m -> m.Range.StartLine) |> Set.ofList
+        let msgLines =
+            msgs
+            |> List.map (fun m -> m.Range.StartLine)
+            |> Set.ofList
+
         msgLines = expectedLines
 
     let messageContains (expectedContent: string) (msg: FSharp.Analyzers.SDK.Message) =
@@ -284,10 +322,16 @@ module Assert =
         && msg.Message.Contains(expectedContent)
 
     let allMessagesContain (expectedContent: string) (msgs: FSharp.Analyzers.SDK.Message list) =
-        msgs |> List.forall (messageContains expectedContent)
+        msgs
+        |> List.forall (messageContains expectedContent)
 
     let messageContainsAny (expectedContents: string list) (msg: FSharp.Analyzers.SDK.Message) =
-        expectedContents |> List.exists msg.Message.Contains
+        expectedContents
+        |> List.exists msg.Message.Contains
 
-    let messagesContainAny (expectedContents: string list) (msgs: FSharp.Analyzers.SDK.Message list) =
-        msgs |> List.forall (messageContainsAny expectedContents)
+    let messagesContainAny
+        (expectedContents: string list)
+        (msgs: FSharp.Analyzers.SDK.Message list)
+        =
+        msgs
+        |> List.forall (messageContainsAny expectedContents)

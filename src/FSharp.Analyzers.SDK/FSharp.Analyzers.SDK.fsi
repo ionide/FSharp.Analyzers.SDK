@@ -8,14 +8,16 @@ open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 
-type AnalyzerIgnoreRange = 
+type AnalyzerIgnoreRange =
     | File
     | Range of commentStart: int * commentEnd: int
     | NextLine of commentLine: int
     | CurrentLine of commentLine: int
 
 [<AbstractClass>]
-[<AttributeUsage(AttributeTargets.Method ||| AttributeTargets.Property ||| AttributeTargets.Field)>]
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type AnalyzerAttribute =
     new:
         [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *
@@ -58,7 +60,7 @@ type Context =
 type AnalyzerProjectOptions =
     | BackgroundCompilerOptions of FSharpProjectOptions
     | TransparentCompilerOptions of FSharpProjectSnapshot
-    
+
     /// The current project name.
     member ProjectFileName: string
     /// The identifier of the current project.
@@ -217,5 +219,5 @@ module Utils =
         fileName: string ->
         sourceText: ISourceText ->
         parseFileResults: FSharpParseFileResults * checkFileResults: FSharpCheckFileResults ->
-        projectOptions: AnalyzerProjectOptions ->
-            CliContext
+            projectOptions: AnalyzerProjectOptions ->
+                CliContext

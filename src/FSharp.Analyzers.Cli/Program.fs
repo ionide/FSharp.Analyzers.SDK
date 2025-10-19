@@ -15,7 +15,6 @@ open Ionide.ProjInfo
 open FSharp.Analyzers.Cli
 open FSharp.Analyzers.Cli.CustomLogging
 
-
 type ExitErrorCodes =
     | Success = 0
     | NoAnalyzersFound = -1
@@ -63,8 +62,10 @@ type Arguments =
     interface IArgParserTemplate with
         member s.Usage =
             match s with
-            | Project _ -> "List of paths to your .fsproj file. Cannot be combined with `--fsc-args`."
-            | Script _ -> "List of paths to your .fsx file. Supports globs. Cannot be combined with `--fsc-args`."
+            | Project _ ->
+                "List of paths to your .fsproj file. Cannot be combined with `--fsc-args`."
+            | Script _ ->
+                "List of paths to your .fsx file. Supports globs. Cannot be combined with `--fsc-args`."
             | Analyzers_Path _ ->
                 "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
@@ -89,12 +90,14 @@ type Arguments =
             | Report _ -> "Write the result messages to a (sarif) report file."
             | Verbosity _ ->
                 "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]."
-            | FSC_Args _ -> "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
+            | FSC_Args _ ->
+                "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
             | Output_Format _ ->
-                "Format in which to write analyzer results to stdout. The available options are: default, github."            
-            | BinLog_Path(_) -> "Path to a directory where MSBuild binary logs (binlog) will be written. You can use https://msbuildlog.com/ to view them."
+                "Format in which to write analyzer results to stdout. The available options are: default, github."
+            | BinLog_Path(_) ->
+                "Path to a directory where MSBuild binary logs (binlog) will be written. You can use https://msbuildlog.com/ to view them."
 
 type SeverityMappings =
     {
@@ -105,21 +108,46 @@ type SeverityMappings =
     }
 
     member x.IsValid() =
-        let allCodes = [ x.TreatAsInfo; x.TreatAsHint; x.TreatAsWarning; x.TreatAsError ]
+        let allCodes =
+            [
+                x.TreatAsInfo
+                x.TreatAsHint
+                x.TreatAsWarning
+                x.TreatAsError
+            ]
 
-        let unionCount = allCodes |> Set.unionMany |> Set.count
-        let summedCount = allCodes |> List.sumBy Set.count
+        let unionCount =
+            allCodes
+            |> Set.unionMany
+            |> Set.count
+
+        let summedCount =
+            allCodes
+            |> List.sumBy Set.count
+
         summedCount = unionCount
 
 let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK.AnalyzerMessage) =
     let targetSeverity =
-        if mappings.TreatAsInfo |> Set.contains msg.Message.Code then
+        if
+            mappings.TreatAsInfo
+            |> Set.contains msg.Message.Code
+        then
             Severity.Info
-        else if mappings.TreatAsHint |> Set.contains msg.Message.Code then
+        else if
+            mappings.TreatAsHint
+            |> Set.contains msg.Message.Code
+        then
             Severity.Hint
-        else if mappings.TreatAsWarning |> Set.contains msg.Message.Code then
+        else if
+            mappings.TreatAsWarning
+            |> Set.contains msg.Message.Code
+        then
             Severity.Warning
-        else if mappings.TreatAsError |> Set.contains msg.Message.Code then
+        else if
+            mappings.TreatAsError
+            |> Set.contains msg.Message.Code
+        then
             Severity.Error
         else
             msg.Message.Severity
@@ -133,13 +161,14 @@ let mapMessageToSeverity (mappings: SeverityMappings) (msg: FSharp.Analyzers.SDK
 
 [<RequireQualifiedAccess>]
 type OutputFormat =
-| Default
-| GitHub
+    | Default
+    | GitHub
 
-let parseOutputFormat = function
-| "github" -> Ok OutputFormat.GitHub
-| "default" -> Ok OutputFormat.Default
-| other -> Error $"Unknown output format: %s{other}."
+let parseOutputFormat =
+    function
+    | "github" -> Ok OutputFormat.GitHub
+    | "default" -> Ok OutputFormat.Default
+    | other -> Error $"Unknown output format: %s{other}."
 
 let mutable logLevel = LogLevel.Warning
 
@@ -159,30 +188,40 @@ let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
 /// <summary>Runs MSBuild to create FSharpProjectOptions based on the projPaths.</summary>
 /// <returns>Returns only the FSharpProjectOptions based on the projPaths and not any referenced projects.</returns>
-let loadProjects toolsPath properties (projPaths: string list) (binLogPath : DirectoryInfo option) =
+let loadProjects toolsPath properties (projPaths: string list) (binLogPath: DirectoryInfo option) =
     async {
         let projPaths =
             projPaths
-            |> List.map (fun proj -> Path.Combine(Environment.CurrentDirectory, proj) |> Path.GetFullPath)
+            |> List.map (fun proj ->
+                Path.Combine(Environment.CurrentDirectory, proj)
+                |> Path.GetFullPath
+            )
 
         for proj in projPaths do
             logger.LogInformation("Loading project {0}", proj)
 
         let loader = WorkspaceLoader.Create(toolsPath, properties)
+
         binLogPath
         |> Option.iter (fun path ->
             logger.LogInformation("Using binary log path: {0}", path.FullName)
         )
+
         let binLogConfig =
             binLogPath
             |> Option.map (fun path -> BinaryLogGeneration.Within path)
             |> Option.defaultValue BinaryLogGeneration.Off
-            
-        let projectOptions = loader.LoadProjects(projPaths, [],  binaryLog = binLogConfig)
+
+        let projectOptions = loader.LoadProjects(projPaths, [], binaryLog = binLogConfig)
 
         let failedLoads =
             projPaths
-            |> Seq.filter (fun path -> not (projectOptions |> Seq.exists (fun p -> p.ProjectFileName = path)))
+            |> Seq.filter (fun path ->
+                not (
+                    projectOptions
+                    |> Seq.exists (fun p -> p.ProjectFileName = path)
+                )
+            )
             |> Seq.toList
 
         if Seq.length failedLoads > 0 then
@@ -191,7 +230,10 @@ let loadProjects toolsPath properties (projPaths: string list) (binLogPath : Dir
 
         let loaded =
             FCS.mapManyOptions projectOptions
-            |> Seq.filter (fun p -> projPaths |> List.exists (fun x -> x = p.ProjectFileName)) // We only want to analyze what was passed in
+            |> Seq.filter (fun p ->
+                projPaths
+                |> List.exists (fun x -> x = p.ProjectFileName)
+            ) // We only want to analyze what was passed in
             |> Seq.toList
 
         return loaded
@@ -214,30 +256,50 @@ let runProject
             |> Array.filter (fun file ->
                 match excludeIncludeFiles with
                 | Choice1Of2 excludeFiles ->
-                    match excludeFiles |> List.tryFind (fun g -> g.IsMatch file) with
+                    match
+                        excludeFiles
+                        |> List.tryFind (fun g -> g.IsMatch file)
+                    with
                     | Some g ->
                         logger.LogInformation("Ignoring file {0} for pattern {1}", file, g.Pattern)
                         false
                     | None -> true
                 | Choice2Of2 includeFiles ->
-                    match includeFiles |> List.tryFind (fun g -> g.IsMatch file) with
+                    match
+                        includeFiles
+                        |> List.tryFind (fun g -> g.IsMatch file)
+                    with
                     | Some g ->
-                        logger.LogInformation("Including file {0} for pattern {1}", file, g.Pattern)
+                        logger.LogInformation(
+                            "Including file {0} for pattern {1}",
+                            file,
+                            g.Pattern
+                        )
+
                         true
                     | None -> false
             )
             |> Array.map (fun fileName ->
                 async {
-                    let! fileContent = File.ReadAllTextAsync fileName |> Async.AwaitTask
+                    let! fileContent =
+                        File.ReadAllTextAsync fileName
+                        |> Async.AwaitTask
+
                     let sourceText = SourceText.ofString fileContent
                     logger.LogDebug("Checking file {0}", fileName)
 
                     // Since we did ParseAndCheckProject, we can be sure that the file is in the project.
                     // See https://fsharp.github.io/fsharp-compiler-docs/fcs/project.html for more information.
-                    let! parseAndCheckResults = fcs.GetBackgroundCheckResultsForFileInProject(fileName, fsharpOptions)
+                    let! parseAndCheckResults =
+                        fcs.GetBackgroundCheckResultsForFileInProject(fileName, fsharpOptions)
 
                     let ctx =
-                        Utils.createContext checkProjectResults fileName sourceText parseAndCheckResults analyzerOptions
+                        Utils.createContext
+                            checkProjectResults
+                            fileName
+                            sourceText
+                            parseAndCheckResults
+                            analyzerOptions
 
                     logger.LogInformation("Running analyzers for {0}", ctx.FileName)
                     let! results = client.RunAnalyzers ctx
@@ -252,12 +314,21 @@ let runProject
             |> Seq.map (fun messages ->
                 match messages with
                 | Error e -> Error e
-                | Ok messages -> messages |> List.map (mapMessageToSeverity mappings) |> Ok
+                | Ok messages ->
+                    messages
+                    |> List.map (mapMessageToSeverity mappings)
+                    |> Ok
             )
             |> Seq.toList
     }
 
-let fsharpFiles = set [| ".fs"; ".fsi"; ".fsx" |]
+let fsharpFiles =
+    set
+        [|
+            ".fs"
+            ".fsi"
+            ".fsx"
+        |]
 
 let isFSharpFile (file: string) =
     Set.exists (fun (ext: string) -> file.EndsWith(ext, StringComparison.Ordinal)) fsharpFiles
@@ -281,13 +352,18 @@ let runFscArgs
             // We make an absolute path because the sarif report cannot deal properly with relative path.
             let path = Path.Combine(Directory.GetCurrentDirectory(), argument)
 
-            if not (isFSharpFile path) || not (File.Exists path) then
+            if
+                not (isFSharpFile path)
+                || not (File.Exists path)
+            then
                 None
             else
                 Some path
         )
 
-    let otherOptions = fscArgs |> Array.filter (fun line -> not (isFSharpFile line))
+    let otherOptions =
+        fscArgs
+        |> Array.filter (fun line -> not (isFSharpFile line))
 
     let projectOptions =
         {
@@ -348,7 +424,7 @@ let printMessagesInDefaultFormat (msgs: AnalyzerMessage list) =
 
     ()
 
-let printMessagesInGitHubFormat (codeRoot : Uri) (msgs: AnalyzerMessage list) =
+let printMessagesInGitHubFormat (codeRoot: Uri) (msgs: AnalyzerMessage list) =
     let severityToLogLevel =
         Map.ofArray
             [|
@@ -421,7 +497,10 @@ let writeReport (results: AnalyzerMessage list) (codeRoot: Uri) (report: string)
         let driver = ToolComponent()
         driver.Name <- "Ionide.Analyzers.Cli"
         driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
-        driver.Version <- string<Version> (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+
+        driver.Version <-
+            string<Version> (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+
         let tool = Tool()
         tool.Driver <- driver
         let run = Run()
@@ -431,7 +510,8 @@ let writeReport (results: AnalyzerMessage list) (codeRoot: Uri) (report: string)
             new SarifLogger(
                 report,
                 logFilePersistenceOptions =
-                    (FilePersistenceOptions.PrettyPrint ||| FilePersistenceOptions.ForceOverwrite),
+                    (FilePersistenceOptions.PrettyPrint
+                     ||| FilePersistenceOptions.ForceOverwrite),
                 run = run,
                 levels = BaseLogger.ErrorWarningNote,
                 kinds = BaseLogger.Fail,
@@ -478,9 +558,17 @@ let writeReport (results: AnalyzerMessage list) (codeRoot: Uri) (report: string)
             physicalLocation.Region <-
                 let r = Region()
                 r.StartLine <- analyzerResult.Message.Range.StartLine
-                r.StartColumn <- analyzerResult.Message.Range.StartColumn + 1
+
+                r.StartColumn <-
+                    analyzerResult.Message.Range.StartColumn
+                    + 1
+
                 r.EndLine <- analyzerResult.Message.Range.EndLine
-                r.EndColumn <- analyzerResult.Message.Range.EndColumn + 1
+
+                r.EndColumn <-
+                    analyzerResult.Message.Range.EndColumn
+                    + 1
+
                 r
 
             let location: Location = Location()
@@ -511,7 +599,9 @@ let expandMultiProperties (properties: (string * string) list) =
             [
                 yield (k, splits[0])
 
-                for pair in splits.[1..] |> Seq.chunkBySize 2 do
+                for pair in
+                    splits.[1..]
+                    |> Seq.chunkBySize 2 do
                     match pair with
                     | [| k; v |] when String.IsNullOrWhiteSpace(v) ->
                         logger.LogError("Missing property value for '{0}'", k)
@@ -529,7 +619,10 @@ let validateRuntimeOsArchCombination (runtime, arch, os) =
         logger.LogError("Specifying both the `-r|--runtime` and `-os` options is not supported.")
         exit (int ExitErrorCodes.RuntimeAndOsOptions)
     | Some _, _, Some _ ->
-        logger.LogError("Specifying both the `-r|--runtime` and `-a|--arch` options is not supported.")
+        logger.LogError(
+            "Specifying both the `-r|--runtime` and `-a|--arch` options is not supported."
+        )
+
         exit (int ExitErrorCodes.RuntimeAndArchOptions)
     | _ -> ()
 
@@ -546,7 +639,12 @@ let getProperties (results: ParseResults<Arguments>) =
         | Some r, _, _ -> Some r
         | None, Some o, Some a -> Some $"{o}-{a}"
         | None, Some o, None ->
-            let archOfRid = rid.Substring(rid.LastIndexOf('-') + 1)
+            let archOfRid =
+                rid.Substring(
+                    rid.LastIndexOf('-')
+                    + 1
+                )
+
             Some $"{o}-{archOfRid}"
         | None, None, Some a ->
             let osOfRid = rid.Substring(0, rid.LastIndexOf('-'))
@@ -568,7 +666,6 @@ let getProperties (results: ParseResults<Arguments>) =
             | _ -> ()
         ]
 
-
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -587,7 +684,12 @@ let main argv =
         | Some "normal" -> LogLevel.Warning
         | None -> LogLevel.Warning
         | Some x ->
-            use factory = LoggerFactory.Create(fun b -> b.AddConsole() |> ignore)
+            use factory =
+                LoggerFactory.Create(fun b ->
+                    b.AddConsole()
+                    |> ignore
+                )
+
             let logger = factory.CreateLogger("")
             logger.LogError("unknown verbosity level given {0}", x)
             exit (int ExitErrorCodes.UnknownLoggerVerbosity)
@@ -607,59 +709,106 @@ let main argv =
     logger <- factory.CreateLogger("FSharp.Analyzers.Cli")
 
     // Set the Ionide.ProjInfo logger to use the same Microsoft.Extensions.Logging logger
-    if logLevel <= LogLevel.Information then
-        Ionide.ProjInfo.Logging.Providers.MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory factory
+    if
+        logLevel
+        <= LogLevel.Information
+    then
+        Ionide.ProjInfo.Logging.Providers.MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory
+            factory
 
     logger.LogInformation("Running in verbose mode")
 
     let binlogPath =
         results.TryGetResult <@ BinLog_Path @>
-        |> Option.map (Path.GetFullPath >> DirectoryInfo)
+        |> Option.map (
+            Path.GetFullPath
+            >> DirectoryInfo
+        )
 
     AppDomain.CurrentDomain.UnhandledException.Add(fun args ->
         let ex = args.ExceptionObject :?> exn
 
         match ex with
-        | :? FileNotFoundException as fnf when fnf.FileName.StartsWith "System.Runtime" -> 
+        | :? FileNotFoundException as fnf when fnf.FileName.StartsWith "System.Runtime" ->
             // https://github.com/ionide/FSharp.Analyzers.SDK/issues/245
-            logger.LogCritical(ex, "FSharp.Analyzers.Cli could not find {0}. If you're using a preview version of the .NET SDK, you may need to set DOTNET_ROLL_FORWARD_TO_PRERELEASE=1 in your environment before running this tool.", fnf.FileName)
-        | _ ->
-            logger.LogCritical(ex, "Unhandled exception:")
+            logger.LogCritical(
+                ex,
+                "FSharp.Analyzers.Cli could not find {0}. If you're using a preview version of the .NET SDK, you may need to set DOTNET_ROLL_FORWARD_TO_PRERELEASE=1 in your environment before running this tool.",
+                fnf.FileName
+            )
+        | _ -> logger.LogCritical(ex, "Unhandled exception:")
+
         factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
         exit (int ExitErrorCodes.UnhandledException)
     )
 
     let severityMapping =
         {
-            TreatAsHint = results.GetResult(<@ Treat_As_Hint @>, []) |> Set.ofList
-            TreatAsInfo = results.GetResult(<@ Treat_As_Info @>, []) |> Set.ofList
-            TreatAsWarning = results.GetResult(<@ Treat_As_Warning @>, []) |> Set.ofList
-            TreatAsError = results.GetResult(<@ Treat_As_Error @>, []) |> Set.ofList
+            TreatAsHint =
+                results.GetResult(<@ Treat_As_Hint @>, [])
+                |> Set.ofList
+            TreatAsInfo =
+                results.GetResult(<@ Treat_As_Info @>, [])
+                |> Set.ofList
+            TreatAsWarning =
+                results.GetResult(<@ Treat_As_Warning @>, [])
+                |> Set.ofList
+            TreatAsError =
+                results.GetResult(<@ Treat_As_Error @>, [])
+                |> Set.ofList
         }
 
-    logger.LogInformation("Treat as Hints: [{0}]", (severityMapping.TreatAsHint |> String.concat ", "))
-    logger.LogInformation("Treat as Info: [{0}]", (severityMapping.TreatAsInfo |> String.concat ", "))
-    logger.LogInformation("Treat as Warning: [{0}]", (severityMapping.TreatAsWarning |> String.concat ", "))
-    logger.LogInformation("Treat as Error: [{0}]", (severityMapping.TreatAsError |> String.concat ", "))
+    logger.LogInformation(
+        "Treat as Hints: [{0}]",
+        (severityMapping.TreatAsHint
+         |> String.concat ", ")
+    )
+
+    logger.LogInformation(
+        "Treat as Info: [{0}]",
+        (severityMapping.TreatAsInfo
+         |> String.concat ", ")
+    )
+
+    logger.LogInformation(
+        "Treat as Warning: [{0}]",
+        (severityMapping.TreatAsWarning
+         |> String.concat ", ")
+    )
+
+    logger.LogInformation(
+        "Treat as Error: [{0}]",
+        (severityMapping.TreatAsError
+         |> String.concat ", ")
+    )
 
     if not (severityMapping.IsValid()) then
-        logger.LogError("An analyzer code may only be listed once in the <treat-as-severity> arguments.")
+        logger.LogError(
+            "An analyzer code may only be listed once in the <treat-as-severity> arguments."
+        )
 
         exit (int ExitErrorCodes.AnalyzerListedMultipleTimesInTreatAsSeverity)
 
-    let projOpts = results.GetResults <@ Project @> |> List.concat
+    let projOpts =
+        results.GetResults <@ Project @>
+        |> List.concat
+
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
-    let cwd = Directory.GetCurrentDirectory() |> DirectoryInfo
+
+    let cwd =
+        Directory.GetCurrentDirectory()
+        |> DirectoryInfo
 
     let beginsWithCurrentPath (path: string) =
-        path.StartsWith("./") || path.StartsWith(".\\")
+        path.StartsWith("./")
+        || path.StartsWith(".\\")
 
-    let scripts = 
+    let scripts =
         results.GetResult(<@ Script @>, [])
-        |> List.collect(fun scriptGlob ->
-            let root, scriptGlob = 
+        |> List.collect (fun scriptGlob ->
+            let root, scriptGlob =
                 if Path.IsPathRooted scriptGlob then
                     // Glob can't handle absolute paths, so we need to make sure the scriptGlob is a relative path
                     let root = Path.GetPathRoot scriptGlob
@@ -672,29 +821,52 @@ let main argv =
                 else
                     cwd, scriptGlob
 
-            root.GlobFiles scriptGlob |> Seq.map (fun file -> file.FullName) |> Seq.toList
+            root.GlobFiles scriptGlob
+            |> Seq.map (fun file -> file.FullName)
+            |> Seq.toList
         )
 
     let exclInclFiles =
         let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
-        logger.LogInformation("Exclude Files: [{0}]", (excludeFiles |> String.concat ", "))
-        let excludeFiles = excludeFiles |> List.map Glob
+
+        logger.LogInformation(
+            "Exclude Files: [{0}]",
+            (excludeFiles
+             |> String.concat ", ")
+        )
+
+        let excludeFiles =
+            excludeFiles
+            |> List.map Glob
 
         let includeFiles = results.GetResult(<@ Include_Files @>, [])
-        logger.LogInformation("Include Files: [{0}]", (includeFiles |> String.concat ", "))
-        let includeFiles = includeFiles |> List.map Glob
+
+        logger.LogInformation(
+            "Include Files: [{0}]",
+            (includeFiles
+             |> String.concat ", ")
+        )
+
+        let includeFiles =
+            includeFiles
+            |> List.map Glob
 
         match excludeFiles, includeFiles with
         | e, [] -> Choice1Of2 e
         | [], i -> Choice2Of2 i
         | _e, i ->
-            logger.LogWarning("--exclude-files and --include-files are mutually exclusive, ignoring --exclude-files")
+            logger.LogWarning(
+                "--exclude-files and --include-files are mutually exclusive, ignoring --exclude-files"
+            )
 
             Choice2Of2 i
 
     let properties = getProperties results
 
-    if Option.isSome fscArgs && not properties.IsEmpty then
+    if
+        Option.isSome fscArgs
+        && not properties.IsEmpty
+    then
         logger.LogError("fsc-args can't be combined with MSBuild properties.")
         exit (int ExitErrorCodes.FscArgsCombinedWithMsBuildProperties)
 
@@ -707,7 +879,8 @@ let main argv =
         |> Option.defaultValue (Ok OutputFormat.Default)
         |> Result.defaultWith (fun errMsg ->
             logger.LogError("{0} Using default output format.", errMsg)
-            OutputFormat.Default)
+            OutputFormat.Default
+        )
 
     let analyzersPaths =
         results.GetResults(<@ Analyzers_Path @>)
@@ -730,21 +903,33 @@ let main argv =
 
         match excludeAnalyzers, includeAnalyzers with
         | e, [] ->
-            fun (s: string) -> e |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            fun (s: string) ->
+                e
+                |> List.map Glob
+                |> List.exists (fun g -> g.IsMatch s)
             |> ExcludeFilter
         | [], i ->
-            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            fun (s: string) ->
+                i
+                |> List.map Glob
+                |> List.exists (fun g -> g.IsMatch s)
             |> IncludeFilter
         | _e, i ->
             logger.LogWarning(
                 "--exclude-analyzers and --include-analyzers are mutually exclusive, ignoring --exclude-analyzers"
             )
 
-            fun (s: string) -> i |> List.map Glob |> List.exists (fun g -> g.IsMatch s)
+            fun (s: string) ->
+                i
+                |> List.map Glob
+                |> List.exists (fun g -> g.IsMatch s)
             |> IncludeFilter
 
     AssemblyLoadContext.Default.add_Resolving (fun _ctx assemblyName ->
-        if assemblyName.Name <> "FSharp.Core" then
+        if
+            assemblyName.Name
+            <> "FSharp.Core"
+        then
             null
         else
 
@@ -765,9 +950,12 @@ let main argv =
         ||> List.fold (fun (accDlls, accAnalyzers, accFailed) analyzersPath ->
             let loadedDlls = client.LoadAnalyzers(analyzersPath, exclInclAnalyzers)
 
-            (accDlls + loadedDlls.AnalyzerAssemblies),
-            (accAnalyzers + loadedDlls.Analyzers),
-            (accFailed + loadedDlls.FailedAssemblies)
+            (accDlls
+             + loadedDlls.AnalyzerAssemblies),
+            (accAnalyzers
+             + loadedDlls.Analyzers),
+            (accFailed
+             + loadedDlls.FailedAssemblies)
         )
 
     logger.LogInformation("Registered {0} analyzers from {1} dlls", analyzers, dlls)
@@ -777,10 +965,18 @@ let main argv =
             None
         else
             match fscArgs with
-            |  Some _ when projOpts |> List.isEmpty |> not ->
+            | Some _ when
+                projOpts
+                |> List.isEmpty
+                |> not
+                ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
                 exit (int ExitErrorCodes.ProjectAndFscArgs)
-            |  Some _ when scripts |> List.isEmpty |> not ->
+            | Some _ when
+                scripts
+                |> List.isEmpty
+                |> not
+                ->
                 logger.LogError("`--script` and `--fsc-args` cannot be combined.")
                 exit (int ExitErrorCodes.ProjectAndFscArgs)
             | Some fscArgs ->
@@ -790,48 +986,75 @@ let main argv =
             | None ->
                 match projOpts, scripts with
                 | [], [] ->
-                    logger.LogError("No projects or scripts were specified. Use `--project` or `--script` to specify them.")
+                    logger.LogError(
+                        "No projects or scripts were specified. Use `--project` or `--script` to specify them."
+                    )
+
                     exit (int ExitErrorCodes.EmptyFscArgs)
                 | projects, scripts ->
 
                     for script in scripts do
                         if not (File.Exists(script)) then
-                            logger.LogError("Invalid `--script` argument. File does not exist: '{script}'", script)
+                            logger.LogError(
+                                "Invalid `--script` argument. File does not exist: '{script}'",
+                                script
+                            )
+
                             exit (int ExitErrorCodes.InvalidProjectArguments)
 
                     let scriptOptions =
-                        scripts 
-                        |> List.map(fun script -> async {
-                            let! fileContent = File.ReadAllTextAsync script |> Async.AwaitTask
-                            let sourceText = SourceText.ofString fileContent
-                            // GetProjectOptionsFromScript cannot be run in parallel, it is not thread-safe.
-                            let! options, diagnostics = fcs.GetProjectOptionsFromScript(script, sourceText)
-                            if not (List.isEmpty diagnostics) then
-                                diagnostics
-                                |> List.iter (fun d ->
-                                    logger.LogError(
-                                        "Script {0} has a diagnostic: {1} at {2}",
-                                        script,
-                                        d.Message,
-                                        d.Range
+                        scripts
+                        |> List.map (fun script ->
+                            async {
+                                let! fileContent =
+                                    File.ReadAllTextAsync script
+                                    |> Async.AwaitTask
+
+                                let sourceText = SourceText.ofString fileContent
+                                // GetProjectOptionsFromScript cannot be run in parallel, it is not thread-safe.
+                                let! options, diagnostics =
+                                    fcs.GetProjectOptionsFromScript(script, sourceText)
+
+                                if not (List.isEmpty diagnostics) then
+                                    diagnostics
+                                    |> List.iter (fun d ->
+                                        logger.LogError(
+                                            "Script {0} has a diagnostic: {1} at {2}",
+                                            script,
+                                            d.Message,
+                                            d.Range
+                                        )
                                     )
-                                )
-                            return options
-                        }
+
+                                return options
+                            }
                         )
                         |> Async.Sequential
 
                     for projPath in projects do
                         if not (File.Exists(projPath)) then
-                            logger.LogError("Invalid `--project` argument. File does not exist: '{projPath}'", projPath)
+                            logger.LogError(
+                                "Invalid `--project` argument. File does not exist: '{projPath}'",
+                                projPath
+                            )
+
                             exit (int ExitErrorCodes.InvalidProjectArguments)
+
                     async {
-                        let! scriptOptions = scriptOptions |> Async.StartChild
-                        let! loadedProjects = loadProjects toolsPath properties projects binlogPath |> Async.StartChild
+                        let! scriptOptions =
+                            scriptOptions
+                            |> Async.StartChild
+
+                        let! loadedProjects =
+                            loadProjects toolsPath properties projects binlogPath
+                            |> Async.StartChild
+
                         let! loadedProjects = loadedProjects
                         let! scriptOptions = scriptOptions
 
-                        let loadedProjects = Array.toList scriptOptions @ loadedProjects
+                        let loadedProjects =
+                            Array.toList scriptOptions
+                            @ loadedProjects
 
                         return!
                             loadedProjects
@@ -852,18 +1075,25 @@ let main argv =
             | Ok results -> results, false
             | Error(results, _errors) -> results, true
 
-        let results = results |> List.concat
+        let results =
+            results
+            |> List.concat
 
         let codeRoot =
             match codeRoot with
-            | None -> Directory.GetCurrentDirectory() |> Uri
-            | Some root -> Path.GetFullPath root |> Uri
+            | None ->
+                Directory.GetCurrentDirectory()
+                |> Uri
+            | Some root ->
+                Path.GetFullPath root
+                |> Uri
 
         match outputFormat with
         | OutputFormat.Default -> printMessagesInDefaultFormat results
         | OutputFormat.GitHub -> printMessagesInGitHubFormat codeRoot results
 
-        report |> Option.iter (writeReport results codeRoot)
+        report
+        |> Option.iter (writeReport results codeRoot)
 
         let check =
             results
