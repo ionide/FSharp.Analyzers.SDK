@@ -36,14 +36,14 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
             textWriter.WriteLine(message)
             this.ResetColor(textWriter)
         else
-            this.WritePrefix(textWriter, logEntry.LogLevel)
+            this.WritePrefix(textWriter, logEntry.Category, logEntry.LogLevel)
             textWriter.WriteLine(message)
             //  logEntry.Formatter doesn't actually write the exception so we need to do that ourselves
             // https://github.com/dotnet/runtime/blob/2bcadad3045934b54672e626bbb6131f7d0a523c/src/libraries/Microsoft.Extensions.Logging.Console/src/SystemdConsoleFormatter.cs#L95-L101
             if not (isNull logEntry.Exception) then
                 textWriter.WriteLine(logEntry.Exception.ToString())
 
-    member private x.WritePrefix(textWriter: TextWriter, logLevel: LogLevel) =
+    member private x.WritePrefix(textWriter: TextWriter, category: string, logLevel: LogLevel) =
         if not (isNull formatterOptions.TimestampFormat) then
             let dateTime =
                 if formatterOptions.UseUtcTimestamp then
@@ -54,6 +54,8 @@ type CustomFormatter(options: IOptionsMonitor<CustomOptions>) as this =
             let timestamp = dateTime.ToString(formatterOptions.TimestampFormat)
 
             textWriter.Write($"{timestamp} ")
+
+        textWriter.Write($"[{category}] ")
 
         match logLevel with
         | LogLevel.Trace -> textWriter.Write("trace: ")

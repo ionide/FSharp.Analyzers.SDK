@@ -58,6 +58,7 @@ type Arguments =
     | [<Unique>] Code_Root of string
     | [<Unique; AltCommandLine("-v")>] Verbosity of string
     | [<Unique>] Output_Format of string
+    | [<Unique>] BinLog_Path of string
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -92,7 +93,8 @@ type Arguments =
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
             | Output_Format _ ->
-                "Format in which to write analyzer results to stdout. The available options are: default, github."
+                "Format in which to write analyzer results to stdout. The available options are: default, github."            
+            | BinLog_Path(_) -> "Path to a directory where MSBuild binary logs (binlog) will be written. You can use https://msbuildlog.com/ to view them."
 
 type SeverityMappings =
     {
@@ -157,7 +159,7 @@ let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
 /// <summary>Runs MSBuild to create FSharpProjectOptions based on the projPaths.</summary>
 /// <returns>Returns only the FSharpProjectOptions based on the projPaths and not any referenced projects.</returns>
-let loadProjects toolsPath properties (projPaths: string list) =
+let loadProjects toolsPath properties (projPaths: string list) (binLogPath : DirectoryInfo option) =
     async {
         let projPaths =
             projPaths
@@ -167,7 +169,16 @@ let loadProjects toolsPath properties (projPaths: string list) =
             logger.LogInformation("Loading project {0}", proj)
 
         let loader = WorkspaceLoader.Create(toolsPath, properties)
-        let projectOptions = loader.LoadProjects projPaths
+        binLogPath
+        |> Option.iter (fun path ->
+            logger.LogInformation("Using binary log path: {0}", path.FullName)
+        )
+        let binLogConfig =
+            binLogPath
+            |> Option.map (fun path -> BinaryLogGeneration.Within path)
+            |> Option.defaultValue BinaryLogGeneration.Off
+            
+        let projectOptions = loader.LoadProjects(projPaths, [],  binaryLog = binLogConfig)
 
         let failedLoads =
             projPaths
@@ -593,9 +604,17 @@ let main argv =
             |> ignore
         )
 
-    logger <- factory.CreateLogger("")
+    logger <- factory.CreateLogger("FSharp.Analyzers.Cli")
+
+    // Set the Ionide.ProjInfo logger to use the same Microsoft.Extensions.Logging logger
+    if logLevel <= LogLevel.Information then
+        Ionide.ProjInfo.Logging.Providers.MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory factory
 
     logger.LogInformation("Running in verbose mode")
+
+    let binlogPath =
+        results.TryGetResult <@ BinLog_Path @>
+        |> Option.map (Path.GetFullPath >> DirectoryInfo)
 
     AppDomain.CurrentDomain.UnhandledException.Add(fun args ->
         let ex = args.ExceptionObject :?> exn
@@ -808,7 +827,7 @@ let main argv =
                             exit (int ExitErrorCodes.InvalidProjectArguments)
                     async {
                         let! scriptOptions = scriptOptions |> Async.StartChild
-                        let! loadedProjects = loadProjects toolsPath properties projects |> Async.StartChild
+                        let! loadedProjects = loadProjects toolsPath properties projects binlogPath |> Async.StartChild
                         let! loadedProjects = loadedProjects
                         let! scriptOptions = scriptOptions
 
