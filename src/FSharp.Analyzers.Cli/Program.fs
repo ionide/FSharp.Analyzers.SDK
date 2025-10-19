@@ -604,7 +604,11 @@ let main argv =
             |> ignore
         )
 
-    logger <- factory.CreateLogger("")
+    logger <- factory.CreateLogger("FSharp.Analyzers.Cli")
+
+    // Set the Ionide.ProjInfo logger to use the same Microsoft.Extensions.Logging logger
+    if logLevel <= LogLevel.Information then
+        Ionide.ProjInfo.Logging.Providers.MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory factory
 
     logger.LogInformation("Running in verbose mode")
 
