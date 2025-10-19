@@ -20,8 +20,7 @@ let buildStage =
 
 pipeline "Build" {
     restoreStage
-    // TODO: can uncomment this after .NET SDK 9.0.101 releases
-    // stage "lint" { run "dotnet fantomas . --check" }
+    stage "lint" { run "dotnet fantomas . --check" }
     stage "build" { run "dotnet build -c Release --no-restore -maxCpuCount" }
     stage "test" {
         purgeBinLogCache ()
@@ -31,7 +30,9 @@ pipeline "Build" {
         run
             "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./artifacts/bin/OptionAnalyzer/release --verbosity d --binlog-path temp/binlogs"
     }
-    stage "docs" { run "dotnet fsdocs build --properties Configuration=Release --eval --clean --strict" }
+    stage "docs" {
+        run "dotnet fsdocs build --properties Configuration=Release --eval --clean --strict"
+    }
     runIfOnlySpecified false
 }
 
