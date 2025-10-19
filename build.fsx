@@ -29,7 +29,7 @@ pipeline "Build" {
     }
     stage "sample" {
         run
-            "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./artifacts/bin/OptionAnalyzer/release --verbosity d"
+            "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./artifacts/bin/OptionAnalyzer/release --verbosity d --binlog-path temp/binlogs"
     }
     stage "docs" { run "dotnet fsdocs build --properties Configuration=Release --eval --clean --strict" }
     runIfOnlySpecified false
