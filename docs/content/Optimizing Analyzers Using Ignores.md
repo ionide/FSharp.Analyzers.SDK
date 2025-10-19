@@ -1,6 +1,6 @@
 ---
 category: end-users
-categoryindex: 1
+categoryindex: 2
 index: 6
 ---
 
