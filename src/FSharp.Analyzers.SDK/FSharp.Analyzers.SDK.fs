@@ -136,6 +136,12 @@ module Ignore =
 
         codeToRanges
 
+    let getAnalyzerIgnoreRanges (parseFileResults: FSharpParseFileResults) sourceText =
+        parseFileResults.ParseTree
+        |> getCodeComments
+        |> getIgnoreComments sourceText
+        |> getIgnoreRanges
+
 module EntityCache =
     let private entityCache = EntityCache()
 
@@ -422,11 +428,7 @@ module Utils =
             TypedTree = checkFileResults.ImplementationFile
             CheckProjectResults = checkProjectResults
             ProjectOptions = projectOptions
-            AnalyzerIgnoreRanges =
-                parseFileResults.ParseTree
-                |> Ignore.getCodeComments
-                |> Ignore.getIgnoreComments sourceText
-                |> Ignore.getIgnoreRanges
+            AnalyzerIgnoreRanges = Ignore.getAnalyzerIgnoreRanges parseFileResults sourceText
         }
 
     let createFCS documentSource =

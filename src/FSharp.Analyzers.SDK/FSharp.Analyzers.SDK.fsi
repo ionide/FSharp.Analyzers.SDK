@@ -14,6 +14,12 @@ type AnalyzerIgnoreRange =
     | NextLine of commentLine: int
     | CurrentLine of commentLine: int
 
+module Ignore =
+    val getAnalyzerIgnoreRanges:
+        parseFileResults: FSharpParseFileResults ->
+        sourceText: ISourceText ->
+            Map<string, AnalyzerIgnoreRange list>
+
 [<AbstractClass>]
 [<AttributeUsage(AttributeTargets.Method
                  ||| AttributeTargets.Property
