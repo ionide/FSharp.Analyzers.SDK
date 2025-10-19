@@ -21,8 +21,11 @@ module TASTCollecting =
         default WalkAddressSet: lvalueExpr: FSharpExpr -> rvalueExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for applications.
-        abstract WalkApplication: funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
-        default WalkApplication: funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+        abstract WalkApplication:
+            funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+
+        default WalkApplication:
+            funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
 
         /// Overwriting this member hooks up a custom operation for a call of a member or function.
         abstract WalkCall:
@@ -49,47 +52,84 @@ module TASTCollecting =
 
         /// Overwriting this member hooks up a custom operation for fast integer loops.
         abstract WalkFastIntegerForLoop:
-            startExpr: FSharpExpr -> limitExpr: FSharpExpr -> consumeExpr: FSharpExpr -> isUp: bool -> unit
+            startExpr: FSharpExpr ->
+            limitExpr: FSharpExpr ->
+            consumeExpr: FSharpExpr ->
+            isUp: bool ->
+                unit
 
         default WalkFastIntegerForLoop:
-            startExpr: FSharpExpr -> limitExpr: FSharpExpr -> consumeExpr: FSharpExpr -> isUp: bool -> unit
+            startExpr: FSharpExpr ->
+            limitExpr: FSharpExpr ->
+            consumeExpr: FSharpExpr ->
+            isUp: bool ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for ILAsm code.
-        abstract WalkILAsm: asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
-        default WalkILAsm: asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+        abstract WalkILAsm:
+            asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+
+        default WalkILAsm:
+            asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
 
         /// Overwriting this member hooks up a custom operation for ILFieldGet expressions.
-        abstract WalkILFieldGet: objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
-        default WalkILFieldGet: objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
+        abstract WalkILFieldGet:
+            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
+
+        default WalkILFieldGet:
+            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
 
         /// Overwriting this member hooks up a custom operation for ILFieldSet expressions.
         abstract WalkILFieldSet:
-            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> valueExpr: FSharpExpr -> unit
+            objExprOpt: FSharpExpr option ->
+            fieldType: FSharpType ->
+            fieldName: string ->
+            valueExpr: FSharpExpr ->
+                unit
 
         default WalkILFieldSet:
-            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> valueExpr: FSharpExpr -> unit
+            objExprOpt: FSharpExpr option ->
+            fieldType: FSharpType ->
+            fieldName: string ->
+            valueExpr: FSharpExpr ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for if-then-else expressions.
-        abstract WalkIfThenElse: guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
-        default WalkIfThenElse: guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
+        abstract WalkIfThenElse:
+            guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
+
+        default WalkIfThenElse:
+            guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for lambda expressions.
-        abstract WalkLambda: lambdaVar: FSharpMemberOrFunctionOrValue -> bodyExpr: FSharpExpr -> unit
+        abstract WalkLambda:
+            lambdaVar: FSharpMemberOrFunctionOrValue -> bodyExpr: FSharpExpr -> unit
+
         default WalkLambda: lambdaVar: FSharpMemberOrFunctionOrValue -> bodyExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for let expressions.
         abstract WalkLet:
-            bindingVar: FSharpMemberOrFunctionOrValue -> bindingExpr: FSharpExpr -> bodyExpr: FSharpExpr -> unit
+            bindingVar: FSharpMemberOrFunctionOrValue ->
+            bindingExpr: FSharpExpr ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         default WalkLet:
-            bindingVar: FSharpMemberOrFunctionOrValue -> bindingExpr: FSharpExpr -> bodyExpr: FSharpExpr -> unit
+            bindingVar: FSharpMemberOrFunctionOrValue ->
+            bindingExpr: FSharpExpr ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for let-rec expressions.
         abstract WalkLetRec:
-            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list -> bodyExpr: FSharpExpr -> unit
+            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         default WalkLetRec:
-            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list -> bodyExpr: FSharpExpr -> unit
+            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for a new array instance.
         abstract WalkNewArray: arrayType: FSharpType -> argExprs: FSharpExpr list -> unit
@@ -101,14 +141,23 @@ module TASTCollecting =
 
         /// Overwriting this member hooks up a custom operation for a new object.
         abstract WalkNewObject:
-            objType: FSharpMemberOrFunctionOrValue -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+            objType: FSharpMemberOrFunctionOrValue ->
+            typeArgs: FSharpType list ->
+            argExprs: FSharpExpr list ->
+                unit
 
         default WalkNewObject:
-            objType: FSharpMemberOrFunctionOrValue -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+            objType: FSharpMemberOrFunctionOrValue ->
+            typeArgs: FSharpType list ->
+            argExprs: FSharpExpr list ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for the creation of a new record instance.
-        abstract WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
-        default WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+        abstract WalkNewRecord:
+            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+
+        default WalkNewRecord:
+            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
 
         /// Overwriting this member hooks up a custom operation for the creation of a new tuple instance.
         abstract WalkNewTuple: tupleType: FSharpType -> argExprs: FSharpExpr list -> unit
@@ -127,10 +176,16 @@ module TASTCollecting =
 
         /// Overwriting this member hooks up a custom operation for field-get expressions.
         abstract WalkFSharpFieldGet:
-            objExprOpt: FSharpExpr option -> recordOrClassType: FSharpType -> fieldInfo: FSharpField -> unit
+            objExprOpt: FSharpExpr option ->
+            recordOrClassType: FSharpType ->
+            fieldInfo: FSharpField ->
+                unit
 
         default WalkFSharpFieldGet:
-            objExprOpt: FSharpExpr option -> recordOrClassType: FSharpType -> fieldInfo: FSharpField -> unit
+            objExprOpt: FSharpExpr option ->
+            recordOrClassType: FSharpType ->
+            fieldInfo: FSharpField ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for field-set expressions.
         abstract WalkFSharpFieldSet:
@@ -173,23 +228,36 @@ module TASTCollecting =
                 unit
 
         /// Overwriting this member hooks up a custom operation for tuple-get expressions.
-        abstract WalkTupleGet: tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
-        default WalkTupleGet: tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
+        abstract WalkTupleGet:
+            tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
+
+        default WalkTupleGet:
+            tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for decision trees.
         abstract WalkDecisionTree:
-            decisionExpr: FSharpExpr -> decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list -> unit
+            decisionExpr: FSharpExpr ->
+            decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list ->
+                unit
 
         default WalkDecisionTree:
-            decisionExpr: FSharpExpr -> decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list -> unit
+            decisionExpr: FSharpExpr ->
+            decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list ->
+                unit
 
         /// Overwriting this member hooks up a custom operation for decision tree success expressions.
-        abstract WalkDecisionTreeSuccess: decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
-        default WalkDecisionTreeSuccess: decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
+        abstract WalkDecisionTreeSuccess:
+            decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
+
+        default WalkDecisionTreeSuccess:
+            decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
 
         /// Overwriting this member hooks up a custom operation for type lambdas.
-        abstract WalkTypeLambda: genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
-        default WalkTypeLambda: genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
+        abstract WalkTypeLambda:
+            genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
+
+        default WalkTypeLambda:
+            genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for type tests.
         abstract WalkTypeTest: ty: FSharpType -> inpExpr: FSharpExpr -> unit
@@ -228,8 +296,11 @@ module TASTCollecting =
                 unit
 
         /// Overwriting this member hooks up a custom operation for union case test expressions.
-        abstract WalkUnionCaseTest: unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
-        default WalkUnionCaseTest: unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
+        abstract WalkUnionCaseTest:
+            unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
+
+        default WalkUnionCaseTest:
+            unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
 
         /// Overwriting this member hooks up a custom operation for union case tag expressions.
         abstract WalkUnionCaseTag: unionExpr: FSharpExpr -> unionType: FSharpType -> unit
@@ -270,8 +341,11 @@ module TASTCollecting =
                 unit
 
         /// Overwriting this member hooks up a custom operation for value sets expressions.
-        abstract WalkValueSet: valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
-        default WalkValueSet: valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
+        abstract WalkValueSet:
+            valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
+
+        default WalkValueSet:
+            valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
 
         /// Overwriting this member hooks up a custom operation for while loops.
         abstract WalkWhileLoop: guardExpr: FSharpExpr -> bodyExpr: FSharpExpr -> unit

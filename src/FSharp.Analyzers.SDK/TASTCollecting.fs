@@ -18,7 +18,9 @@ module TASTCollecting =
         abstract WalkAddressSet: lvalueExpr: FSharpExpr -> rvalueExpr: FSharpExpr -> unit
         default _.WalkAddressSet _ _ = ()
 
-        abstract WalkApplication: funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+        abstract WalkApplication:
+            funcExpr: FSharpExpr -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+
         default _.WalkApplication _ _ _ = ()
 
         abstract WalkCall:
@@ -36,34 +38,55 @@ module TASTCollecting =
         default _.WalkCoerce _ _ = ()
 
         abstract WalkFastIntegerForLoop:
-            startExpr: FSharpExpr -> limitExpr: FSharpExpr -> consumeExpr: FSharpExpr -> isUp: bool -> unit
+            startExpr: FSharpExpr ->
+            limitExpr: FSharpExpr ->
+            consumeExpr: FSharpExpr ->
+            isUp: bool ->
+                unit
 
         default _.WalkFastIntegerForLoop _ _ _ _ = ()
 
-        abstract WalkILAsm: asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+        abstract WalkILAsm:
+            asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+
         default _.WalkILAsm _ _ _ = ()
 
-        abstract WalkILFieldGet: objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
+        abstract WalkILFieldGet:
+            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> unit
+
         default _.WalkILFieldGet _ _ _ = ()
 
         abstract WalkILFieldSet:
-            objExprOpt: FSharpExpr option -> fieldType: FSharpType -> fieldName: string -> valueExpr: FSharpExpr -> unit
+            objExprOpt: FSharpExpr option ->
+            fieldType: FSharpType ->
+            fieldName: string ->
+            valueExpr: FSharpExpr ->
+                unit
 
         default _.WalkILFieldSet _ _ _ _ = ()
 
-        abstract WalkIfThenElse: guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
+        abstract WalkIfThenElse:
+            guardExpr: FSharpExpr -> thenExpr: FSharpExpr -> elseExpr: FSharpExpr -> unit
+
         default _.WalkIfThenElse _ _ _ = ()
 
-        abstract WalkLambda: lambdaVar: FSharpMemberOrFunctionOrValue -> bodyExpr: FSharpExpr -> unit
+        abstract WalkLambda:
+            lambdaVar: FSharpMemberOrFunctionOrValue -> bodyExpr: FSharpExpr -> unit
+
         default _.WalkLambda _ _ = ()
 
         abstract WalkLet:
-            bindingVar: FSharpMemberOrFunctionOrValue -> bindingExpr: FSharpExpr -> bodyExpr: FSharpExpr -> unit
+            bindingVar: FSharpMemberOrFunctionOrValue ->
+            bindingExpr: FSharpExpr ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         default _.WalkLet _ _ _ = ()
 
         abstract WalkLetRec:
-            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list -> bodyExpr: FSharpExpr -> unit
+            recursiveBindings: (FSharpMemberOrFunctionOrValue * FSharpExpr) list ->
+            bodyExpr: FSharpExpr ->
+                unit
 
         default _.WalkLetRec _ _ = ()
 
@@ -74,11 +97,16 @@ module TASTCollecting =
         default _.WalkNewDelegate _ _ = ()
 
         abstract WalkNewObject:
-            objType: FSharpMemberOrFunctionOrValue -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
+            objType: FSharpMemberOrFunctionOrValue ->
+            typeArgs: FSharpType list ->
+            argExprs: FSharpExpr list ->
+                unit
 
         default _.WalkNewObject _ _ _ = ()
 
-        abstract WalkNewRecord: recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+        abstract WalkNewRecord:
+            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+
         default _.WalkNewRecord _ _ _ = ()
 
         abstract WalkNewTuple: tupleType: FSharpType -> argExprs: FSharpExpr list -> unit
@@ -93,7 +121,10 @@ module TASTCollecting =
         default _.WalkQuote _ = ()
 
         abstract WalkFSharpFieldGet:
-            objExprOpt: FSharpExpr option -> recordOrClassType: FSharpType -> fieldInfo: FSharpField -> unit
+            objExprOpt: FSharpExpr option ->
+            recordOrClassType: FSharpType ->
+            fieldInfo: FSharpField ->
+                unit
 
         default _.WalkFSharpFieldGet _ _ _ = ()
 
@@ -122,18 +153,26 @@ module TASTCollecting =
 
         default _.WalkTryWith _ _ _ _ _ = ()
 
-        abstract WalkTupleGet: tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
+        abstract WalkTupleGet:
+            tupleType: FSharpType -> tupleElemIndex: int -> tupleExpr: FSharpExpr -> unit
+
         default _.WalkTupleGet _ _ _ = ()
 
         abstract WalkDecisionTree:
-            decisionExpr: FSharpExpr -> decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list -> unit
+            decisionExpr: FSharpExpr ->
+            decisionTargets: (FSharpMemberOrFunctionOrValue list * FSharpExpr) list ->
+                unit
 
         default _.WalkDecisionTree _ _ = ()
 
-        abstract WalkDecisionTreeSuccess: decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
+        abstract WalkDecisionTreeSuccess:
+            decisionTargetIdx: int -> decisionTargetExprs: FSharpExpr list -> unit
+
         default _.WalkDecisionTreeSuccess _ _ = ()
 
-        abstract WalkTypeLambda: genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
+        abstract WalkTypeLambda:
+            genericParam: FSharpGenericParameter list -> bodyExpr: FSharpExpr -> unit
+
         default _.WalkTypeLambda _ _ = ()
 
         abstract WalkTypeTest: ty: FSharpType -> inpExpr: FSharpExpr -> unit
@@ -158,7 +197,9 @@ module TASTCollecting =
 
         default _.WalkUnionCaseGet _ _ _ _ = ()
 
-        abstract WalkUnionCaseTest: unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
+        abstract WalkUnionCaseTest:
+            unionExpr: FSharpExpr -> unionType: FSharpType -> unionCase: FSharpUnionCase -> unit
+
         default _.WalkUnionCaseTest _ _ _ = ()
 
         abstract WalkUnionCaseTag: unionExpr: FSharpExpr -> unionType: FSharpType -> unit
@@ -184,7 +225,9 @@ module TASTCollecting =
 
         default _.WalkTraitCall _ _ _ _ _ _ = ()
 
-        abstract WalkValueSet: valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
+        abstract WalkValueSet:
+            valToSet: FSharpMemberOrFunctionOrValue -> valueExpr: FSharpExpr -> unit
+
         default _.WalkValueSet _ _ = ()
 
         abstract WalkWhileLoop: guardExpr: FSharpExpr -> bodyExpr: FSharpExpr -> unit
@@ -220,13 +263,25 @@ module TASTCollecting =
             visitExpr handler funcExpr
             visitExprs handler argExprs
         | Call(objExprOpt, memberOrFunc, objExprTypeArgs, memberOrFuncTypeArgs, argExprs) ->
-            handler.WalkCall objExprOpt memberOrFunc objExprTypeArgs memberOrFuncTypeArgs argExprs e.Range
+            handler.WalkCall
+                objExprOpt
+                memberOrFunc
+                objExprTypeArgs
+                memberOrFuncTypeArgs
+                argExprs
+                e.Range
+
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
         | Coerce(targetType, inpExpr) ->
             handler.WalkCoerce targetType inpExpr
             visitExpr handler inpExpr
-        | FastIntegerForLoop(startExpr, limitExpr, consumeExpr, isUp, _debugPointAtFor, _debugPointAtInOrTo) ->
+        | FastIntegerForLoop(startExpr,
+                             limitExpr,
+                             consumeExpr,
+                             isUp,
+                             _debugPointAtFor,
+                             _debugPointAtInOrTo) ->
             handler.WalkFastIntegerForLoop startExpr limitExpr consumeExpr isUp
             visitExpr handler startExpr
             visitExpr handler limitExpr
@@ -254,10 +309,16 @@ module TASTCollecting =
             visitExpr handler bodyExpr
         | LetRec(recursiveBindings, bodyExpr) ->
             let recursiveBindings' =
-                recursiveBindings |> List.map (fun (mfv, expr, _dp) -> (mfv, expr))
+                recursiveBindings
+                |> List.map (fun (mfv, expr, _dp) -> (mfv, expr))
 
             handler.WalkLetRec recursiveBindings' bodyExpr
-            List.iter (snd >> visitExpr handler) recursiveBindings'
+
+            List.iter
+                (snd
+                 >> visitExpr handler)
+                recursiveBindings'
+
             visitExpr handler bodyExpr
         | NewArray(arrayType, argExprs) ->
             handler.WalkNewArray arrayType argExprs
@@ -295,7 +356,13 @@ module TASTCollecting =
             handler.WalkTryFinally bodyExpr finalizeExpr
             visitExpr handler bodyExpr
             visitExpr handler finalizeExpr
-        | TryWith(bodyExpr, filterVar, filterExpr, catchVar, catchExpr, _debugPointAtTry, _debugPointAtWith) ->
+        | TryWith(bodyExpr,
+                  filterVar,
+                  filterExpr,
+                  catchVar,
+                  catchExpr,
+                  _debugPointAtTry,
+                  _debugPointAtWith) ->
             handler.WalkTryWith bodyExpr filterVar filterExpr catchVar catchExpr
             visitExpr handler bodyExpr
             visitExpr handler catchExpr
@@ -305,7 +372,11 @@ module TASTCollecting =
         | DecisionTree(decisionExpr, decisionTargets) ->
             handler.WalkDecisionTree decisionExpr decisionTargets
             visitExpr handler decisionExpr
-            List.iter (snd >> visitExpr handler) decisionTargets
+
+            List.iter
+                (snd
+                 >> visitExpr handler)
+                decisionTargets
         | DecisionTreeSuccess(decisionTargetIdx, decisionTargetExprs) ->
             handler.WalkDecisionTreeSuccess decisionTargetIdx decisionTargetExprs
             visitExprs handler decisionTargetExprs
@@ -332,7 +403,11 @@ module TASTCollecting =
             handler.WalkObjectExpr objType baseCallExpr overrides interfaceImplementations
             visitExpr handler baseCallExpr
             List.iter (visitObjMember handler) overrides
-            List.iter (snd >> List.iter (visitObjMember handler)) interfaceImplementations
+
+            List.iter
+                (snd
+                 >> List.iter (visitObjMember handler))
+                interfaceImplementations
         | TraitCall(sourceTypes, traitName, typeArgs, typeInstantiation, argTypes, argExprs) ->
             handler.WalkTraitCall sourceTypes traitName typeArgs typeInstantiation argTypes argExprs
             visitExprs handler argExprs
@@ -356,10 +431,20 @@ module TASTCollecting =
 
     and visitObjMember f memb = visitExpr f memb.Body
 
-    let membersToIgnore = set [ "CompareTo"; "GetHashCode"; "Equals" ]
+    let membersToIgnore =
+        set
+            [
+                "CompareTo"
+                "GetHashCode"
+                "Equals"
+            ]
 
     let exprTypesToIgnore =
-            set [ "Microsoft.FSharp.Core.int"; "Microsoft.FSharp.Core.bool" ]
+        set
+            [
+                "Microsoft.FSharp.Core.int"
+                "Microsoft.FSharp.Core.bool"
+            ]
 
     let rec visitDeclaration f d =
 
@@ -381,10 +466,16 @@ module TASTCollecting =
                 try
                     visitExpr f e
                 with ex ->
-                    logger.LogDebug("unhandled expression at {0}:{1}", e.Range.FileName, e.Range.ToString())
+                    logger.LogDebug(
+                        "unhandled expression at {0}:{1}",
+                        e.Range.FileName,
+                        e.Range.ToString()
+                    )
+
                     logger.LogDebug("{0}", ex.Message)
                     logger.LogDebug("{0}", ex.StackTrace)
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
     let walkTast (walker: TypedTreeCollectorBase) (tast: FSharpImplementationFileContents) : unit =
-        tast.Declarations |> List.iter (visitDeclaration walker)
+        tast.Declarations
+        |> List.iter (visitDeclaration walker)

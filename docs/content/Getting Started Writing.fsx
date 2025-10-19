@@ -146,7 +146,9 @@ let releaseNotes = ReleaseNotes.load "RELEASE_NOTES.md"
 Target.create
     "PackAnalyzer"
     (fun _ ->
-        let analyzerProject = "src" </> "BadCodeAnalyzer"
+        let analyzerProject =
+            "src"
+            </> "BadCodeAnalyzer"
 
         let args =
             [
@@ -154,38 +156,80 @@ Target.create
                 "--configuration Release"
                 sprintf "/p:PackageVersion=%s" releaseNotes.NugetVersion
                 sprintf "/p:PackageReleaseNotes=\"%s\"" (String.concat "\n" releaseNotes.Notes)
-                sprintf "--output %s" (__SOURCE_DIRECTORY__ </> "dist")
+                sprintf
+                    "--output %s"
+                    (__SOURCE_DIRECTORY__
+                     </> "dist")
             ]
 
         // create initial nuget package
         let exitCode = Shell.Exec("dotnet", String.concat " " args, analyzerProject)
 
-        if exitCode <> 0 then
+        if
+            exitCode
+            <> 0
+        then
             failwith "dotnet pack failed"
         else
-            match Shell.Exec("dotnet", "publish --configuration Release --framework net8.0", analyzerProject) with
+            match
+                Shell.Exec(
+                    "dotnet",
+                    "publish --configuration Release --framework net8.0",
+                    analyzerProject
+                )
+            with
             | 0 ->
                 let nupkg =
-                    System.IO.Directory.GetFiles(__SOURCE_DIRECTORY__ </> "dist")
+                    System.IO.Directory.GetFiles(
+                        __SOURCE_DIRECTORY__
+                        </> "dist"
+                    )
                     |> Seq.head
                     |> Path.GetFullPath
 
                 let nugetParent = DirectoryInfo(nupkg).Parent.FullName
                 let nugetFileName = Path.GetFileNameWithoutExtension(nupkg)
 
-                let publishPath = analyzerProject </> "bin" </> "Release" </> "net8.0" </> "publish"
+                let publishPath =
+                    analyzerProject
+                    </> "bin"
+                    </> "Release"
+                    </> "net8.0"
+                    </> "publish"
                 // Unzip the nuget
-                ZipFile.ExtractToDirectory(nupkg, nugetParent </> nugetFileName)
+                ZipFile.ExtractToDirectory(
+                    nupkg,
+                    nugetParent
+                    </> nugetFileName
+                )
                 // delete the initial nuget package
                 File.Delete nupkg
                 // remove stuff from ./lib/net8.0
-                Shell.deleteDir (nugetParent </> nugetFileName </> "lib" </> "net8.0")
+                Shell.deleteDir (
+                    nugetParent
+                    </> nugetFileName
+                    </> "lib"
+                    </> "net8.0"
+                )
                 // move the output of publish folder into the ./lib/net8.0 directory
-                Shell.copyDir (nugetParent </> nugetFileName </> "lib" </> "net8.0") publishPath (fun _ -> true)
+                Shell.copyDir
+                    (nugetParent
+                     </> nugetFileName
+                     </> "lib"
+                     </> "net8.0")
+                    publishPath
+                    (fun _ -> true)
                 // re-create the nuget package
-                ZipFile.CreateFromDirectory(nugetParent </> nugetFileName, nupkg)
+                ZipFile.CreateFromDirectory(
+                    nugetParent
+                    </> nugetFileName,
+                    nupkg
+                )
                 // delete intermediate directory
-                Shell.deleteDir (nugetParent </> nugetFileName)
+                Shell.deleteDir (
+                    nugetParent
+                    </> nugetFileName
+                )
             | _ -> failwith "dotnet publish failed"
     )
 

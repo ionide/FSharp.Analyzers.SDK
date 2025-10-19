@@ -49,13 +49,21 @@ module Client =
                     "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.Message",
                     StringComparison.InvariantCulture
                 )
-            elif t.Name = "FSharpAsync`1" && t.GenericTypeArguments.Length = 1 then
+            elif
+                t.Name = "FSharpAsync`1"
+                && t.GenericTypeArguments.Length = 1
+            then
                 let listType = t.GenericTypeArguments.[0]
 
-                if listType.Name = "FSharpList`1" && listType.GenericTypeArguments.Length = 1 then
+                if
+                    listType.Name = "FSharpList`1"
+                    && listType.GenericTypeArguments.Length = 1
+                then
                     // This could still be generic, as in an empty list is returned from the analyzer
                     let msgType = listType.GenericTypeArguments.[0]
-                    msgType.Name = "a" || msgType = typeof<Message>
+
+                    msgType.Name = "a"
+                    || msgType = typeof<Message>
                 else
                     false
             else
@@ -65,15 +73,25 @@ module Client =
             match box mi with
             | :? FieldInfo as m ->
                 if m.FieldType = typeof<Analyzer<'TContext>> then
-                    Some(m.GetValue(null) |> unboxAnalyzer)
+                    Some(
+                        m.GetValue(null)
+                        |> unboxAnalyzer
+                    )
                 else
                     None
             | :? MethodInfo as m ->
                 if m.ReturnType = typeof<Analyzer<'TContext>> then
-                    Some(m.Invoke(null, null) |> unboxAnalyzer)
+                    Some(
+                        m.Invoke(null, null)
+                        |> unboxAnalyzer
+                    )
                 elif hasExpectReturnType m.ReturnType then
                     try
-                        let analyzer: Analyzer<'TContext> = fun ctx -> m.Invoke(null, [| ctx |]) |> unbox
+                        let analyzer: Analyzer<'TContext> =
+                            fun ctx ->
+                                m.Invoke(null, [| ctx |])
+                                |> unbox
+
                         Some analyzer
                     with ex ->
                         None
@@ -81,7 +99,10 @@ module Client =
                     None
             | :? PropertyInfo as m ->
                 if m.PropertyType = typeof<Analyzer<'TContext>> then
-                    Some(m.GetValue(null, null) |> unboxAnalyzer)
+                    Some(
+                        m.GetValue(null, null)
+                        |> unboxAnalyzer
+                    )
                 else
                     None
             | _ -> None
@@ -109,26 +130,36 @@ module Client =
         | None -> None
 
     let shouldIgnoreMessage (ctx: 'Context :> #Context) message =
-        match ctx.AnalyzerIgnoreRanges |> Map.tryFind message.Code with
+        match
+            ctx.AnalyzerIgnoreRanges
+            |> Map.tryFind message.Code
+        with
         | Some ignoreRanges ->
             ignoreRanges
-            |> List.exists (function
+            |> List.exists (
+                function
                 | File -> true
-                | Range (commentStart, commentEnd) ->
-                    if message.Range.StartLine - 1 >= commentStart && message.Range.EndLine - 1 <= commentEnd then
+                | Range(commentStart, commentEnd) ->
+                    if
+                        message.Range.StartLine
+                        - 1
+                        >= commentStart
+                        && message.Range.EndLine
+                           - 1
+                           <= commentEnd
+                    then
                         true
                     else
                         false
                 | NextLine line ->
-                    if message.Range.StartLine - 1 = line then
+                    if
+                        message.Range.StartLine
+                        - 1 = line
+                    then
                         true
                     else
                         false
-                | CurrentLine line ->
-                    if message.Range.StartLine = line then
-                        true
-                    else
-                        false
+                | CurrentLine line -> if message.Range.StartLine = line then true else false
             )
         | None -> false
 
@@ -139,13 +170,19 @@ module Client =
         : RegisteredAnalyzer<'TContext> list
         =
         let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
-        let bindingFlags = BindingFlags.Public ||| BindingFlags.Static
+
+        let bindingFlags =
+            BindingFlags.Public
+            ||| BindingFlags.Static
 
         let members =
             [
-                t.GetTypeInfo().GetMethods bindingFlags |> asMembers
-                t.GetTypeInfo().GetProperties bindingFlags |> asMembers
-                t.GetTypeInfo().GetFields bindingFlags |> asMembers
+                t.GetTypeInfo().GetMethods bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetProperties bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetFields bindingFlags
+                |> asMembers
             ]
             |> Seq.collect id
 
@@ -164,7 +201,9 @@ type ExcludeInclude =
     | ExcludeFilter of (AnalyzerName -> bool)
     | IncludeFilter of (AnalyzerName -> bool)
 
-type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>(logger: ILogger) =
+type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TContext :> Context>
+    (logger: ILogger)
+    =
     do TASTCollecting.logger <- logger
 
     let registeredAnalyzers =
@@ -205,7 +244,11 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             let findFSharpAnalyzerSDKVersion (assembly: Assembly) =
                 let references = assembly.GetReferencedAssemblies()
-                let fas = references |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
+
+                let fas =
+                    references
+                    |> Array.find (fun ra -> ra.Name = "FSharp.Analyzers.SDK")
+
                 fas.Version
 
             let skippedAssemblies = ref 0
@@ -221,7 +264,8 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                     then
                         true
                     else
-                        System.Threading.Interlocked.Increment skippedAssemblies |> ignore
+                        System.Threading.Interlocked.Increment skippedAssemblies
+                        |> ignore
 
                         logger.LogError(
                             "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
@@ -272,7 +316,13 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 |> ignore
 
             let assemblyCount = Array.length analyzers
-            let analyzerCount = analyzers |> Seq.sumBy (snd >> Seq.length)
+
+            let analyzerCount =
+                analyzers
+                |> Seq.sumBy (
+                    snd
+                    >> Seq.length
+                )
 
             {
                 AnalyzerAssemblies = assemblyCount
@@ -291,9 +341,15 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
         x.RunAnalyzers(ctx, fun _ -> true)
 
-    member x.RunAnalyzers(ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool) : Async<AnalyzerMessage list> =
+    member x.RunAnalyzers
+        (ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool)
+        : Async<AnalyzerMessage list>
+        =
         async {
-            let analyzers = registeredAnalyzers.Values |> Seq.collect id |> Seq.filter analyzerPredicate
+            let analyzers =
+                registeredAnalyzers.Values
+                |> Seq.collect id
+                |> Seq.filter analyzerPredicate
 
             let! messagesPerAnalyzer =
                 analyzers
@@ -305,7 +361,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                             return
                                 messages
                                 |> List.choose (fun message ->
-                                    let analyzerMessage = 
+                                    let analyzerMessage =
                                         {
                                             Message = message
                                             Name = registeredAnalyzer.Name
@@ -313,7 +369,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                                             ShortDescription = registeredAnalyzer.ShortDescription
                                             HelpUri = registeredAnalyzer.HelpUri
                                         }
-                                    
+
                                     if Client.shouldIgnoreMessage ctx message then
                                         None
                                     else
@@ -335,20 +391,29 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     member x.RunAnalyzersSafely(ctx: 'TContext) : Async<AnalysisResult list> =
         x.RunAnalyzersSafely(ctx, fun _ -> true)
 
-    member x.RunAnalyzersSafely(ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool) : Async<AnalysisResult list> =
+    member x.RunAnalyzersSafely
+        (ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool)
+        : Async<AnalysisResult list>
+        =
         async {
-            let analyzers = registeredAnalyzers.Values |> Seq.collect id |> Seq.filter analyzerPredicate
+            let analyzers =
+                registeredAnalyzers.Values
+                |> Seq.collect id
+                |> Seq.filter analyzerPredicate
 
             let! results =
                 analyzers
                 |> Seq.map (fun registeredAnalyzer ->
                     async {
                         try
-                            let! messages = 
-                                registeredAnalyzer.Analyzer ctx
-                                
+                            let! messages = registeredAnalyzer.Analyzer ctx
+
                             let messages =
-                                messages |> List.filter (Client.shouldIgnoreMessage ctx >> not)
+                                messages
+                                |> List.filter (
+                                    Client.shouldIgnoreMessage ctx
+                                    >> not
+                                )
 
                             return
                                 {

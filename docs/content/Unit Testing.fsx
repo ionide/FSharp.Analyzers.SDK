@@ -38,10 +38,13 @@ let Setup () =
             mkOptionsFromProject
                 "net7.0"
                 [
-                  // The SDK uses this in a "dotnet add package x --version y" command
-                  // to generate the needed FSharpProjectOptions
-                  { Name = "Newtonsoft.Json"
-                    Version = "13.0.3" } ]
+                    // The SDK uses this in a "dotnet add package x --version y" command
+                    // to generate the needed FSharpProjectOptions
+                    {
+                        Name = "Newtonsoft.Json"
+                        Version = "13.0.3"
+                    }
+                ]
 
         projectOptions <- opts
     }

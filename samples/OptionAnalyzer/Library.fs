@@ -45,11 +45,9 @@ let handler typeTree =
             |> Seq.toList
     }
 
-
 [<EditorAnalyzerAttribute "OptionAnalyzer">]
-let analyzerEditorContext : Analyzer<EditorContext> =
-    fun ctx ->  handler ctx.TypedTree
+let analyzerEditorContext: Analyzer<EditorContext> =
+    fun ctx -> handler ctx.TypedTree
 
 [<CliAnalyzer "OptionAnalyzer">]
-let optionValueAnalyzer: Analyzer<CliContext> =
-    fun ctx ->  handler ctx.TypedTree
+let optionValueAnalyzer: Analyzer<CliContext> = fun ctx -> handler ctx.TypedTree
