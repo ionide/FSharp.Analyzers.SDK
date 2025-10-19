@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2025-10-19
+
+### Added
+
+- Support for Analyzers using NuGet in FsAutocomplete [253](https://github.com/ionide/FSharp.Analyzers.SDK/pull/253) [255](https://github.com/ionide/FSharp.Analyzers.SDK/pull/255) (thanks @TheAngryByrd!)
+- [Adds CLI Flag to get binlogs for project loads. Configures ProjInfo logging.](https://github.com/ionide/FSharp.Analyzers.SDK/pull/256) (thanks @TheAngryByrd!)
+- [Add Ignore Functionality for Analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/pull/254) (thanks @1eyewonder!)
+
+### Changed
+
+- [Update Ionide.KeepAChangelog.Tasks to 0.3.0](https://github.com/ionide/FSharp.Analyzers.SDK/pull/244) (thanks @Numpsy!)
+- [Add EditorContext to OptionAnalyzer sample](https://github.com/ionide/FSharp.Analyzers.SDK/pull/249) (thanks @TheAngryByrd!)
+- [Add logging about System.Runtime load exceptions](https://github.com/ionide/FSharp.Analyzers.SDK/pull/250) (thanks @TheAngryByrd!)
+- [Fix the path to the OptionsAnalyzer binary in the readme](https://github.com/ionide/FSharp.Analyzers.SDK/pull/252/) (thanks @Numpsy!)
+
 
 ## [0.32.1] - 2025-08-02
 
