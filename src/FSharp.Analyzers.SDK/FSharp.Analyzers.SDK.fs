@@ -69,19 +69,19 @@ module Ignore =
                     - 1
                 )
             with
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*?)(?:\*\)|$)" [ SplitBy splitBy codes ] ->
                 Some
                 <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*)$" [ SplitBy splitBy codes ] ->
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*?)(?:\*\)|$)" [ SplitBy splitBy codes ] ->
                 Some
                 <| IgnoreComment.CurrentLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] ->
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*?)(?:\*\)|$)" [ SplitBy splitBy codes ] ->
                 Some
                 <| IgnoreComment.File(trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*)$" [ SplitBy splitBy codes ] ->
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*?)(?:\*\)|$)" [ SplitBy splitBy codes ] ->
                 Some
                 <| IgnoreComment.RegionStart(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ ->
+            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end(?:.*?)(?:\*\)|$)" _ ->
                 Some
                 <| IgnoreComment.RegionEnd r.StartLine
             | _ -> None
