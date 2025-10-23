@@ -453,26 +453,30 @@ module Utils =
     let typeCheckFile
         (fcs: FSharpChecker)
         (logger: ILogger)
-        (options: FSharpProjectOptions)
+        (options: AnalyzerProjectOptions)
         (fileName: string)
         (source: SourceOfSource)
-        : Result<FSharpParseFileResults * FSharpCheckFileResults, AnalysisFailure>
+        : Async<Result<FSharpParseFileResults * FSharpCheckFileResults, AnalysisFailure>>
         =
+        async {
+            let! parseRes, checkAnswer =
+                match options with
+                | BackgroundCompilerOptions options ->
+                    let sourceText =
+                        match source with
+                        | SourceOfSource.Path path ->
+                            let text = System.IO.File.ReadAllText path
+                            SourceText.ofString text
+                        | SourceOfSource.DiscreteSource s -> SourceText.ofString s
+                        | SourceOfSource.SourceText s -> s
 
-        let sourceText =
-            match source with
-            | SourceOfSource.Path path ->
-                let text = System.IO.File.ReadAllText path
-                SourceText.ofString text
-            | SourceOfSource.DiscreteSource s -> SourceText.ofString s
-            | SourceOfSource.SourceText s -> s
+                    fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
+                | TransparentCompilerOptions snapshot ->
+                    fcs.ParseAndCheckFileInProject(fileName, snapshot)
 
-        let parseRes, checkAnswer =
-            fcs.ParseAndCheckFileInProject(fileName, 0, sourceText, options)
-            |> Async.RunSynchronously //ToDo: Validate if 0 is ok
-
-        match checkAnswer with
-        | FSharpCheckFileAnswer.Aborted ->
-            logger.LogError("Checking of file {0} aborted", fileName)
-            Error AnalysisFailure.Aborted
-        | FSharpCheckFileAnswer.Succeeded result -> Ok(parseRes, result)
+            match checkAnswer with
+            | FSharpCheckFileAnswer.Aborted ->
+                logger.LogError("Checking of file {0} aborted", fileName)
+                return Error AnalysisFailure.Aborted
+            | FSharpCheckFileAnswer.Succeeded result -> return Ok(parseRes, result)
+        }
