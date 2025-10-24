@@ -1,5 +1,7 @@
 module OptionAnalyzer.Test
 
+#nowarn "57"
+
 open FSharp.Compiler.CodeAnalysis
 open NUnit.Framework
 open FSharp.Compiler.Text
@@ -429,13 +431,17 @@ module ClientTests =
 
     module RunAnalyzersSafelyTests =
 
-        let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
+        let mutable projectOptions: FSharpProjectSnapshot = FSharpProjectSnapshot.zero
+
+        let getContext snapshot source =
+            let file = { FileName = "A.fs"; Source = source }
+            getContextFor (TransparentCompilerOptions snapshot) [ file ] file
 
         [<SetUp>]
         let Setup () =
             task {
                 let! opts =
-                    mkOptionsFromProject
+                    mkSnapshotFromProject
                         "net8.0"
                         [
                             {
@@ -463,7 +469,10 @@ module ClientTests =
         option.Value
             """
 
-                let ctx = getContext projectOptions source
+                let! ctx =
+                    getContext projectOptions source
+                    |> Async.AwaitTask
+
                 let client = new Client<CliAnalyzerAttribute, _>()
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
@@ -492,7 +501,10 @@ module ClientTests =
         option.Value
             """
 
-                let ctx = getContext projectOptions source
+                let! ctx =
+                    getContext projectOptions source
+                    |> Async.AwaitTask
+
                 let client = new Client<CliAnalyzerAttribute, _>()
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
@@ -521,7 +533,10 @@ module ClientTests =
         option.Value // fsharpanalyzer: ignore-line OV001
             """
 
-                let ctx = getContext projectOptions source
+                let! ctx =
+                    getContext projectOptions source
+                    |> Async.AwaitTask
+
                 let client = new Client<CliAnalyzerAttribute, _>()
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
@@ -551,7 +566,10 @@ module ClientTests =
         option.Value
             """
 
-                let ctx = getContext projectOptions source
+                let! ctx =
+                    getContext projectOptions source
+                    |> Async.AwaitTask
+
                 let client = new Client<CliAnalyzerAttribute, _>()
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
@@ -582,7 +600,10 @@ module ClientTests =
     // fsharpanalyzer: ignore-region-end
             """
 
-                let ctx = getContext projectOptions source
+                let! ctx =
+                    getContext projectOptions source
+                    |> Async.AwaitTask
+
                 let client = new Client<CliAnalyzerAttribute, _>()
                 let path = System.IO.Path.GetFullPath(".")
                 let stats = client.LoadAnalyzers(path)
