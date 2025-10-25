@@ -139,7 +139,7 @@ let mkOptions (compilerArgs: string array) =
         ReferencedProjects = [||]
         IsIncompleteTypeCheckEnvironment = false
         UseScriptResolutionRules = false
-        LoadTime = DateTime.Now
+        LoadTime = DateTime.UtcNow
         UnresolvedReferences = None
         OriginalLoadReferences = []
         Stamp = None
@@ -177,7 +177,7 @@ let mkSnapshot (compilerArgs: string array) =
         [],
         false,
         false,
-        DateTime.Now,
+        DateTime.UtcNow,
         None,
         [],
         None
