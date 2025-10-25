@@ -215,10 +215,10 @@ module Utils =
     val typeCheckFile:
         fcs: FSharpChecker ->
         logger: ILogger ->
-        options: FSharpProjectOptions ->
+        options: AnalyzerProjectOptions ->
         fileName: string ->
         source: SourceOfSource ->
-            Result<FSharpParseFileResults * FSharpCheckFileResults, AnalysisFailure>
+            Async<Result<(FSharpParseFileResults * FSharpCheckFileResults), AnalysisFailure>>
 
     val createContext:
         checkProjectResults: FSharpCheckProjectResults ->
