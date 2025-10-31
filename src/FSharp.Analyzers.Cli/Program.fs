@@ -338,7 +338,7 @@ let isFSharpFile (file: string) =
 
 /// <summary>Reads FSC compiler arguments from a response (RSP) file.</summary>
 /// <remarks>
-/// RSP files contain compiler arguments, with each argument on a separate line or separated by spaces.
+/// RSP files contain compiler arguments, with each argument on a separate line.
 /// Lines starting with '#' are treated as comments and ignored.
 /// Empty lines are ignored.
 /// </remarks>
@@ -351,13 +351,17 @@ let readFscArgsFromFile (filePath: string) : string =
 
     let args =
         File.ReadAllLines(filePath)
-        |> Array.filter (fun line ->
+        |> Array.choose (fun line ->
             let trimmed = line.Trim()
 
-            not (String.IsNullOrWhiteSpace trimmed)
-            && not (trimmed.StartsWith("#"))
+            if
+                String.IsNullOrWhiteSpace trimmed
+                || trimmed.StartsWith("#")
+            then
+                None
+            else
+                Some trimmed
         )
-        |> Array.map (fun line -> line.Trim())
         |> String.concat ";"
 
     if String.IsNullOrWhiteSpace args then
