@@ -60,8 +60,20 @@
                 If FscCommandLineArgs is empty, then CoreCompile did not run, we'll try to skip running the analyzer if this wasn't explicitly set to true
             -->
             <FSharpAnalyzersAlwaysRunAfterBuild Condition="'$(FSharpAnalyzersAlwaysRunAfterBuild)' == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzersAlwaysRunAfterBuild>
-            <!-- We'll try to use FscCommandLineArgs- to speed up analyzer execution since this skips requiring a design-time build -->
-            <_FSharpAnalyzersProjectOptions Condition="'@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzersProjectOptions>
+            <!-- Define the RSP file path in the intermediate output directory -->
+            <_FSharpAnalyzersFscArgsFile Condition="'$(IntermediateOutputPath)' != '' and '@(FscCommandLineArgs->Count())' != '0'">$(IntermediateOutputPath)fsc-analyzers.rsp</_FSharpAnalyzersFscArgsFile>
+        </PropertyGroup>
+        <!-- Write FscCommandLineArgs to RSP file to avoid command-line length limits -->
+        <WriteLinesToFile 
+            Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''"
+            File="$(_FSharpAnalyzersFscArgsFile)"
+            Lines="@(FscCommandLineArgs)"
+            Overwrite="true"
+            WriteOnlyWhenDifferent="true" />
+        <PropertyGroup>
+            <!-- Use RSP file if it was created, otherwise fall back to direct args -->
+            <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''">--fsc-args-file &quot;$(_FSharpAnalyzersFscArgsFile)&quot;</_FSharpAnalyzersProjectOptions>
+            <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' == '' and '@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzersProjectOptions>
         </PropertyGroup>
         <Exec
                 ContinueOnError="$(FSharpAnalyzersContinueOnError)"
