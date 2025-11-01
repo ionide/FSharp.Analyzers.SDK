@@ -58,33 +58,69 @@ module Ignore =
         |> List.map (fun s -> s.Trim())
 
     let tryGetIgnoreComment splitBy (sourceText: ISourceText) (ct: CommentTrivia) =
-        match ct with
-        | CommentTrivia.BlockComment r
-        | CommentTrivia.LineComment r ->
-            // pattern to match is:
-            // prefix: command [codes]
-            match
-                sourceText.GetLineString(
-                    r.StartLine
-                    - 1
-                )
-            with
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some
-                <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some
-                <| IgnoreComment.CurrentLine(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some
-                <| IgnoreComment.File(trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*)$" [ SplitBy splitBy codes ] ->
-                Some
-                <| IgnoreComment.RegionStart(r.StartLine, trimCodes codes)
-            | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ ->
-                Some
-                <| IgnoreComment.RegionEnd r.StartLine
-            | _ -> None
+        let commentText, commentRange =
+            match ct with
+            | CommentTrivia.BlockComment r ->
+                let startTrim =
+                    [|
+                        '('
+                        '*'
+                    |]
+
+                let endTrim =
+                    [|
+                        '*'
+                        ')'
+                    |]
+
+                let comment =
+                    sourceText
+                        .GetLineString(
+                            r.StartLine
+                            - 1
+                        )
+                        .TrimStart(startTrim)
+                        .TrimEnd(endTrim)
+                        .Trim()
+
+                comment, r
+            | CommentTrivia.LineComment r ->
+                let startTrim =
+                    [|
+                        '/'
+                        '/'
+                    |]
+
+                let comment =
+                    sourceText
+                        .GetLineString(
+                            r.StartLine
+                            - 1
+                        )
+                        .TrimStart(startTrim)
+                        .Trim()
+
+                comment, r
+
+        // pattern to match is:
+        // prefix: command [codes]
+        match commentText with
+        | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
+            Some
+            <| IgnoreComment.NextLine(commentRange.StartLine, trimCodes codes)
+        | ParseRegexCompiled @"fsharpanalyzer:\signore-line\s(.*)$" [ SplitBy splitBy codes ] ->
+            Some
+            <| IgnoreComment.CurrentLine(commentRange.StartLine, trimCodes codes)
+        | ParseRegexCompiled @"fsharpanalyzer:\signore-file\s(.*)$" [ SplitBy splitBy codes ] ->
+            Some
+            <| IgnoreComment.File(trimCodes codes)
+        | ParseRegexCompiled @"fsharpanalyzer:\signore-region-start\s(.*)$" [ SplitBy splitBy codes ] ->
+            Some
+            <| IgnoreComment.RegionStart(commentRange.StartLine, trimCodes codes)
+        | ParseRegexCompiled @"fsharpanalyzer:\signore-region-end.*$" _ ->
+            Some
+            <| IgnoreComment.RegionEnd commentRange.StartLine
+        | _ -> None
 
     let getIgnoreComments (sourceText: ISourceText) (comments: CommentTrivia list) =
         comments

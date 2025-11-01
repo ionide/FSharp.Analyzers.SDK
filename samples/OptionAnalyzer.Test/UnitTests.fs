@@ -427,6 +427,119 @@ module IgnoreRangeTests =
             Assert.That(ctx.AnalyzerIgnoreRanges, Is.Empty)
         }
 
+    [<Test>]
+    let ``block comment ignore-line-next does not include trailing asterisk parenthesis`` () =
+        async {
+            let source =
+                """
+    module M
+    (* fsharpanalyzer: ignore-line-next IONIDE-001 *)
+    let x = 1
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
+        }
+
+    [<Test>]
+    let ``block comment ignore-line does not include trailing asterisk parenthesis`` () =
+        async {
+            let source =
+                """
+    module M
+    let x = 1 (* fsharpanalyzer: ignore-line IONIDE-001 *)
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ CurrentLine 3 ]
+        }
+
+    [<Test>]
+    let ``block comment ignore-file does not include trailing asterisk parenthesis`` () =
+        async {
+            let source =
+                """
+    (* fsharpanalyzer: ignore-file IONIDE-001 *)
+    module M
+    let x = 1
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ File ]
+        }
+
+    [<Test>]
+    let ``block comment ignore-region-start does not include trailing asterisk parenthesis`` () =
+        async {
+            let source =
+                """
+    module M
+    (* fsharpanalyzer: ignore-region-start IONIDE-001 *)
+    let x = 1
+    (* fsharpanalyzer: ignore-region-end *)
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ Range(3, 5) ]
+        }
+
+    [<Test>]
+    let ``block comment with multiple codes does not include trailing asterisk parenthesis`` () =
+        async {
+            let source =
+                """
+    module M
+    (* fsharpanalyzer: ignore-line-next IONIDE-001, IONIDE-002, IONIDE-003 *)
+    let x = 1
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-003" [ NextLine 3 ]
+        }
+
+    [<Test>]
+    let ``mixed line and block comments work correctly`` () =
+        async {
+            let source =
+                """
+    module M
+    // fsharpanalyzer: ignore-line-next IONIDE-001
+    (* fsharpanalyzer: ignore-line-next IONIDE-002 *)
+    let x = 1 // fsharpanalyzer: ignore-line IONIDE-003
+    let y = 2 (* fsharpanalyzer: ignore-line IONIDE-004 *)
+    """
+
+            let ctx = getContext projectOptions source
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-001" [ NextLine 3 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-002" [ NextLine 4 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-003" [ CurrentLine 5 ]
+
+            ctx.AnalyzerIgnoreRanges
+            |> tryCompareRanges "IONIDE-004" [ CurrentLine 6 ]
+        }
+
 module ClientTests =
 
     module RunAnalyzersSafelyTests =
