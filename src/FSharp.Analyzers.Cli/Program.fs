@@ -54,6 +54,7 @@ type Arguments =
     | [<Unique>] Include_Analyzers of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
+    | [<Unique>] FSC_Args_File of string
     | [<Unique>] Code_Root of string
     | [<Unique; AltCommandLine("-v")>] Verbosity of string
     | [<Unique>] Output_Format of string
@@ -92,6 +93,8 @@ type Arguments =
                 "The verbosity level. The available verbosity levels are: n[ormal], d[etailed], diag[nostic]."
             | FSC_Args _ ->
                 "Pass in the raw fsc compiler arguments. Cannot be combined with the `--project` flag."
+            | FSC_Args_File _ ->
+                "Path to a response (RSP) file containing fsc compiler arguments. Cannot be combined with `--project` or `--fsc-args` flags."
             | Code_Root _ ->
                 "Root of the current code repository, used in the sarif report to construct the relative file path. The current working directory is used by default."
             | Output_Format _ ->
@@ -332,6 +335,40 @@ let fsharpFiles =
 
 let isFSharpFile (file: string) =
     Set.exists (fun (ext: string) -> file.EndsWith(ext, StringComparison.Ordinal)) fsharpFiles
+
+/// <summary>Reads FSC compiler arguments from a response (RSP) file.</summary>
+/// <remarks>
+/// RSP files contain compiler arguments, with each argument on a separate line.
+/// Lines starting with '#' are treated as comments and ignored.
+/// Empty lines are ignored.
+/// </remarks>
+let readFscArgsFromFile (filePath: string) : string =
+    if not (File.Exists filePath) then
+        logger.LogError("FSC args file not found: {0}", filePath)
+        exit (int ExitErrorCodes.EmptyFscArgs)
+
+    logger.LogInformation("Reading FSC arguments from file: {0}", filePath)
+
+    let args =
+        File.ReadAllLines(filePath)
+        |> Array.choose (fun line ->
+            let trimmed = line.Trim()
+
+            if
+                String.IsNullOrWhiteSpace trimmed
+                || trimmed.StartsWith("#")
+            then
+                None
+            else
+                Some trimmed
+        )
+        |> String.concat ";"
+
+    if String.IsNullOrWhiteSpace args then
+        logger.LogError("No valid FSC arguments found in file: {0}", filePath)
+        exit (int ExitErrorCodes.EmptyFscArgs)
+
+    args
 
 let runFscArgs
     (client: Client<CliAnalyzerAttribute, CliContext>)
@@ -794,6 +831,21 @@ let main argv =
         |> List.concat
 
     let fscArgs = results.TryGetResult <@ FSC_Args @>
+    let fscArgsFile = results.TryGetResult <@ FSC_Args_File @>
+
+    // Validate that both fsc-args and fsc-args-file are not used together
+    match fscArgs, fscArgsFile with
+    | Some _, Some _ ->
+        logger.LogError("`--fsc-args` and `--fsc-args-file` cannot be combined.")
+        exit (int ExitErrorCodes.ProjectAndFscArgs)
+    | _ -> ()
+
+    // Read fsc args from file if specified, otherwise use direct args
+    let fscArgs =
+        match fscArgsFile with
+        | Some filePath -> Some(readFscArgsFromFile filePath)
+        | None -> fscArgs
+
     let report = results.TryGetResult <@ Report @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
 
