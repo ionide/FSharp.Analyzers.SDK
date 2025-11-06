@@ -20,7 +20,7 @@ dotnet tool install fsharp-analyzers --create-manifest-if-needed
 1. [Ionide Analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/)
 2. [G-Research Analyzers](https://github.com/G-Research/fsharp-analyzers/)
 3. [WoofWare.FSharpAnalyzers](https://github.com/Smaug123/WoofWare.FSharpAnalyzers)
-4. Search for more on [Nuget](https://www.nuget.org/packages?q=Tags%3A%22fharp-analyzer%22)
+4. Search for more on [Nuget](https://www.nuget.org/packages?q=Tags%3A%22fsharp-analyzer%22)
 
 ### Nuget
 
