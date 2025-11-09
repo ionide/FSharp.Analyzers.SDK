@@ -9,7 +9,7 @@
     <PackageVersion Include="FSharp.Core" Version="[9.0.300]" />
     <PackageVersion Include="FSharp.Compiler.Service" Version="[43.9.300]" />
     <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.3.0" PrivateAssets="all" />
-    <PackageVersion Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+    <PackageVersion Include="McMaster.NETCore.Plugins" Version="2.0.0" />
     <PackageVersion Include="Argu" Version="6.2.5" />
     <PackageVersion Include="Glob" Version="1.1.9" />
     <PackageVersion Include="Ionide.ProjInfo.ProjectSystem" Version="0.72.0" /> <!-- Older versions of NuGet.ProjectModel.JsonUtility use Newtonsoft and this package so happens to depend on newtonsoft too-->
