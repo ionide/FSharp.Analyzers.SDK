@@ -38,7 +38,7 @@ The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https
 It is considered a best practice to use the correct `FSharp.Core` version and not the implicit one from the SDK.
 
 ```xml
-<PackageReference Update="FSharp.Core" Version="9.0.300" />
+<PackageReference Update="FSharp.Core" Version="10.0.100" />
 ```
 
 ## First analyzer
@@ -80,7 +80,7 @@ let optionValueAnalyzer: Analyzer<CliContext> =
                         Message = "Option.Value shouldn't be used"
                         Code = "OV001"
                         Severity = Severity.Warning
-                        Range = FSharp.Compiler.Text.Range.Zero
+                        Range = FSharp.Compiler.Text.Range.range0
                         Fixes = []
                     }
                 ]
