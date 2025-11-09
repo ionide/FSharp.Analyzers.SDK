@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="FSharp.Compiler.Service" VersionOverride="43.9.303" />
         <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
     </ItemGroup>
 
