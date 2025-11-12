@@ -2,6 +2,11 @@
 
 This is the changelog for the `FSharp.Analyzers.Build` package specifically. It's distinct from that of the overall libraries and command-line tool.
 
+## [0.5.0] - 2025-11-11
+
+### Changed
+- [Add RSP file support for FSC arguments to bypass CLI length limits](https://github.com/ionide/FSharp.Analyzers.SDK/pull/268) (thanks @Copilot!)
+
 ## [0.4.0] - 2025-09-27
 
 ### Changed
