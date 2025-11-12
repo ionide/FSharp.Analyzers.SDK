@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.34.0] - 2025-11-11 
+
+### Changed
+
+- [Adds various helpers for FSharpSnapshot and multi-file projects](https://github.com/ionide/FSharp.Analyzers.SDK/pull/261) (thanks @TheAngryByrd!)
+- [Add RSP file support for FSC arguments to bypass CLI length limits](https://github.com/ionide/FSharp.Analyzers.SDK/pull/268) (thanks @Copilot!)
+- [Update McMaster.NETCore.Plugins to v2](https://github.com/ionide/FSharp.Analyzers.SDK/pull/233) (thanks @Numpsy!)
+- [Update FSharp.Compiler.Service 43.10.100](https://github.com/ionide/FSharp.Analyzers.SDK/pull/270/files) (thanks @Numpsy!)
+
 ## [0.33.1] - 2025-10-19
 
 ### Fixed 
