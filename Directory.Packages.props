@@ -19,7 +19,7 @@
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="$(MsBuildPackageVersion)" ExcludeAssets="runtime" />
     <PackageVersion Include="Microsoft.Build.Locator" Version="1.7.8" />
     <!-- Need to update Directory.Build.props DotNet.ReproducibleBuilds.Isolated version when updating this-->
-    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.4" PrivateAssets="All" />
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.39" PrivateAssets="All" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="6.0.1" />
