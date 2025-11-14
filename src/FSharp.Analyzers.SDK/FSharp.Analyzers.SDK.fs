@@ -59,16 +59,17 @@ module Ignore =
 
     let tryGetIgnoreComment splitBy (sourceText: ISourceText) (ct: CommentTrivia) =
         match ct with
-        | CommentTrivia.BlockComment r
+        | CommentTrivia.BlockComment _ -> None
         | CommentTrivia.LineComment r ->
-            // pattern to match is:
-            // prefix: command [codes]
-            match
+            let commentText =
                 sourceText.GetLineString(
                     r.StartLine
                     - 1
                 )
-            with
+
+            // pattern to match is:
+            // prefix: command [codes]
+            match commentText with
             | ParseRegexCompiled @"fsharpanalyzer:\signore-line-next\s(.*)$" [ SplitBy splitBy codes ] ->
                 Some
                 <| IgnoreComment.NextLine(r.StartLine, trimCodes codes)
