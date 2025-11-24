@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "fsdocs-tool": {
-      "version": "20.0.1",
+      "version": "21.0.0",
       "commands": [
         "fsdocs"
       ],
