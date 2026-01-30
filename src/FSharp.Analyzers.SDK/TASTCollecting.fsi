@@ -64,6 +64,13 @@ module TASTCollecting =
             body: FSharpExpr ->
                 unit
 
+        /// Overwriting this member hooks up a custom operation for a declaration of an entity (type definition or module).
+        abstract WalkEntity:
+            entity: FSharpEntity -> declarations: FSharpImplementationFileDeclaration list -> unit
+
+        default WalkEntity:
+            entity: FSharpEntity -> declarations: FSharpImplementationFileDeclaration list -> unit
+
         /// Overwriting this member hooks up a custom operation for fast integer loops.
         abstract WalkFastIntegerForLoop:
             startExpr: FSharpExpr ->
