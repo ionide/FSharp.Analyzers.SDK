@@ -54,6 +54,11 @@ module TASTCollecting =
 
         default _.WalkMemberOrFunctionOrValue _ _ _ = ()
 
+        abstract WalkEntity:
+            entity: FSharpEntity -> declarations: FSharpImplementationFileDeclaration list -> unit
+
+        default _.WalkEntity _ _ = ()
+
         abstract WalkILAsm:
             asmCode: string -> typeArgs: FSharpType list -> argExprs: FSharpExpr list -> unit
 
@@ -457,7 +462,9 @@ module TASTCollecting =
     let rec visitDeclaration (f: TypedTreeCollectorBase) d =
 
         match d with
-        | FSharpImplementationFileDeclaration.Entity(_e, subDecls) ->
+        | FSharpImplementationFileDeclaration.Entity(e, subDecls) ->
+            f.WalkEntity e subDecls
+
             for subDecl in subDecls do
                 visitDeclaration f subDecl
         | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(v, vs, e) ->
