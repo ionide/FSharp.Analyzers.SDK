@@ -53,6 +53,7 @@ module TASTCollecting =
                 unit
 
         default _.WalkMemberOrFunctionOrValue _ _ _ = ()
+
         abstract WalkEntity:
             entity: FSharpEntity -> declarations: FSharpImplementationFileDeclaration list -> unit
 
