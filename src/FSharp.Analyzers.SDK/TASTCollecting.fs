@@ -10,21 +10,6 @@ module TASTCollecting =
 
     let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
-    let private ofFcsRange (r: FSharp.Compiler.Text.range) : FSharp.Analyzers.SDK.Range =
-        {
-            FileName = r.FileName
-            Start =
-                {
-                    Line = r.Start.Line
-                    Column = r.Start.Column
-                }
-            End =
-                {
-                    Line = r.End.Line
-                    Column = r.End.Column
-                }
-        }
-
     type TypedTreeCollectorBase() =
 
         abstract WalkAddressOf: lvalueExpr: FSharpExpr -> unit
@@ -300,7 +285,7 @@ module TASTCollecting =
                 objExprTypeArgs
                 memberOrFuncTypeArgs
                 argExprs
-                (ofFcsRange e.Range)
+                (RangeConversions.ofFcsRange e.Range)
 
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
@@ -361,7 +346,7 @@ module TASTCollecting =
             handler.WalkNewObject objType typeArgs argExprs
             visitExprs handler argExprs
         | NewRecord(recordType, argExprs) ->
-            handler.WalkNewRecord recordType argExprs (ofFcsRange e.Range)
+            handler.WalkNewRecord recordType argExprs (RangeConversions.ofFcsRange e.Range)
             visitExprs handler argExprs
         | NewTuple(tupleType, argExprs) ->
             handler.WalkNewTuple tupleType argExprs
