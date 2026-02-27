@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <Compile Include="UnitTests.fs" />
+        <Compile Include="V1Tests.fs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,6 +21,8 @@
         <PackageReference Include="NUnit" />
         <PackageReference Include="NUnit3TestAdapter" />
         <PackageReference Include="FSharp.Compiler.Service"/>
+        <PackageReference Include="FsCheck" />
+        <PackageReference Include="FsCheck.NUnit" />
     </ItemGroup>
 
     <ItemGroup>

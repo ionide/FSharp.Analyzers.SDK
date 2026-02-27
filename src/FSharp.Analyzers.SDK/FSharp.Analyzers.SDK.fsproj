@@ -10,6 +10,9 @@
     <Tailcalls>true</Tailcalls>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="OptionAnalyzer.Test" />
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="ASTCollecting.fsi" />
     <Compile Include="ASTCollecting.fs" />
     <Compile Include="TASTCollecting.fsi" />
