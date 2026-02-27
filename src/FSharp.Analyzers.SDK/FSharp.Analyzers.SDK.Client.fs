@@ -31,7 +31,12 @@ module Client =
     let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
         mi.GetCustomAttributes true
         |> Array.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
-        |> Option.map unbox<'TAttribute>
+        |> Option.bind (fun attr ->
+            try
+                Some(unbox<'TAttribute> attr)
+            with _ ->
+                None
+        )
 
     let analyzerFromMember<'TAnalyzerAttribute, 'TContext
         when 'TAnalyzerAttribute :> AnalyzerAttribute and 'TContext :> Context>
@@ -190,6 +195,136 @@ module Client =
         |> Seq.choose (analyzerFromMember<'TAnalyzerAttribute, 'TContext> path)
         |> Seq.toList
 
+module internal V1Support =
+
+    let isV1CliAnalyzer (mi: MemberInfo) : FSharp.Analyzers.SDK.V1.CliAnalyzerAttribute option =
+        mi.GetCustomAttributes true
+        |> Array.tryFind (fun a ->
+            a.GetType().FullName = "FSharp.Analyzers.SDK.V1.CliAnalyzerAttribute"
+        )
+        |> Option.bind (fun attr ->
+            try
+                Some(unbox<FSharp.Analyzers.SDK.V1.CliAnalyzerAttribute> attr)
+            with _ ->
+                None
+        )
+
+    let adaptV1Analyzer (v1Analyzer: FSharp.Analyzers.SDK.V1.Analyzer) : Analyzer<CliContext> =
+        fun ctx ->
+            async {
+                let v1Ctx = MigrationV1.contextToV1 ctx
+                let! v1Messages = v1Analyzer v1Ctx
+
+                return
+                    v1Messages
+                    |> List.map MigrationV1.messageFromV1
+            }
+
+    let private hasV1ExpectReturnType (t: Type) =
+        if not (isNull t.FullName) then
+            t.FullName.StartsWith(
+                "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.V1.Message",
+                StringComparison.InvariantCulture
+            )
+        else
+            false
+
+    let v1CliAnalyzerFromMember
+        (path: string)
+        (mi: MemberInfo)
+        : Client.RegisteredAnalyzer<CliContext> option
+        =
+        let inline unboxV1Analyzer v =
+            if isNull v then
+                failwith "V1 Analyzer is null"
+            else
+                unbox<FSharp.Analyzers.SDK.V1.Analyzer> v
+
+        let getV1Analyzer (mi: MemberInfo) : FSharp.Analyzers.SDK.V1.Analyzer option =
+            try
+                match box mi with
+                | :? FieldInfo as m ->
+                    if m.FieldType = typeof<FSharp.Analyzers.SDK.V1.Analyzer> then
+                        Some(
+                            m.GetValue(null)
+                            |> unboxV1Analyzer
+                        )
+                    else
+                        None
+                | :? MethodInfo as m ->
+                    if m.ReturnType = typeof<FSharp.Analyzers.SDK.V1.Analyzer> then
+                        Some(
+                            m.Invoke(null, null)
+                            |> unboxV1Analyzer
+                        )
+                    elif hasV1ExpectReturnType m.ReturnType then
+                        let analyzer: FSharp.Analyzers.SDK.V1.Analyzer =
+                            fun ctx ->
+                                m.Invoke(null, [| ctx |])
+                                |> unbox
+
+                        Some analyzer
+                    else
+                        None
+                | :? PropertyInfo as m ->
+                    if m.PropertyType = typeof<FSharp.Analyzers.SDK.V1.Analyzer> then
+                        Some(
+                            m.GetValue(null, null)
+                            |> unboxV1Analyzer
+                        )
+                    else
+                        None
+                | _ -> None
+            with _ ->
+                None
+
+        match isV1CliAnalyzer mi with
+        | Some attr ->
+            match getV1Analyzer mi with
+            | Some v1Analyzer ->
+                let name =
+                    if String.IsNullOrWhiteSpace attr.Name then
+                        mi.Name
+                    else
+                        attr.Name
+
+                Some
+                    {
+                        AssemblyPath = path
+                        Name = name
+                        Analyzer = adaptV1Analyzer v1Analyzer
+                        ShortDescription = attr.ShortDescription
+                        HelpUri = attr.HelpUri
+                    }
+            | None -> None
+        | None -> None
+
+    let v1CliAnalyzersFromType
+        (path: string)
+        (t: Type)
+        : Client.RegisteredAnalyzer<CliContext> list
+        =
+        let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
+
+        let bindingFlags =
+            BindingFlags.Public
+            ||| BindingFlags.Static
+
+        let members =
+            [
+                t.GetTypeInfo().GetMethods bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetProperties bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetFields bindingFlags
+                |> asMembers
+            ]
+            |> Seq.collect id
+
+        members
+        |> Seq.choose (v1CliAnalyzerFromMember path)
+        |> Seq.toList
+
 type AssemblyLoadStats =
     {
         AnalyzerAssemblies: int
@@ -253,62 +388,93 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             let skippedAssemblies = ref 0
 
+            let filterByExcludeInclude
+                (assembly: Assembly)
+                (registeredAnalyzer: Client.RegisteredAnalyzer<'TContext>)
+                =
+                match excludeInclude with
+                | Some(ExcludeFilter excludeFilter) ->
+                    let shouldExclude = excludeFilter registeredAnalyzer.Name
+
+                    if shouldExclude then
+                        logger.LogInformation(
+                            "Excluding {Name} from {FullName}",
+                            registeredAnalyzer.Name,
+                            assembly.FullName
+                        )
+
+                    not shouldExclude
+                | Some(IncludeFilter includeFilter) ->
+                    let shouldInclude = includeFilter registeredAnalyzer.Name
+
+                    if shouldInclude then
+                        logger.LogInformation(
+                            "Including {Name} from {FullName}",
+                            registeredAnalyzer.Name,
+                            assembly.FullName
+                        )
+
+                    shouldInclude
+                | None -> true
+
             let analyzers =
                 analyzerAssemblies
-                |> Array.filter (fun (name, analyzerAssembly) ->
-                    let version = findFSharpAnalyzerSDKVersion analyzerAssembly
+                |> Array.map (fun (path, assembly) ->
+                    let version = findFSharpAnalyzerSDKVersion assembly
 
-                    if
+                    let isVersionMatch =
                         version.Major = Utils.currentFSharpAnalyzersSDKVersion.Major
                         && version.Minor = Utils.currentFSharpAnalyzersSDKVersion.Minor
+
+                    // V1 CLI analyzers: load regardless of version (no version gate).
+                    let v1Analyzers: Client.RegisteredAnalyzer<'TContext> list =
+                        if typeof<'TContext> = typeof<CliContext> then
+                            try
+                                assembly.GetExportedTypes()
+                                |> Seq.collect (V1Support.v1CliAnalyzersFromType path)
+                                |> Seq.map (fun ra ->
+                                    unbox<Client.RegisteredAnalyzer<'TContext>> (box ra)
+                                )
+                                |> Seq.toList
+                            with _ ->
+                                []
+                        else
+                            []
+
+                    // Legacy analyzers: version check required.
+                    let legacyAnalyzers =
+                        if isVersionMatch then
+                            try
+                                assembly.GetExportedTypes()
+                                |> Seq.collect (
+                                    Client.analyzersFromType<'TAttribute, 'TContext> path
+                                )
+                                |> Seq.toList
+                            with _ ->
+                                []
+                        else
+                            []
+
+                    if
+                        not isVersionMatch
+                        && List.isEmpty v1Analyzers
                     then
-                        true
-                    else
                         System.Threading.Interlocked.Increment skippedAssemblies
                         |> ignore
 
                         logger.LogError(
                             "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
-                            name,
+                            path,
                             version,
                             Utils.currentFSharpAnalyzersSDKVersion
                         )
 
-                        false
-                )
-                |> Array.map (fun (path, assembly) ->
-                    let analyzers =
-                        assembly.GetExportedTypes()
-                        |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
-                        |> Seq.filter (fun registeredAnalyzer ->
-                            match excludeInclude with
-                            | Some(ExcludeFilter excludeFilter) ->
-                                let shouldExclude = excludeFilter registeredAnalyzer.Name
+                    let allAnalyzers =
+                        (legacyAnalyzers
+                         @ v1Analyzers)
+                        |> List.filter (filterByExcludeInclude assembly)
 
-                                if shouldExclude then
-                                    logger.LogInformation(
-                                        "Excluding {Name} from {FullName}",
-                                        registeredAnalyzer.Name,
-                                        assembly.FullName
-                                    )
-
-                                not shouldExclude
-                            | Some(IncludeFilter includeFilter) ->
-                                let shouldInclude = includeFilter registeredAnalyzer.Name
-
-                                if shouldInclude then
-                                    logger.LogInformation(
-                                        "Including {Name} from {FullName}",
-                                        registeredAnalyzer.Name,
-                                        assembly.FullName
-                                    )
-
-                                shouldInclude
-                            | None -> true
-                        )
-                        |> Seq.toList
-
-                    path, analyzers
+                    path, allAnalyzers
                 )
 
             for path, analyzers in analyzers do
