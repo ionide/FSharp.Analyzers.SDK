@@ -11,17 +11,15 @@ open FSharp.Analyzers.SDK.V1
 // shadow the identically-named TypedExpr DU cases from V1.
 open FSharp.Compiler.Symbols.FSharpExprPatterns
 
-// Reference-identity equality comparer for memoisation of FCS objects.
-type private ReferenceEqualityComparer<'T when 'T: not struct>() =
-    interface IEqualityComparer<'T> with
-        member _.Equals(x, y) = obj.ReferenceEquals(x, y)
-        member _.GetHashCode(x) = RuntimeHelpers.GetHashCode(x)
-
+// Cache keyed by logical identity (FullName/BasicQualifiedName) rather than
+// reference identity, because FCS may return different objects for the same
+// logical entity when accessed via different paths (e.g. member.DeclaringEntity
+// vs the entity directly).
 type ConversionCache() =
-    member val Entities =
-        Dictionary<FSharpEntity, EntityInfo>(ReferenceEqualityComparer<FSharpEntity>())
-
-    member val Types = Dictionary<FSharpType, TypeInfo>(ReferenceEqualityComparer<FSharpType>())
+    // Keyed by FullName for entities
+    member val Entities = Dictionary<string, EntityInfo>()
+    // Keyed by BasicQualifiedName for types
+    member val Types = Dictionary<string, TypeInfo>()
 
 let inline private tryGet defaultValue ([<InlineIfLambda>] f) =
     try
@@ -73,13 +71,16 @@ let genericParameterToV1 (gp: FSharpGenericParameter) : GenericParameterInfo =
 // ─── Mutually recursive FCS type conversions ────────────────────────
 
 let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
-    match cache.Entities.TryGetValue(e) with
+    // Use FullName as cache key; fall back to empty string if it throws
+    let cacheKey = tryGet "" (fun () -> e.FullName)
+
+    match cache.Entities.TryGetValue(cacheKey) with
     | true, v -> v
     | false, _ ->
         // Insert a stub to break cycles.
         let stub: EntityInfo =
             {
-                FullName = tryGet "" (fun () -> e.FullName)
+                FullName = cacheKey
                 DisplayName = tryGet "" (fun () -> e.DisplayName)
                 CompiledName = tryGet "" (fun () -> e.CompiledName)
                 Namespace = tryGet None (fun () -> e.Namespace)
@@ -111,7 +112,7 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
                 AbbreviatedType = None
             }
 
-        cache.Entities.[e] <- stub
+        cache.Entities.[cacheKey] <- stub
 
         let full: EntityInfo =
             { stub with
@@ -180,16 +181,19 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
                         )
             }
 
-        cache.Entities.[e] <- full
+        cache.Entities.[cacheKey] <- full
         full
 
 and typeToV1 (cache: ConversionCache) (t: FSharpType) : TypeInfo =
-    match cache.Types.TryGetValue(t) with
+    // Use BasicQualifiedName as cache key; fall back to empty string if it throws
+    let cacheKey = tryGet "" (fun () -> t.BasicQualifiedName)
+
+    match cache.Types.TryGetValue(cacheKey) with
     | true, v -> v
     | false, _ ->
         let result: TypeInfo =
             {
-                BasicQualifiedName = tryGet "" (fun () -> t.BasicQualifiedName)
+                BasicQualifiedName = cacheKey
                 IsAbbreviation = tryGet false (fun () -> t.IsAbbreviation)
                 IsFunctionType = tryGet false (fun () -> t.IsFunctionType)
                 IsTupleType = tryGet false (fun () -> t.IsTupleType)
@@ -233,7 +237,7 @@ and typeToV1 (cache: ConversionCache) (t: FSharpType) : TypeInfo =
                         )
             }
 
-        cache.Types.[t] <- result
+        cache.Types.[cacheKey] <- result
         result
 
 and memberToV1
