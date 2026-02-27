@@ -3,7 +3,6 @@ namespace FSharp.Analyzers.SDK
 open Microsoft.Extensions.Logging
 open FSharp.Compiler.Symbols
 open FSharp.Compiler.Syntax
-open FSharp.Compiler.Text
 
 module TASTCollecting =
 
@@ -34,7 +33,7 @@ module TASTCollecting =
             objExprTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
-            exprRange: range ->
+            exprRange: Range ->
                 unit
 
         default WalkCall:
@@ -43,7 +42,7 @@ module TASTCollecting =
             objTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
-            exprRange: range ->
+            exprRange: Range ->
                 unit
 
         /// Overwriting this member hooks up a custom operation for type coercion.
@@ -177,10 +176,10 @@ module TASTCollecting =
 
         /// Overwriting this member hooks up a custom operation for the creation of a new record instance.
         abstract WalkNewRecord:
-            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: Range -> unit
 
         default WalkNewRecord:
-            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: Range -> unit
 
         /// Overwriting this member hooks up a custom operation for the creation of a new tuple instance.
         abstract WalkNewTuple: tupleType: FSharpType -> argExprs: FSharpExpr list -> unit

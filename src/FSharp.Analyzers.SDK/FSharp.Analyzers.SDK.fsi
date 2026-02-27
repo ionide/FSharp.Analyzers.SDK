@@ -8,6 +8,54 @@ open FSharp.Compiler.Symbols
 open FSharp.Compiler.EditorServices
 open FSharp.Compiler.Text
 
+/// Represents a position (line and column) in a source file.
+/// This type is independent of any compiler implementation.
+[<Struct>]
+type Position =
+    {
+        /// 1-based line number.
+        Line: int
+        /// 0-based column number.
+        Column: int
+    }
+
+    /// Creates a Position from a line and column.
+    static member mkPos: line: int -> column: int -> Position
+
+/// Represents a range (start and end position) in a source file.
+/// This type is independent of any compiler implementation.
+[<Struct>]
+type Range =
+    {
+        /// The file name this range belongs to.
+        FileName: string
+        /// Start position of the range.
+        Start: Position
+        /// End position of the range.
+        End: Position
+    }
+
+    /// 1-based start line of the range.
+    member StartLine: int
+    /// 0-based start column of the range.
+    member StartColumn: int
+    /// 1-based end line of the range.
+    member EndLine: int
+    /// 0-based end column of the range.
+    member EndColumn: int
+
+    /// Creates a Range from a file name and start/end positions.
+    static member mkRange: fileName: string -> startPos: Position -> endPos: Position -> Range
+
+/// Helpers for converting FCS position/range types to SDK types.
+/// Useful for analyzer authors who work with FCS types and need to produce SDK messages.
+module RangeConversions =
+    /// Converts an FCS pos to an SDK Position.
+    val ofFcsPos: p: FSharp.Compiler.Text.pos -> Position
+
+    /// Converts an FCS range to an SDK Range.
+    val ofFcsRange: r: FSharp.Compiler.Text.range -> Range
+
 type AnalyzerIgnoreRange =
     | File
     | Range of commentStart: int * commentEnd: int
@@ -155,7 +203,7 @@ type EditorContext =
 
 type Fix =
     {
-        FromRange: range
+        FromRange: Range
         FromText: string
         ToText: string
     }
@@ -173,7 +221,7 @@ type Message =
         Message: string
         Code: string
         Severity: Severity
-        Range: range
+        Range: Range
         Fixes: Fix list
     }
 

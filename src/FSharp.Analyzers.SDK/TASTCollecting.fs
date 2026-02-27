@@ -10,6 +10,21 @@ module TASTCollecting =
 
     let mutable logger: ILogger = Abstractions.NullLogger.Instance
 
+    let private ofFcsRange (r: FSharp.Compiler.Text.range) : FSharp.Analyzers.SDK.Range =
+        {
+            FileName = r.FileName
+            Start =
+                {
+                    Line = r.Start.Line
+                    Column = r.Start.Column
+                }
+            End =
+                {
+                    Line = r.End.Line
+                    Column = r.End.Column
+                }
+        }
+
     type TypedTreeCollectorBase() =
 
         abstract WalkAddressOf: lvalueExpr: FSharpExpr -> unit
@@ -29,7 +44,7 @@ module TASTCollecting =
             objExprTypeArgs: FSharpType list ->
             memberOrFuncTypeArgs: FSharpType list ->
             argExprs: FSharpExpr list ->
-            exprRange: range ->
+            exprRange: FSharp.Analyzers.SDK.Range ->
                 unit
 
         default _.WalkCall _ _ _ _ _ _ = ()
@@ -118,7 +133,10 @@ module TASTCollecting =
         default _.WalkNewObject _ _ _ = ()
 
         abstract WalkNewRecord:
-            recordType: FSharpType -> argExprs: FSharpExpr list -> exprRange: range -> unit
+            recordType: FSharpType ->
+            argExprs: FSharpExpr list ->
+            exprRange: FSharp.Analyzers.SDK.Range ->
+                unit
 
         default _.WalkNewRecord _ _ _ = ()
 
@@ -282,7 +300,7 @@ module TASTCollecting =
                 objExprTypeArgs
                 memberOrFuncTypeArgs
                 argExprs
-                e.Range
+                (ofFcsRange e.Range)
 
             visitObjArg handler objExprOpt
             visitExprs handler argExprs
@@ -343,7 +361,7 @@ module TASTCollecting =
             handler.WalkNewObject objType typeArgs argExprs
             visitExprs handler argExprs
         | NewRecord(recordType, argExprs) ->
-            handler.WalkNewRecord recordType argExprs e.Range
+            handler.WalkNewRecord recordType argExprs (ofFcsRange e.Range)
             visitExprs handler argExprs
         | NewTuple(tupleType, argExprs) ->
             handler.WalkNewTuple tupleType argExprs

@@ -3,7 +3,6 @@
 open System
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.TASTCollecting
-open FSharp.Compiler.Text
 
 let notUsed () =
     let option: Option<int> = None
@@ -11,7 +10,7 @@ let notUsed () =
 
 let handler typeTree =
     async {
-        let state = ResizeArray<range>()
+        let state = ResizeArray<Range>()
 
         let walker =
             { new TypedTreeCollectorBase() with

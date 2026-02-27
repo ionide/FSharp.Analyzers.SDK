@@ -12,6 +12,49 @@ open System.Runtime.InteropServices
 open FSharp.Compiler.Text
 open FSharp.Compiler.SyntaxTrivia
 
+[<Struct>]
+type Position =
+    {
+        Line: int
+        Column: int
+    }
+
+    static member mkPos (line: int) (column: int) : Position = { Line = line; Column = column }
+
+[<Struct>]
+type Range =
+    {
+        FileName: string
+        Start: Position
+        End: Position
+    }
+
+    member r.StartLine = r.Start.Line
+    member r.StartColumn = r.Start.Column
+    member r.EndLine = r.End.Line
+    member r.EndColumn = r.End.Column
+
+    static member mkRange (fileName: string) (startPos: Position) (endPos: Position) : Range =
+        {
+            FileName = fileName
+            Start = startPos
+            End = endPos
+        }
+
+/// Helpers for converting FCS position/range types to SDK types.
+/// Useful for analyzer authors who work with FCS types and need to produce SDK messages.
+module RangeConversions =
+    /// Converts an FCS pos to an SDK Position.
+    let ofFcsPos (p: FSharp.Compiler.Text.pos) : Position = { Line = p.Line; Column = p.Column }
+
+    /// Converts an FCS range to an SDK Range.
+    let ofFcsRange (r: FSharp.Compiler.Text.range) : Range =
+        {
+            FileName = r.FileName
+            Start = ofFcsPos r.Start
+            End = ofFcsPos r.End
+        }
+
 [<RequireQualifiedAccess>]
 type IgnoreComment =
     | CurrentLine of line: int * codes: string list
@@ -362,7 +405,7 @@ type EditorContext =
 
 type Fix =
     {
-        FromRange: range
+        FromRange: Range
         FromText: string
         ToText: string
     }
@@ -380,7 +423,7 @@ type Message =
         Message: string
         Code: string
         Severity: Severity
-        Range: range
+        Range: Range
         Fixes: Fix list
     }
 

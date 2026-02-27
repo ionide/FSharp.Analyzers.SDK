@@ -4,7 +4,6 @@ module OptionAnalyzer.Test
 
 open FSharp.Compiler.CodeAnalysis
 open NUnit.Framework
-open FSharp.Compiler.Text
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
 open FSharp.Analyzers.SDK

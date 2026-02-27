@@ -12,10 +12,10 @@
   <ItemGroup>
     <Compile Include="ASTCollecting.fsi" />
     <Compile Include="ASTCollecting.fs" />
-    <Compile Include="TASTCollecting.fsi" />
-    <Compile Include="TASTCollecting.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
+    <Compile Include="TASTCollecting.fsi" />
+    <Compile Include="TASTCollecting.fs" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.Client.fs" />
   </ItemGroup>
