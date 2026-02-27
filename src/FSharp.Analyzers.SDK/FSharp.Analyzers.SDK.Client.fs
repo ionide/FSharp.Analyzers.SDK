@@ -212,12 +212,12 @@ module internal V1Support =
     let adaptV1Analyzer (v1Analyzer: FSharp.Analyzers.SDK.V1.Analyzer) : Analyzer<CliContext> =
         fun ctx ->
             async {
-                let v1Ctx = MigrationV1.contextToV1 ctx
+                let v1Ctx = AdapterV1.contextToV1 ctx
                 let! v1Messages = v1Analyzer v1Ctx
 
                 return
                     v1Messages
-                    |> List.map MigrationV1.messageFromV1
+                    |> List.map AdapterV1.messageFromV1
             }
 
     let private hasV1ExpectReturnType (t: Type) =

@@ -1,4 +1,4 @@
-module internal FSharp.Analyzers.SDK.MigrationV1
+module internal FSharp.Analyzers.SDK.AdapterV1
 
 open System.Collections.Generic
 open System.Runtime.CompilerServices

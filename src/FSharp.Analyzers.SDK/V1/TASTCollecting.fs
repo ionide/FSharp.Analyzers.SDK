@@ -5,10 +5,10 @@ module TASTCollecting =
     /// Convert the typed tree into SDK-owned V1 types.
     /// This is the main entry point for TAST-based analyzers.
     let convertTast (tast: TypedTreeHandle) : TypedDeclaration list =
-        let cache = FSharp.Analyzers.SDK.MigrationV1.ConversionCache()
+        let cache = FSharp.Analyzers.SDK.AdapterV1.ConversionCache()
 
         tast.Contents.Declarations
-        |> List.map (FSharp.Analyzers.SDK.MigrationV1.declarationToV1 cache)
+        |> List.map (FSharp.Analyzers.SDK.AdapterV1.declarationToV1 cache)
 
     /// Walk the typed tree and call handler for each expression node.
     let rec visitTypedTree
