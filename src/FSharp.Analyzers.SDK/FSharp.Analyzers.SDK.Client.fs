@@ -220,14 +220,10 @@ module internal V1Support =
                     |> List.map AdapterV1.messageFromV1
             }
 
-    let private hasV1ExpectReturnType (t: Type) =
-        if not (isNull t.FullName) then
-            t.FullName.StartsWith(
-                "Microsoft.FSharp.Control.FSharpAsync`1[[Microsoft.FSharp.Collections.FSharpList`1[[FSharp.Analyzers.SDK.V1.Message",
-                StringComparison.InvariantCulture
-            )
-        else
-            false
+    let private v1ExpectedReturnType =
+        typeof<Async<FSharp.Analyzers.SDK.V1.Message list>>
+
+    let private hasV1ExpectReturnType (t: Type) = t = v1ExpectedReturnType
 
     let v1CliAnalyzerFromMember
         (path: string)
