@@ -28,10 +28,18 @@ module Client =
             HelpUri: string option
         }
 
-    let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
+    let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute>
+        (mi: MemberInfo)
+        : 'TAttribute option
+        =
         mi.GetCustomAttributes true
         |> Array.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
-        |> Option.map unbox<'TAttribute>
+        |> Option.bind (fun attr ->
+            try
+                Some(unbox<'TAttribute> attr)
+            with _ ->
+                None
+        )
 
     let analyzerFromMember<'TAnalyzerAttribute, 'TContext
         when 'TAnalyzerAttribute :> AnalyzerAttribute and 'TContext :> Context>
