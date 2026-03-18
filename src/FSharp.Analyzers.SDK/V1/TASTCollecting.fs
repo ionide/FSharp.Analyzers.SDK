@@ -8,7 +8,7 @@ module TASTCollecting =
         let cache = FSharp.Analyzers.SDK.AdapterV1.ConversionCache()
 
         tast.Contents.Declarations
-        |> List.map (FSharp.Analyzers.SDK.AdapterV1.declarationToV1 cache)
+        |> List.choose (FSharp.Analyzers.SDK.AdapterV1.declarationToV1 cache)
 
     /// Walk the typed tree and call handler for each expression node.
     let rec visitTypedTree

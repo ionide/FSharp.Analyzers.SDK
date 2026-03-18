@@ -705,27 +705,66 @@ let rec exprToV1 (cache: ConversionCache) (e: FSharpExpr) : TypedExpr =
 
 // ─── Declaration conversion ─────────────────────────────────────────
 
+// FCS throws on certain compiler-generated members (e.g. CompareTo, GetHashCode, Equals)
+// whose expression body can't be safely decompiled. These sets mirror the workaround in
+// TASTCollecting.visitDeclaration — see:
+// https://github.com/dotnet/fsharp/blob/91ff67b5f698f1929f75e65918e998a2df1c1858/src/Compiler/Symbols/Exprs.fs#L1269
+let private membersToIgnore =
+    set
+        [
+            "CompareTo"
+            "GetHashCode"
+            "Equals"
+        ]
+
+let private exprTypesToIgnore =
+    set
+        [
+            "Microsoft.FSharp.Core.int"
+            "Microsoft.FSharp.Core.bool"
+        ]
+
+let private shouldSkipMember (v: FSharpMemberOrFunctionOrValue) (e: FSharpExpr) =
+    v.IsCompilerGenerated
+    && Set.contains v.CompiledName membersToIgnore
+    && e.Type.IsAbbreviation
+    && Set.contains e.Type.BasicQualifiedName exprTypesToIgnore
+
 let rec declarationToV1
     (cache: ConversionCache)
     (d: FSharpImplementationFileDeclaration)
-    : TypedDeclaration
+    : TypedDeclaration option
     =
     match d with
     | FSharpImplementationFileDeclaration.Entity(e, subDecls) ->
         TypedDeclaration.Entity(
             entityToV1 cache e,
             subDecls
-            |> List.map (declarationToV1 cache)
+            |> List.choose (declarationToV1 cache)
         )
+        |> Some
     | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(v, vs, e) ->
-        TypedDeclaration.MemberOrFunctionOrValue(
-            memberToV1 cache v,
-            vs
-            |> List.map (List.map (memberToV1 cache)),
-            exprToV1 cache e
-        )
+        if shouldSkipMember v e then
+            None
+        else
+            // FCS may throw when decompiling certain expression trees — see:
+            // https://github.com/dotnet/fsharp/blob/91ff67b5f698f1929f75e65918e998a2df1c1858/src/Compiler/Symbols/Exprs.fs#L1329
+            let body =
+                try
+                    exprToV1 cache e
+                with _ ->
+                    TypedExpr.Unknown(rangeToV1 e.Range)
+
+            TypedDeclaration.MemberOrFunctionOrValue(
+                memberToV1 cache v,
+                vs
+                |> List.map (List.map (memberToV1 cache)),
+                body
+            )
+            |> Some
     | FSharpImplementationFileDeclaration.InitAction e ->
         TypedDeclaration.InitAction(exprToV1 cache e)
+        |> Some
 
 // ─── Severity / Fix / Message conversion (V1 -> SDK) ────────────────
 
