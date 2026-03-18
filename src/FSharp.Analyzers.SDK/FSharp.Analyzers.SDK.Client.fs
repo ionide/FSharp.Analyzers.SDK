@@ -226,7 +226,26 @@ module internal V1Support =
     let private v1ExpectedReturnType =
         typeof<Async<FSharp.Analyzers.SDK.V1.Message list>>
 
-    let private hasV1ExpectReturnType (t: Type) = t = v1ExpectedReturnType
+    let private hasV1ExpectReturnType (t: Type) =
+        if t = v1ExpectedReturnType then
+            true
+        // Fallback for methods with inferred generic return type (e.g. returning []).
+        // The FullName is null for types containing unresolved generic parameters.
+        elif
+            isNull t.FullName
+            && t.Name = "FSharpAsync`1"
+            && t.GenericTypeArguments.Length = 1
+        then
+            let listType = t.GenericTypeArguments.[0]
+
+            listType.Name = "FSharpList`1"
+            && listType.GenericTypeArguments.Length = 1
+            && (let msgType = listType.GenericTypeArguments.[0] in
+
+                msgType.Name = "a"
+                || msgType = typeof<FSharp.Analyzers.SDK.V1.Message>)
+        else
+            false
 
     let v1CliAnalyzerFromMember
         (path: string)
@@ -454,19 +473,24 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         else
                             []
 
-                    if
-                        not isVersionMatch
-                        && List.isEmpty v1Analyzers
-                    then
-                        System.Threading.Interlocked.Increment skippedAssemblies
-                        |> ignore
+                    if not isVersionMatch then
+                        if List.isEmpty v1Analyzers then
+                            System.Threading.Interlocked.Increment skippedAssemblies
+                            |> ignore
 
-                        logger.LogError(
-                            "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
-                            path,
-                            version,
-                            Utils.currentFSharpAnalyzersSDKVersion
-                        )
+                            logger.LogError(
+                                "Trying to load {Name} which was built using SDK version {Version}. Expect {SdkVersion} instead. Assembly will be skipped.",
+                                path,
+                                version,
+                                Utils.currentFSharpAnalyzersSDKVersion
+                            )
+                        else
+                            logger.LogWarning(
+                                "Assembly {Name} was built using SDK version {Version} (expected {SdkVersion}). Legacy analyzers from this assembly will be skipped; only V1 analyzers will be loaded.",
+                                path,
+                                version,
+                                Utils.currentFSharpAnalyzersSDKVersion
+                            )
 
                     let allAnalyzers =
                         (legacyAnalyzers
