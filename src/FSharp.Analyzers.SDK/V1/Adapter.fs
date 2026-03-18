@@ -11,15 +11,14 @@ open FSharp.Analyzers.SDK.V1
 // shadow the identically-named TypedExpr DU cases from V1.
 open FSharp.Compiler.Symbols.FSharpExprPatterns
 
-// Cache keyed by logical identity (FullName/BasicQualifiedName) rather than
-// reference identity, because FCS may return different objects for the same
-// logical entity when accessed via different paths (e.g. member.DeclaringEntity
-// vs the entity directly).
+// Cache keyed by logical identity (FullName) rather than reference identity,
+// because FCS may return different objects for the same logical entity when
+// accessed via different paths (e.g. member.DeclaringEntity vs the entity
+// directly).  Only entities are cached (using a stub to break cycles).
+// Types are NOT cached because BasicQualifiedName does not distinguish
+// generic instantiations (e.g. list<int> vs list<string>).
 type ConversionCache() =
-    // Keyed by FullName for entities
     member val Entities = Dictionary<string, EntityInfo>()
-    // Keyed by BasicQualifiedName for types
-    member val Types = Dictionary<string, TypeInfo>()
 
 let inline private tryGet defaultValue ([<InlineIfLambda>] f) =
     try
@@ -185,60 +184,50 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
         full
 
 and typeToV1 (cache: ConversionCache) (t: FSharpType) : TypeInfo =
-    // Use BasicQualifiedName as cache key; fall back to empty string if it throws
-    let cacheKey = tryGet "" (fun () -> t.BasicQualifiedName)
-
-    match cache.Types.TryGetValue(cacheKey) with
-    | true, v -> v
-    | false, _ ->
-        let result: TypeInfo =
-            {
-                BasicQualifiedName = cacheKey
-                IsAbbreviation = tryGet false (fun () -> t.IsAbbreviation)
-                IsFunctionType = tryGet false (fun () -> t.IsFunctionType)
-                IsTupleType = tryGet false (fun () -> t.IsTupleType)
-                IsStructTupleType = tryGet false (fun () -> t.IsStructTupleType)
-                IsGenericParameter = tryGet false (fun () -> t.IsGenericParameter)
-                HasTypeDefinition = tryGet false (fun () -> t.HasTypeDefinition)
-                GenericArguments =
-                    tryGet
-                        []
-                        (fun () ->
-                            t.GenericArguments
-                            |> Seq.map (typeToV1 cache)
-                            |> Seq.toList
-                        )
-                AbbreviatedType =
-                    tryGet
+    {
+        BasicQualifiedName = tryGet "" (fun () -> t.BasicQualifiedName)
+        IsAbbreviation = tryGet false (fun () -> t.IsAbbreviation)
+        IsFunctionType = tryGet false (fun () -> t.IsFunctionType)
+        IsTupleType = tryGet false (fun () -> t.IsTupleType)
+        IsStructTupleType = tryGet false (fun () -> t.IsStructTupleType)
+        IsGenericParameter = tryGet false (fun () -> t.IsGenericParameter)
+        HasTypeDefinition = tryGet false (fun () -> t.HasTypeDefinition)
+        GenericArguments =
+            tryGet
+                []
+                (fun () ->
+                    t.GenericArguments
+                    |> Seq.map (typeToV1 cache)
+                    |> Seq.toList
+                )
+        AbbreviatedType =
+            tryGet
+                None
+                (fun () ->
+                    if t.IsAbbreviation then
+                        Some(typeToV1 cache t.AbbreviatedType)
+                    else
                         None
-                        (fun () ->
-                            if t.IsAbbreviation then
-                                Some(typeToV1 cache t.AbbreviatedType)
-                            else
-                                None
-                        )
-                TypeDefinition =
-                    tryGet
+                )
+        TypeDefinition =
+            tryGet
+                None
+                (fun () ->
+                    if t.HasTypeDefinition then
+                        Some(entityToV1 cache t.TypeDefinition)
+                    else
                         None
-                        (fun () ->
-                            if t.HasTypeDefinition then
-                                Some(entityToV1 cache t.TypeDefinition)
-                            else
-                                None
-                        )
-                GenericParameter =
-                    tryGet
+                )
+        GenericParameter =
+            tryGet
+                None
+                (fun () ->
+                    if t.IsGenericParameter then
+                        Some(genericParameterToV1 t.GenericParameter)
+                    else
                         None
-                        (fun () ->
-                            if t.IsGenericParameter then
-                                Some(genericParameterToV1 t.GenericParameter)
-                            else
-                                None
-                        )
-            }
-
-        cache.Types.[cacheKey] <- result
-        result
+                )
+    }
 
 and memberToV1
     (cache: ConversionCache)
@@ -785,7 +774,7 @@ let contextToV1 (ctx: FSharp.Analyzers.SDK.CliContext) : CliContext =
         SourceText = ctx.SourceText.GetSubTextString(0, ctx.SourceText.Length)
         TypedTree =
             ctx.TypedTree
-            |> Option.map (fun tast -> { TypedTreeHandle.Contents = tast })
+            |> Option.map TypedTreeHandle
         ProjectOptions =
             {
                 ProjectFileName = ctx.ProjectOptions.ProjectFileName

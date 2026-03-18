@@ -321,14 +321,8 @@ type SymbolUseInfo =
         IsFromOpenStatement: bool
     }
 
-// Opaque handle to the FCS typed tree.
-// The internal representation is hidden by the .fsi file.
-[<Struct>]
-type TypedTreeHandle =
-    internal
-        {
-            Contents: FSharp.Compiler.Symbols.FSharpImplementationFileContents
-        }
+// TypedTreeHandle is defined in V1/TypedTreeHandle.fs (no .fsi)
+// so that internal members are visible without the signature referencing FCS.
 
 type CliContext =
     {

@@ -19,6 +19,7 @@
     <Compile Include="TASTCollecting.fs" />
     <Compile Include="FSharp.Analyzers.SDK.fsi" />
     <Compile Include="FSharp.Analyzers.SDK.fs" />
+    <Compile Include="V1/TypedTreeHandle.fs" />
     <Compile Include="V1/Types.fsi" />
     <Compile Include="V1/Types.fs" />
     <Compile Include="V1/Attributes.fs" />

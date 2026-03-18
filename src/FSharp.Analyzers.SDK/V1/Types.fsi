@@ -311,14 +311,7 @@ type SymbolUseInfo =
         IsFromOpenStatement: bool
     }
 
-/// Opaque handle to the FCS typed tree.
-/// Pass to TASTCollecting.convertTast to obtain V1 typed declarations.
-[<Struct>]
-type TypedTreeHandle =
-    internal
-        {
-            Contents: FSharp.Compiler.Symbols.FSharpImplementationFileContents
-        }
+// TypedTreeHandle is defined in V1/TypedTreeHandle.fs (no .fsi).
 
 type CliContext =
     {

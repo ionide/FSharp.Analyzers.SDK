@@ -353,3 +353,234 @@ let x = 1
         Assert.AreEqual(ctx.ProjectOptions.SourceFiles, v1Ctx.ProjectOptions.SourceFiles)
 
         Assert.AreEqual(ctx.ProjectOptions.OtherOptions, v1Ctx.ProjectOptions.OtherOptions)
+
+    // ─── Helpers for typed-tree inspection ─────────────────────────────
+
+    /// Extract all top-level MemberOrFunctionOrValue bindings from declarations,
+    /// descending one level into Entity (module) wrappers.
+    let private findBindings (decls: FSharp.Analyzers.SDK.V1.TypedDeclaration list) =
+        decls
+        |> List.collect (fun d ->
+            match d with
+            | FSharp.Analyzers.SDK.V1.TypedDeclaration.Entity(_, subDecls) -> subDecls
+            | other -> [ other ]
+        )
+        |> List.choose (fun d ->
+            match d with
+            | FSharp.Analyzers.SDK.V1.TypedDeclaration.MemberOrFunctionOrValue(v, _, _) -> Some v
+            | _ -> None
+        )
+
+    let private getBinding name decls =
+        findBindings decls
+        |> List.find (fun v -> v.DisplayName = name)
+
+    let private convertSource source =
+        let ctx = getContext projectOptions source
+        let v1Ctx = contextToV1 ctx
+        let handle = v1Ctx.TypedTree.Value
+        FSharp.Analyzers.SDK.V1.TASTCollecting.convertTast handle
+
+    // ─── TypedTreeHandle opacity tests ─────────────────────────────────
+
+    /// Recursively check whether a System.Type references any type from the
+    /// FSharp.Compiler assembly (FCS), including through generic arguments.
+    let rec private referencesFCS (ty: System.Type) =
+        if
+            isNull ty
+            || isNull ty.FullName
+        then
+            false
+        elif ty.FullName.StartsWith("FSharp.Compiler", System.StringComparison.Ordinal) then
+            true
+        elif ty.IsGenericType then
+            ty.GetGenericArguments()
+            |> Array.exists referencesFCS
+        elif ty.IsArray then
+            referencesFCS (ty.GetElementType())
+        elif ty.IsByRef then
+            referencesFCS (ty.GetElementType())
+        else
+            false
+
+    [<Test>]
+    let ``no V1 public type exposes FCS types in its public surface`` () =
+        let v1Assembly = typeof<FSharp.Analyzers.SDK.V1.CliContext>.Assembly
+
+        let v1Types =
+            v1Assembly.GetTypes()
+            |> Array.filter (fun t ->
+                t.IsPublic
+                && not (isNull t.Namespace)
+                && t.Namespace.StartsWith(
+                    "FSharp.Analyzers.SDK.V1",
+                    System.StringComparison.Ordinal
+                )
+            )
+
+        // Sanity: we should find a reasonable number of V1 types.
+        NUnit.Framework.Assert.That(
+            v1Types.Length,
+            Is.GreaterThanOrEqualTo(10),
+            "Should find V1 types"
+        )
+
+        for t in v1Types do
+            let publicMembers =
+                t.GetMembers(
+                    System.Reflection.BindingFlags.Public
+                    ||| System.Reflection.BindingFlags.Instance
+                    ||| System.Reflection.BindingFlags.Static
+                    ||| System.Reflection.BindingFlags.DeclaredOnly
+                )
+
+            for m in publicMembers do
+                let memberTypes =
+                    match m with
+                    | :? System.Reflection.PropertyInfo as p -> [ p.PropertyType ]
+                    | :? System.Reflection.FieldInfo as f -> [ f.FieldType ]
+                    | :? System.Reflection.MethodInfo as mi ->
+                        mi.ReturnType
+                        :: (mi.GetParameters()
+                            |> Array.toList
+                            |> List.map (fun p -> p.ParameterType))
+                    | :? System.Reflection.ConstructorInfo as ci ->
+                        ci.GetParameters()
+                        |> Array.toList
+                        |> List.map (fun p -> p.ParameterType)
+                    | _ -> []
+
+                for mt in memberTypes do
+                    NUnit.Framework.Assert.That(
+                        referencesFCS mt,
+                        Is.False,
+                        $"Type '{t.Name}', member '{m.Name}' exposes FCS type '{mt.FullName}'"
+                    )
+
+    // ─── Type conversion cache-collision tests ─────────────────────────
+
+    [<Test>]
+    let ``typeToV1 distinguishes list<int> from list<string>`` () =
+        let source =
+            """
+module M
+
+let a : list<int> = []
+let b : list<string> = []
+"""
+
+        let decls = convertSource source
+        let aInfo = getBinding "a" decls
+        let bInfo = getBinding "b" decls
+
+        // Both should have the same base list type
+        Assert.AreEqual(
+            aInfo.FullType.BasicQualifiedName,
+            bInfo.FullType.BasicQualifiedName,
+            "Both should share the same base list type name"
+        )
+
+        // But their generic arguments must differ
+        Assert.AreEqual(1, aInfo.FullType.GenericArguments.Length, "list<int> has 1 generic arg")
+        Assert.AreEqual(1, bInfo.FullType.GenericArguments.Length, "list<string> has 1 generic arg")
+
+        Assert.AreNotEqual(
+            aInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            bInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            "list<int> and list<string> must have different generic arguments"
+        )
+
+    [<Test>]
+    let ``typeToV1 preserves generic argument order for Result<int,string> vs Result<string,int>``
+        ()
+        =
+        let source =
+            """
+module M
+
+let a : Result<int, string> = Ok 1
+let b : Result<string, int> = Ok ""
+"""
+
+        let decls = convertSource source
+        let aInfo = getBinding "a" decls
+        let bInfo = getBinding "b" decls
+
+        // Same base type
+        Assert.AreEqual(
+            aInfo.FullType.BasicQualifiedName,
+            bInfo.FullType.BasicQualifiedName,
+            "Both should share the same base Result type name"
+        )
+
+        Assert.AreEqual(2, aInfo.FullType.GenericArguments.Length)
+        Assert.AreEqual(2, bInfo.FullType.GenericArguments.Length)
+
+        // a's first arg (int) should match b's second arg (int), and vice versa
+        Assert.AreEqual(
+            aInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            bInfo.FullType.GenericArguments.[1].BasicQualifiedName,
+            "First arg of Result<int,string> should equal second arg of Result<string,int>"
+        )
+
+        Assert.AreEqual(
+            aInfo.FullType.GenericArguments.[1].BasicQualifiedName,
+            bInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            "Second arg of Result<int,string> should equal first arg of Result<string,int>"
+        )
+
+    [<Test>]
+    let ``typeToV1 distinguishes nested generic instantiations`` () =
+        let source =
+            """
+module M
+
+let a : list<list<int>> = []
+let b : list<list<string>> = []
+"""
+
+        let decls = convertSource source
+        let aInfo = getBinding "a" decls
+        let bInfo = getBinding "b" decls
+
+        // Outer list types have same BasicQualifiedName
+        Assert.AreEqual(aInfo.FullType.BasicQualifiedName, bInfo.FullType.BasicQualifiedName)
+
+        // The inner list's generic argument must differ
+        let aInner = aInfo.FullType.GenericArguments.[0]
+        let bInner = bInfo.FullType.GenericArguments.[0]
+
+        Assert.AreEqual(
+            aInner.BasicQualifiedName,
+            bInner.BasicQualifiedName,
+            "Inner lists share the same base type name"
+        )
+
+        Assert.AreNotEqual(
+            aInner.GenericArguments.[0].BasicQualifiedName,
+            bInner.GenericArguments.[0].BasicQualifiedName,
+            "list<list<int>> and list<list<string>> must differ at the innermost generic argument"
+        )
+
+    [<Test>]
+    let ``typeToV1 correctly converts two values with the same generic instantiation`` () =
+        let source =
+            """
+module M
+
+let a : list<int> = []
+let b : list<int> = []
+"""
+
+        let decls = convertSource source
+        let aInfo = getBinding "a" decls
+        let bInfo = getBinding "b" decls
+
+        // Both should be structurally equal
+        Assert.AreEqual(aInfo.FullType.BasicQualifiedName, bInfo.FullType.BasicQualifiedName)
+
+        Assert.AreEqual(
+            aInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            bInfo.FullType.GenericArguments.[0].BasicQualifiedName,
+            "Two list<int> values should have the same generic argument"
+        )
