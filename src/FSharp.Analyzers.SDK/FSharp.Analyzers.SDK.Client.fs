@@ -28,7 +28,10 @@ module Client =
             HelpUri: string option
         }
 
-    let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute> (mi: MemberInfo) =
+    let isAnalyzer<'TAttribute when 'TAttribute :> AnalyzerAttribute>
+        (mi: MemberInfo)
+        : 'TAttribute option
+        =
         mi.GetCustomAttributes true
         |> Array.tryFind (fun n -> n.GetType().Name = typeof<'TAttribute>.Name)
         |> Option.bind (fun attr ->
