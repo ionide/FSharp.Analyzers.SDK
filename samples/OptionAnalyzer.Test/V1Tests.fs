@@ -187,6 +187,22 @@ let notUsed() =
                 | Error ex -> Assert.Fail($"Analyzer result was Error: %A{ex}")
         }
 
+    [<Test>]
+    let ``LoadAnalyzers discovers V1 analyzer with inferred return type`` () =
+        let client = Client<CliAnalyzerAttribute, CliContext>()
+        let path = System.IO.Path.GetFullPath(".")
+        let stats = client.LoadAnalyzers(path)
+
+        // We expect at least 3 analyzers:
+        //   1. Legacy OptionAnalyzer (CliContext)
+        //   2. V1 OptionAnalyzer (explicitly typed as Analyzer)
+        //   3. V1 InferredReturnAnalyzer (method with inferred Async<'a list> return)
+        Assert.That(
+            stats.Analyzers,
+            Is.GreaterThanOrEqualTo 3,
+            "V1 analyzer with inferred Async<'a list> return type should be discovered"
+        )
+
 // ─── Adapter unit tests ────────────────────────────────────────────
 
 module AdapterTests =

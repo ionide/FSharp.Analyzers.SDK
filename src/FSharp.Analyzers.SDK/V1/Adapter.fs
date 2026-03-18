@@ -17,8 +17,18 @@ open FSharp.Compiler.Symbols.FSharpExprPatterns
 // directly).  Only entities are cached (using a stub to break cycles).
 // Types are NOT cached because BasicQualifiedName does not distinguish
 // generic instantiations (e.g. list<int> vs list<string>).
+//
+// Entities whose FullName is unavailable (local, anonymous, compiler-generated)
+// are cached separately by reference identity so they don't collide.
+let private referenceComparer<'T when 'T: not struct> =
+    { new IEqualityComparer<'T> with
+        member _.Equals(x, y) = obj.ReferenceEquals(x, y)
+        member _.GetHashCode(x) = RuntimeHelpers.GetHashCode(x)
+    }
+
 type ConversionCache() =
     member val Entities = Dictionary<string, EntityInfo>()
+    member val EntitiesByRef = Dictionary<FSharpEntity, EntityInfo>(referenceComparer)
 
 let inline private tryGet defaultValue ([<InlineIfLambda>] f) =
     try
@@ -70,16 +80,38 @@ let genericParameterToV1 (gp: FSharpGenericParameter) : GenericParameterInfo =
 // ─── Mutually recursive FCS type conversions ────────────────────────
 
 let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
-    // Use FullName as cache key; fall back to empty string if it throws
-    let cacheKey = tryGet "" (fun () -> e.FullName)
+    // Use FullName as cache key when available; entities whose FullName
+    // throws (local, anonymous, compiler-generated) use a separate
+    // reference-identity cache so distinct nameless entities don't collide.
+    let fullName = tryGet None (fun () -> Some e.FullName)
 
-    match cache.Entities.TryGetValue(cacheKey) with
-    | true, v -> v
-    | false, _ ->
+    let cached =
+        match fullName with
+        | Some name ->
+            match cache.Entities.TryGetValue(name) with
+            | true, v -> ValueSome v
+            | _ -> ValueNone
+        | None ->
+            match cache.EntitiesByRef.TryGetValue(e) with
+            | true, v -> ValueSome v
+            | _ -> ValueNone
+
+    match cached with
+    | ValueSome v -> v
+    | ValueNone ->
+        let fullNameStr =
+            fullName
+            |> Option.defaultValue ""
+
+        let cacheSet v =
+            match fullName with
+            | Some name -> cache.Entities.[name] <- v
+            | None -> cache.EntitiesByRef.[e] <- v
+
         // Insert a stub to break cycles.
         let stub: EntityInfo =
             {
-                FullName = cacheKey
+                FullName = fullNameStr
                 DisplayName = tryGet "" (fun () -> e.DisplayName)
                 CompiledName = tryGet "" (fun () -> e.CompiledName)
                 Namespace = tryGet None (fun () -> e.Namespace)
@@ -111,7 +143,7 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
                 AbbreviatedType = None
             }
 
-        cache.Entities.[cacheKey] <- stub
+        cacheSet stub
 
         let full: EntityInfo =
             { stub with
@@ -180,7 +212,7 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
                         )
             }
 
-        cache.Entities.[cacheKey] <- full
+        cacheSet full
         full
 
 and typeToV1 (cache: ConversionCache) (t: FSharpType) : TypeInfo =

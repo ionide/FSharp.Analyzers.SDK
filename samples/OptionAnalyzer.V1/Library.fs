@@ -41,3 +41,9 @@ let optionValueAnalyzer: Analyzer =
                 )
                 |> Seq.toList
         }
+
+/// A V1 analyzer defined as a method with inferred return type (returns [] without
+/// explicit type annotation). This exercises the same codepath that the legacy loader
+/// handles via its generic-return-type fallback.
+[<CliAnalyzer "InferredReturnAnalyzer">]
+let inferredReturnAnalyzer (_ctx: CliContext) = async { return [] }
