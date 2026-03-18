@@ -876,3 +876,43 @@ let contextToV1 (ctx: FSharp.Analyzers.SDK.CliContext) : CliContext =
                     |> Seq.toList
                 )
     }
+
+let editorContextToV1 (ctx: FSharp.Analyzers.SDK.EditorContext) : CliContext =
+    let cache = ConversionCache()
+
+    {
+        FileName = ctx.FileName
+        SourceText = ctx.SourceText.GetSubTextString(0, ctx.SourceText.Length)
+        TypedTree =
+            ctx.TypedTree
+            |> Option.map TypedTreeHandle
+        ProjectOptions =
+            {
+                ProjectFileName = ctx.ProjectOptions.ProjectFileName
+                SourceFiles = ctx.ProjectOptions.SourceFiles
+                ReferencedProjectsPaths = ctx.ProjectOptions.ReferencedProjectsPath
+                OtherOptions = ctx.ProjectOptions.OtherOptions
+            }
+        AnalyzerIgnoreRanges =
+            ctx.AnalyzerIgnoreRanges
+            |> Map.map (fun _ ranges ->
+                ranges
+                |> List.map analyzerIgnoreRangeToV1
+            )
+        SymbolUsesInFile =
+            tryGet
+                []
+                (fun () ->
+                    ctx.GetAllSymbolUsesOfFile()
+                    |> Seq.map (symbolUseToV1 cache)
+                    |> Seq.toList
+                )
+        SymbolUsesInProject =
+            tryGet
+                []
+                (fun () ->
+                    ctx.GetAllSymbolUsesOfProject()
+                    |> Seq.map (symbolUseToV1 cache)
+                    |> Seq.toList
+                )
+    }

@@ -343,6 +343,155 @@ module internal V1Support =
         |> Seq.choose (v1CliAnalyzerFromMember path)
         |> Seq.toList
 
+    // ─── V1 Editor analyzer support ──────────────────────────────────
+
+    let isV1EditorAnalyzer
+        (mi: MemberInfo)
+        : FSharp.Analyzers.SDK.V1.EditorAnalyzerAttribute option
+        =
+        mi.GetCustomAttributes true
+        |> Array.tryFind (fun a ->
+            a.GetType().FullName = "FSharp.Analyzers.SDK.V1.EditorAnalyzerAttribute"
+        )
+        |> Option.bind (fun attr ->
+            try
+                Some(unbox<FSharp.Analyzers.SDK.V1.EditorAnalyzerAttribute> attr)
+            with _ ->
+                None
+        )
+
+    let adaptV1EditorAnalyzer
+        (v1Analyzer: FSharp.Analyzers.SDK.V1.EditorAnalyzer)
+        : Analyzer<EditorContext>
+        =
+        fun ctx ->
+            async {
+                let v1Ctx = AdapterV1.editorContextToV1 ctx
+                let! v1Messages = v1Analyzer v1Ctx
+
+                return
+                    v1Messages
+                    |> List.map AdapterV1.messageFromV1
+            }
+
+    let private v1EditorExpectedReturnType =
+        typeof<Async<FSharp.Analyzers.SDK.V1.Message list>>
+
+    let private hasV1EditorExpectedReturnType (t: Type) =
+        if t = v1EditorExpectedReturnType then
+            true
+        elif
+            isNull t.FullName
+            && t.Name = "FSharpAsync`1"
+            && t.GenericTypeArguments.Length = 1
+        then
+            let listType = t.GenericTypeArguments.[0]
+
+            listType.Name = "FSharpList`1"
+            && listType.GenericTypeArguments.Length = 1
+            && (let msgType = listType.GenericTypeArguments.[0] in
+
+                msgType.Name = "a"
+                || msgType = typeof<FSharp.Analyzers.SDK.V1.Message>)
+        else
+            false
+
+    let v1EditorAnalyzerFromMember
+        (path: string)
+        (mi: MemberInfo)
+        : Client.RegisteredAnalyzer<EditorContext> option
+        =
+        let inline unboxV1Analyzer v =
+            if isNull v then
+                failwith "V1 EditorAnalyzer is null"
+            else
+                unbox<FSharp.Analyzers.SDK.V1.EditorAnalyzer> v
+
+        let getV1Analyzer (mi: MemberInfo) : FSharp.Analyzers.SDK.V1.EditorAnalyzer option =
+            try
+                match box mi with
+                | :? FieldInfo as m ->
+                    if m.FieldType = typeof<FSharp.Analyzers.SDK.V1.EditorAnalyzer> then
+                        Some(
+                            m.GetValue(null)
+                            |> unboxV1Analyzer
+                        )
+                    else
+                        None
+                | :? MethodInfo as m ->
+                    if m.ReturnType = typeof<FSharp.Analyzers.SDK.V1.EditorAnalyzer> then
+                        Some(
+                            m.Invoke(null, null)
+                            |> unboxV1Analyzer
+                        )
+                    elif hasV1EditorExpectedReturnType m.ReturnType then
+                        let analyzer: FSharp.Analyzers.SDK.V1.EditorAnalyzer =
+                            fun ctx ->
+                                m.Invoke(null, [| ctx |])
+                                |> unbox
+
+                        Some analyzer
+                    else
+                        None
+                | :? PropertyInfo as m ->
+                    if m.PropertyType = typeof<FSharp.Analyzers.SDK.V1.EditorAnalyzer> then
+                        Some(
+                            m.GetValue(null, null)
+                            |> unboxV1Analyzer
+                        )
+                    else
+                        None
+                | _ -> None
+            with _ ->
+                None
+
+        match isV1EditorAnalyzer mi with
+        | Some attr ->
+            match getV1Analyzer mi with
+            | Some v1Analyzer ->
+                let name =
+                    if String.IsNullOrWhiteSpace attr.Name then
+                        mi.Name
+                    else
+                        attr.Name
+
+                Some
+                    {
+                        AssemblyPath = path
+                        Name = name
+                        Analyzer = adaptV1EditorAnalyzer v1Analyzer
+                        ShortDescription = attr.ShortDescription
+                        HelpUri = attr.HelpUri
+                    }
+            | None -> None
+        | None -> None
+
+    let v1EditorAnalyzersFromType
+        (path: string)
+        (t: Type)
+        : Client.RegisteredAnalyzer<EditorContext> list
+        =
+        let asMembers x = Seq.map (fun m -> m :> MemberInfo) x
+
+        let bindingFlags =
+            BindingFlags.Public
+            ||| BindingFlags.Static
+
+        let members =
+            [
+                t.GetTypeInfo().GetMethods bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetProperties bindingFlags
+                |> asMembers
+                t.GetTypeInfo().GetFields bindingFlags
+                |> asMembers
+            ]
+            |> Seq.collect id
+
+        members
+        |> Seq.choose (v1EditorAnalyzerFromMember path)
+        |> Seq.toList
+
 type AssemblyLoadStats =
     {
         AnalyzerAssemblies: int
@@ -444,12 +593,22 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                         version.Major = Utils.currentFSharpAnalyzersSDKVersion.Major
                         && version.Minor = Utils.currentFSharpAnalyzersSDKVersion.Minor
 
-                    // V1 CLI analyzers: load regardless of version (no version gate).
+                    // V1 analyzers: load regardless of version (no version gate).
                     let v1Analyzers: Client.RegisteredAnalyzer<'TContext> list =
                         if typeof<'TContext> = typeof<CliContext> then
                             try
                                 assembly.GetExportedTypes()
                                 |> Seq.collect (V1Support.v1CliAnalyzersFromType path)
+                                |> Seq.map (fun ra ->
+                                    unbox<Client.RegisteredAnalyzer<'TContext>> (box ra)
+                                )
+                                |> Seq.toList
+                            with _ ->
+                                []
+                        elif typeof<'TContext> = typeof<EditorContext> then
+                            try
+                                assembly.GetExportedTypes()
+                                |> Seq.collect (V1Support.v1EditorAnalyzersFromType path)
                                 |> Seq.map (fun ra ->
                                     unbox<Client.RegisteredAnalyzer<'TContext>> (box ra)
                                 )
