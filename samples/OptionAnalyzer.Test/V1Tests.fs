@@ -10,31 +10,32 @@ open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
 open FSharp.Analyzers.SDK.AdapterV1
 
-let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
-
-[<SetUp>]
-let Setup () =
-    task {
-        let! opts =
-            mkOptionsFromProject
-                "net8.0"
-                [
-                    {
-                        Name = "Newtonsoft.Json"
-                        Version = "13.0.3"
-                    }
-                    {
-                        Name = "Fantomas.FCS"
-                        Version = "6.2.0"
-                    }
-                ]
-
-        projectOptions <- opts
-    }
+let mkProjectOptions () =
+    mkOptionsFromProject
+        "net8.0"
+        [
+            {
+                Name = "Newtonsoft.Json"
+                Version = "13.0.3"
+            }
+            {
+                Name = "Fantomas.FCS"
+                Version = "6.2.0"
+            }
+        ]
 
 // ─── Oracle tests: V1 and legacy analyzers must agree ──────────────
 
 module OracleTests =
+
+    let mutable projectOptions: FSharpProjectOptions = Unchecked.defaultof<_>
+
+    [<OneTimeSetUp>]
+    let Setup () =
+        task {
+            let! opts = mkProjectOptions ()
+            projectOptions <- opts
+        }
 
     [<Test>]
     let ``V1 and legacy agree on single Option.Value`` () =
@@ -131,6 +132,15 @@ let f () =
 
 module ClientIntegrationTests =
 
+    let mutable projectOptions: FSharpProjectOptions = Unchecked.defaultof<_>
+
+    [<OneTimeSetUp>]
+    let Setup () =
+        task {
+            let! opts = mkProjectOptions ()
+            projectOptions <- opts
+        }
+
     [<Test>]
     let ``LoadAnalyzers includes V1 analyzers in count`` () =
         let client = Client<CliAnalyzerAttribute, CliContext>()
@@ -187,6 +197,15 @@ module AdapterTests =
     type V1Fix = FSharp.Analyzers.SDK.V1.Fix
     type V1Message = FSharp.Analyzers.SDK.V1.Message
     type V1AnalyzerIgnoreRange = FSharp.Analyzers.SDK.V1.AnalyzerIgnoreRange
+
+    let mutable projectOptions: FSharpProjectOptions = Unchecked.defaultof<_>
+
+    [<OneTimeSetUp>]
+    let Setup () =
+        task {
+            let! opts = mkProjectOptions ()
+            projectOptions <- opts
+        }
 
     [<Property>]
     let ``rangeToV1 then rangeFromV1 preserves all fields``
