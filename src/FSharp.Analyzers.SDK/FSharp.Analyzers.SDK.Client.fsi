@@ -22,11 +22,14 @@ type AssemblyLoadStats =
     {
         /// The number of DLLs from which we tried to load analyzers.
         AnalyzerAssemblies: int
-        /// The total number of analyzers loaded across all attempted DLLs.
-        Analyzers: int
+        /// The names of all analyzers loaded across all attempted DLLs.
+        AnalyzerNames: string list
         /// The number of assemblies from which we tried and failed to load any DLLs.
         FailedAssemblies: int
     }
+
+    /// The total number of analyzers loaded across all attempted DLLs.
+    member Analyzers: int
 
 type ExcludeInclude =
     /// A predicate function to exclude Analyzers.
