@@ -9,28 +9,7 @@ open FsCheck.NUnit
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
 open FSharp.Analyzers.SDK.AdapterV1
-
-let runtimeTfm =
-    let v = System.Environment.Version
-
-    "net"
-    + string v.Major
-    + "."
-    + string v.Minor
-
-let mkProjectOptions () =
-    mkOptionsFromProject
-        runtimeTfm
-        [
-            {
-                Name = "Newtonsoft.Json"
-                Version = "13.0.3"
-            }
-            {
-                Name = "Fantomas.FCS"
-                Version = "6.2.0"
-            }
-        ]
+open OptionAnalyzer.TestHelpers
 
 // ─── Oracle tests: V1 and legacy analyzers must agree ──────────────
 
@@ -41,7 +20,7 @@ module OracleTests =
     [<OneTimeSetUp>]
     let Setup () =
         task {
-            let! opts = mkProjectOptions ()
+            let! opts = mkTestProjectOptions ()
             projectOptions <- opts
         }
 
@@ -145,34 +124,21 @@ module ClientIntegrationTests =
     [<OneTimeSetUp>]
     let Setup () =
         task {
-            let! opts = mkProjectOptions ()
+            let! opts = mkTestProjectOptions ()
             projectOptions <- opts
         }
 
     [<Test>]
     let ``LoadAnalyzers includes V1 analyzers`` () =
-        let client = Client<CliAnalyzerAttribute, CliContext>()
-        let path = System.IO.Path.GetFullPath(".")
-        let stats = client.LoadAnalyzers(path)
+        let _client, stats = loadAnalyzers ()
         Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
         Assert.That(stats.AnalyzerNames, Does.Contain "InferredReturnAnalyzer")
 
     [<Test>]
     let ``RunAnalyzersSafely produces results from both legacy and V1`` () =
         async {
-            let source =
-                """
-module M
-
-let notUsed() =
-    let option : Option<int> = None
-    option.Value
-    """
-
-            let ctx = getContext projectOptions source
-            let client = Client<CliAnalyzerAttribute, CliContext>()
-            let path = System.IO.Path.GetFullPath(".")
-            let _stats = client.LoadAnalyzers(path)
+            let ctx = getContext projectOptions ClientTestSources.optionValue
+            let client, _stats = loadAnalyzers ()
             let! results = client.RunAnalyzersSafely(ctx)
 
             let optionResults =
@@ -205,9 +171,7 @@ let notUsed() =
 
     [<Test>]
     let ``LoadAnalyzers discovers V1 analyzer with inferred return type`` () =
-        let client = Client<CliAnalyzerAttribute, CliContext>()
-        let path = System.IO.Path.GetFullPath(".")
-        let stats = client.LoadAnalyzers(path)
+        let _client, stats = loadAnalyzers ()
 
         Assert.That(
             stats.AnalyzerNames,
@@ -231,7 +195,7 @@ module AdapterTests =
     [<OneTimeSetUp>]
     let Setup () =
         task {
-            let! opts = mkProjectOptions ()
+            let! opts = mkTestProjectOptions ()
             projectOptions <- opts
         }
 

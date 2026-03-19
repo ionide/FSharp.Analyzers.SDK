@@ -7,35 +7,14 @@ open NUnit.Framework
 open FSharp.Compiler.Text
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
+open OptionAnalyzer.TestHelpers
 
 let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
-let mutable runtimeTfm: string = Unchecked.defaultof<_>
 
 [<OneTimeSetUp>]
 let Setup () =
-    runtimeTfm <-
-        let v = System.Environment.Version
-
-        "net"
-        + string v.Major
-        + "."
-        + string v.Minor
-
     task {
-        let! opts =
-            mkOptionsFromProject
-                runtimeTfm
-                [
-                    {
-                        Name = "Newtonsoft.Json"
-                        Version = "13.0.3"
-                    }
-                    {
-                        Name = "Fantomas.FCS"
-                        Version = "6.2.0"
-                    }
-                ]
-
+        let! opts = mkTestProjectOptions ()
         projectOptions <- opts
     }
 
@@ -448,184 +427,88 @@ module ClientTests =
         [<OneTimeSetUp>]
         let Setup () =
             task {
-                let! opts =
-                    mkSnapshotFromProject
-                        runtimeTfm
-                        [
-                            {
-                                Name = "Newtonsoft.Json"
-                                Version = "13.0.3"
-                            }
-                            {
-                                Name = "Fantomas.FCS"
-                                Version = "6.2.0"
-                            }
-                        ]
-
+                let! opts = mkTestProjectSnapshot ()
                 projectOptions <- opts
             }
 
         [<Test>]
         let ``run analyzers safely captures messages`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-            """
-
                 let! ctx =
-                    getContext projectOptions source
+                    getContext projectOptions ClientTestSources.optionValue
                     |> Async.AwaitTask
 
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                match List.tryHead messages with
-                | Some message ->
-                    match message.Output with
-                    | Ok msgs -> Assert.That(msgs, Is.Not.Empty)
-                    | Error ex -> Assert.Fail(sprintf "Expected messages but got exception: %A" ex)
-                | None -> Assert.Fail("Expected at least one analyzer result")
+                messages
+                |> assertSafeResult false
             }
 
         [<Test>]
         let ``run analyzer safely ignores next line comment properly`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        // fsharpanalyzer: ignore-line-next OV001
-        option.Value
-            """
-
                 let! ctx =
-                    getContext projectOptions source
+                    getContext projectOptions ClientTestSources.ignoreNextLine
                     |> Async.AwaitTask
 
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                match List.tryHead messages with
-                | Some message ->
-                    match message.Output with
-                    | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex ->
-                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
-                | None -> Assert.Fail("Expected at least one analyzer result")
+                messages
+                |> assertSafeResult true
             }
 
         [<Test>]
         let ``run analyzer safely ignores current line comment properly`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value // fsharpanalyzer: ignore-line OV001
-            """
-
                 let! ctx =
-                    getContext projectOptions source
+                    getContext projectOptions ClientTestSources.ignoreCurrentLine
                     |> Async.AwaitTask
 
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                match List.tryHead messages with
-                | Some message ->
-                    match message.Output with
-                    | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex ->
-                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
-                | None -> Assert.Fail("Expected at least one analyzer result")
+                messages
+                |> assertSafeResult true
             }
 
         [<Test>]
         let ``run analyzer safely ignores file comment properly`` () =
             async {
-                let source =
-                    """
-    // fsharpanalyzer: ignore-file OV001
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-            """
-
                 let! ctx =
-                    getContext projectOptions source
+                    getContext projectOptions ClientTestSources.ignoreFile
                     |> Async.AwaitTask
 
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                match List.tryHead messages with
-                | Some message ->
-                    match message.Output with
-                    | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex ->
-                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
-                | None -> Assert.Fail("Expected at least one analyzer result")
+                messages
+                |> assertSafeResult true
             }
 
         [<Test>]
         let ``run analyzer safely ignores range comment properly`` () =
             async {
-                let source =
-                    """
-    // fsharpanalyzer: ignore-region-start OV001
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-    // fsharpanalyzer: ignore-region-end
-            """
-
                 let! ctx =
-                    getContext projectOptions source
+                    getContext projectOptions ClientTestSources.ignoreRange
                     |> Async.AwaitTask
 
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzersSafely(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                match List.tryHead messages with
-                | Some message ->
-                    match message.Output with
-                    | Ok msgs -> Assert.That(msgs, Is.Empty)
-                    | Error ex ->
-                        Assert.Fail(sprintf "Expected no messages but got exception: %A" ex)
-                | None -> Assert.Fail("Expected at least one analyzer result")
+                messages
+                |> assertSafeResult true
             }
 
     module RunAnalyzersTests =
@@ -635,39 +518,15 @@ module ClientTests =
         [<OneTimeSetUp>]
         let Setup () =
             task {
-                let! opts =
-                    mkOptionsFromProject
-                        runtimeTfm
-                        [
-                            {
-                                Name = "Newtonsoft.Json"
-                                Version = "13.0.3"
-                            }
-                            {
-                                Name = "Fantomas.FCS"
-                                Version = "6.2.0"
-                            }
-                        ]
-
+                let! opts = mkTestProjectOptions ()
                 projectOptions <- opts
             }
 
         [<Test>]
         let ``run analyzers captures messages`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-            """
-
-                let ctx = getContext projectOptions source
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let ctx = getContext projectOptions ClientTestSources.optionValue
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
@@ -677,20 +536,8 @@ module ClientTests =
         [<Test>]
         let ``run analyzer ignores next line comment properly`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        // fsharpanalyzer: ignore-line-next OV001
-        option.Value
-            """
-
-                let ctx = getContext projectOptions source
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let ctx = getContext projectOptions ClientTestSources.ignoreNextLine
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
@@ -700,19 +547,8 @@ module ClientTests =
         [<Test>]
         let ``run analyzer ignores current line comment properly`` () =
             async {
-                let source =
-                    """
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value // fsharpanalyzer: ignore-line OV001
-            """
-
-                let ctx = getContext projectOptions source
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let ctx = getContext projectOptions ClientTestSources.ignoreCurrentLine
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
@@ -722,20 +558,8 @@ module ClientTests =
         [<Test>]
         let ``run analyzer ignores file comment properly`` () =
             async {
-                let source =
-                    """
-    // fsharpanalyzer: ignore-file OV001
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-            """
-
-                let ctx = getContext projectOptions source
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let ctx = getContext projectOptions ClientTestSources.ignoreFile
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
@@ -745,21 +569,8 @@ module ClientTests =
         [<Test>]
         let ``run analyzer ignores range comment properly`` () =
             async {
-                let source =
-                    """
-    // fsharpanalyzer: ignore-region-start OV001
-    module M
-
-    let notUsed() =
-        let option : Option<int> = None
-        option.Value
-    // fsharpanalyzer: ignore-region-end
-            """
-
-                let ctx = getContext projectOptions source
-                let client = new Client<CliAnalyzerAttribute, _>()
-                let path = System.IO.Path.GetFullPath(".")
-                let stats = client.LoadAnalyzers(path)
+                let ctx = getContext projectOptions ClientTestSources.ignoreRange
+                let client, stats = loadAnalyzers ()
                 let! messages = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
