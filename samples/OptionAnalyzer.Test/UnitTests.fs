@@ -11,7 +11,7 @@ open FSharp.Analyzers.SDK.Testing
 let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 let mutable runtimeTfm: string = Unchecked.defaultof<_>
 
-[<SetUp>]
+[<OneTimeSetUp>]
 let Setup () =
     runtimeTfm <-
         let v = System.Environment.Version
@@ -445,7 +445,7 @@ module ClientTests =
             let file = { FileName = "A.fs"; Source = source }
             getContextFor (TransparentCompilerOptions snapshot) [ file ] file
 
-        [<SetUp>]
+        [<OneTimeSetUp>]
         let Setup () =
             task {
                 let! opts =
@@ -632,7 +632,7 @@ module ClientTests =
 
         let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 
-        [<SetUp>]
+        [<OneTimeSetUp>]
         let Setup () =
             task {
                 let! opts =
