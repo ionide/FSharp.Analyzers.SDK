@@ -11,15 +11,20 @@ open FSharp.Analyzers.SDK.V1
 // shadow the identically-named TypedExpr DU cases from V1.
 open FSharp.Compiler.Symbols.FSharpExprPatterns
 
-// Cache keyed by logical identity (FullName) rather than reference identity,
+// Cache keyed by logical identity rather than reference identity,
 // because FCS may return different objects for the same logical entity when
 // accessed via different paths (e.g. member.DeclaringEntity vs the entity
 // directly).  Only entities are cached (using a stub to break cycles).
 // Types are NOT cached because BasicQualifiedName does not distinguish
 // generic instantiations (e.g. list<int> vs list<string>).
 //
-// Entities whose FullName is unavailable (local, anonymous, compiler-generated)
-// are cached separately by reference identity so they don't collide.
+// Three-tier cache key strategy:
+//   1. FullName — most entities (e.g. "Microsoft.FSharp.Core.FSharpOption`1")
+//   2. AccessPath.DisplayName — type-abbreviation entities (bool, int, obj,
+//      unit, etc.) whose FullName throws but whose AccessPath + DisplayName
+//      is stable across different FCS object instances
+//   3. Reference identity — truly anonymous/compiler-generated entities where
+//      neither FullName nor AccessPath.DisplayName is available
 let private referenceComparer<'T when 'T: not struct> =
     { new IEqualityComparer<'T> with
         member _.Equals(x, y) = obj.ReferenceEquals(x, y)
@@ -80,13 +85,38 @@ let genericParameterToV1 (gp: FSharpGenericParameter) : GenericParameterInfo =
 // ─── Mutually recursive FCS type conversions ────────────────────────
 
 let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
-    // Use FullName as cache key when available; entities whose FullName
-    // throws (local, anonymous, compiler-generated) use a separate
-    // reference-identity cache so distinct nameless entities don't collide.
+    // Use FullName as cache key when available; for type-abbreviation
+    // entities (bool, int, obj, etc.) whose FullName throws, fall back
+    // to AccessPath.DisplayName; truly anonymous entities use reference
+    // identity so distinct nameless entities don't collide.
     let fullName = tryGet None (fun () -> Some e.FullName)
 
-    let cached =
+    let stableName =
         match fullName with
+        | Some _ -> fullName
+        | None ->
+            tryGet
+                None
+                (fun () ->
+                    let dn = e.DisplayName
+
+                    if System.String.IsNullOrEmpty(dn) then
+                        None
+                    else
+                        let ap = e.AccessPath
+
+                        if System.String.IsNullOrEmpty(ap) then
+                            None
+                        else
+                            Some(
+                                ap
+                                + "."
+                                + dn
+                            )
+                )
+
+    let cached =
+        match stableName with
         | Some name ->
             match cache.Entities.TryGetValue(name) with
             | true, v -> ValueSome v
@@ -100,11 +130,11 @@ let rec entityToV1 (cache: ConversionCache) (e: FSharpEntity) : EntityInfo =
     | ValueSome v -> v
     | ValueNone ->
         let fullNameStr =
-            fullName
+            stableName
             |> Option.defaultValue ""
 
         let cacheSet v =
-            match fullName with
+            match stableName with
             | Some name -> cache.Entities.[name] <- v
             | None -> cache.EntitiesByRef.[e] <- v
 

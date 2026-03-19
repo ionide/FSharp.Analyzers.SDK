@@ -2,7 +2,10 @@ module OptionAnalyzer.V1Tests
 
 #nowarn "57"
 
+open System.Collections.Generic
+open System.Runtime.CompilerServices
 open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.Symbols
 open FSharp.Compiler.Text
 open NUnit.Framework
 open FsCheck.NUnit
@@ -158,8 +161,9 @@ module ClientIntegrationTests =
                 |> List.filter (fun msgs ->
                     msgs
                     |> List.exists (fun m -> m.Code = "OV001")
-                ),
-                Has.Count.GreaterThanOrEqualTo 2,
+                )
+                |> List.length,
+                Is.GreaterThanOrEqualTo 2,
                 "Expected OV001 results from both legacy and V1 OptionAnalyzer"
             )
 
@@ -178,6 +182,62 @@ module ClientIntegrationTests =
             Does.Contain "InferredReturnAnalyzer",
             "V1 analyzer with inferred Async<'a list> return type should be discovered"
         )
+
+    [<Test>]
+    let ``LoadAnalyzers discovers V1 analyzer with explicit generic parameter`` () =
+        let _client, stats = loadAnalyzers ()
+
+        Assert.That(
+            stats.AnalyzerNames,
+            Does.Contain "ExplicitGenericAnalyzer",
+            "V1 analyzer with explicit generic parameter should be discovered"
+        )
+
+    [<Test>]
+    let ``InferredReturnAnalyzer runs without error`` () =
+        async {
+            let ctx = getContext projectOptions ClientTestSources.optionValue
+            let client, _stats = loadAnalyzers ()
+            let! results = client.RunAnalyzersSafely(ctx)
+
+            let inferredResults =
+                results
+                |> List.filter (fun r -> r.AnalyzerName = "InferredReturnAnalyzer")
+
+            Assert.That(
+                inferredResults,
+                Is.Not.Empty,
+                "InferredReturnAnalyzer should produce a result"
+            )
+
+            for r in inferredResults do
+                match r.Output with
+                | Ok _ -> ()
+                | Error ex -> Assert.Fail($"InferredReturnAnalyzer returned Error: %A{ex}")
+        }
+
+    [<Test>]
+    let ``ExplicitGenericAnalyzer runs without error`` () =
+        async {
+            let ctx = getContext projectOptions ClientTestSources.optionValue
+            let client, _stats = loadAnalyzers ()
+            let! results = client.RunAnalyzersSafely(ctx)
+
+            let explicitResults =
+                results
+                |> List.filter (fun r -> r.AnalyzerName = "ExplicitGenericAnalyzer")
+
+            Assert.That(
+                explicitResults,
+                Is.Not.Empty,
+                "ExplicitGenericAnalyzer should produce a result"
+            )
+
+            for r in explicitResults do
+                match r.Output with
+                | Ok _ -> ()
+                | Error ex -> Assert.Fail($"ExplicitGenericAnalyzer returned Error: %A{ex}")
+        }
 
 // ─── Adapter unit tests ────────────────────────────────────────────
 
@@ -576,3 +636,405 @@ let b : list<int> = []
             bInfo.FullType.GenericArguments.[0].BasicQualifiedName,
             "Two list<int> values should have the same generic argument"
         )
+
+// ─── Cycle diagnostic tests ──────────────────────────────────────
+
+/// Simulate entityToV1's cache and traversal against the live FCS
+/// entity/type graph to find what causes unbounded recursion.
+module CycleDiagnosticTests =
+
+    let mutable projectOptions: FSharpProjectOptions = Unchecked.defaultof<_>
+
+    [<OneTimeSetUp>]
+    let Setup () =
+        task {
+            let! opts = mkTestProjectOptions ()
+            projectOptions <- opts
+        }
+
+    let private refEq<'T when 'T: not struct> =
+        { new IEqualityComparer<'T> with
+            member _.Equals(x, y) = obj.ReferenceEquals(x, y)
+            member _.GetHashCode(x) = RuntimeHelpers.GetHashCode(x)
+        }
+
+    let inline private safe def ([<InlineIfLambda>] f) =
+        try
+            f ()
+        with _ ->
+            def
+
+    /// Walk the FCS entity/type graph following entityToV1's exact
+    /// cache logic and field-evaluation order.  Returns diagnostics
+    /// instead of crashing.
+    type WalkStats =
+        {
+            CallCount: int
+            MaxDepth: int
+            EntitiesByName: int
+            EntitiesByRef: int
+            NoNameEntityEncounters: int
+            /// Entities where FullName throws AND FCS returned a
+            /// *different* object reference for the same DisplayName.
+            DifferentRefNoNameEntities: (string * int) list
+            /// True when CallCount hit the safety limit.
+            HitLimit: bool
+        }
+
+    let walkFrom (symbols: FSharpSymbolUse seq) : WalkStats =
+        // Simulate entityToV1's two-tier cache.
+        let nameCache = HashSet<string>()
+        let refCache = HashSet<FSharpEntity>(refEq)
+        let noNameByDisplay = Dictionary<string, FSharpEntity list>()
+
+        let mutable callCount = 0
+        let mutable maxDepth = 0
+        let mutable noNameHits = 0
+        let limit = 1_000_000
+        let depthLimit = 400
+
+        let rec walkEntity depth (e: FSharpEntity) =
+            callCount <-
+                callCount
+                + 1
+
+            if depth > maxDepth then
+                maxDepth <- depth
+
+            if
+                callCount
+                >= limit
+                || depth
+                   >= depthLimit
+            then
+                ()
+            else
+                let fn = safe None (fun () -> Some e.FullName)
+
+                // Mirror the three-tier cache key from entityToV1:
+                // FullName -> AccessPath.DisplayName -> reference identity
+                let stableName =
+                    match fn with
+                    | Some _ -> fn
+                    | None ->
+                        safe
+                            None
+                            (fun () ->
+                                let dn = e.DisplayName
+
+                                if System.String.IsNullOrEmpty(dn) then
+                                    None
+                                else
+                                    let ap = e.AccessPath
+
+                                    if System.String.IsNullOrEmpty(ap) then
+                                        None
+                                    else
+                                        Some(
+                                            ap
+                                            + "."
+                                            + dn
+                                        )
+                            )
+
+                let isHit =
+                    match stableName with
+                    | Some name -> not (nameCache.Add(name))
+                    | None -> not (refCache.Add(e))
+
+                if stableName.IsNone then
+                    noNameHits <-
+                        noNameHits
+                        + 1
+
+                    let dn = safe "???" (fun () -> e.DisplayName)
+
+                    let existing =
+                        match noNameByDisplay.TryGetValue(dn) with
+                        | true, xs -> xs
+                        | _ -> []
+
+                    let hasDiffRef =
+                        existing
+                        |> List.exists (fun x -> not (obj.ReferenceEquals(x, e)))
+
+                    if hasDiffRef then
+                        printfn
+                            "CYCLE PROOF: no-name entity '%s' at depth %d — FullName throws AND different FCS object reference (ref-cache miss)"
+                            dn
+                            depth
+
+                    noNameByDisplay.[dn] <-
+                        e
+                        :: existing
+
+                if not isHit then
+                    let dn = safe "???" (fun () -> e.DisplayName)
+
+                    if fn.IsNone then
+                        printfn "  [depth %d] processing NO-NAME entity '%s'" depth dn
+
+                    // 1. DeclaringEntity
+                    safe
+                        ()
+                        (fun () ->
+                            e.DeclaringEntity
+                            |> Option.iter (walkEntity (depth + 1))
+                        )
+
+                    // 2. UnionCases
+                    safe
+                        ()
+                        (fun () ->
+                            for uc in e.UnionCases do
+                                safe
+                                    ()
+                                    (fun () ->
+                                        for f in uc.Fields do
+                                            safe () (fun () -> walkType (depth + 1) f.FieldType)
+
+                                            safe
+                                                ()
+                                                (fun () ->
+                                                    f.DeclaringEntity
+                                                    |> Option.iter (walkEntity (depth + 1))
+                                                )
+                                    )
+
+                                safe () (fun () -> walkType (depth + 1) uc.ReturnType)
+                                safe () (fun () -> walkEntity (depth + 1) uc.DeclaringEntity)
+                        )
+
+                    // 3. FSharpFields
+                    safe
+                        ()
+                        (fun () ->
+                            for f in e.FSharpFields do
+                                safe () (fun () -> walkType (depth + 1) f.FieldType)
+
+                                safe
+                                    ()
+                                    (fun () ->
+                                        f.DeclaringEntity
+                                        |> Option.iter (walkEntity (depth + 1))
+                                    )
+                        )
+
+                    // 4. MembersFunctionsAndValues
+                    safe
+                        ()
+                        (fun () ->
+                            for m in e.MembersFunctionsAndValues do
+                                walkMember (depth + 1) m
+                        )
+
+                    // 5. BaseType
+                    safe
+                        ()
+                        (fun () ->
+                            e.BaseType
+                            |> Option.iter (walkType (depth + 1))
+                        )
+
+                    // 6. DeclaredInterfaces
+                    safe
+                        ()
+                        (fun () ->
+                            for iface in e.DeclaredInterfaces do
+                                walkType (depth + 1) iface
+                        )
+
+                    // 7. AbbreviatedType
+                    safe
+                        ()
+                        (fun () ->
+                            if e.IsFSharpAbbreviation then
+                                walkType (depth + 1) e.AbbreviatedType
+                        )
+
+        and walkMember depth (m: FSharpMemberOrFunctionOrValue) =
+            if
+                depth
+                >= depthLimit
+            then
+                ()
+            else
+
+            safe
+                ()
+                (fun () ->
+                    m.DeclaringEntity
+                    |> Option.iter (walkEntity (depth + 1))
+                )
+
+            safe () (fun () -> walkType (depth + 1) m.FullType)
+
+            safe
+                ()
+                (fun () ->
+                    for group in m.CurriedParameterGroups do
+                        for p in group do
+                            safe () (fun () -> walkType (depth + 1) p.Type)
+                )
+
+            safe () (fun () -> walkType (depth + 1) m.ReturnParameter.Type)
+
+        and walkType depth (t: FSharpType) =
+            if
+                depth
+                >= depthLimit
+            then
+                ()
+            else
+
+            safe
+                ()
+                (fun () ->
+                    for ga in t.GenericArguments do
+                        walkType (depth + 1) ga
+                )
+
+            safe
+                ()
+                (fun () ->
+                    if t.IsAbbreviation then
+                        walkType (depth + 1) t.AbbreviatedType
+                )
+
+            safe
+                ()
+                (fun () ->
+                    if t.HasTypeDefinition then
+                        walkEntity (depth + 1) t.TypeDefinition
+                )
+
+        for su in symbols do
+            match su.Symbol with
+            | :? FSharpEntity as e -> walkEntity 0 e
+            | :? FSharpMemberOrFunctionOrValue as m ->
+                safe
+                    ()
+                    (fun () ->
+                        m.DeclaringEntity
+                        |> Option.iter (walkEntity 0)
+                    )
+
+                safe () (fun () -> walkType 0 m.FullType)
+            | :? FSharpField as f ->
+                safe () (fun () -> walkType 0 f.FieldType)
+
+                safe
+                    ()
+                    (fun () ->
+                        f.DeclaringEntity
+                        |> Option.iter (walkEntity 0)
+                    )
+            | :? FSharpUnionCase as uc -> safe () (fun () -> walkEntity 0 uc.DeclaringEntity)
+            | _ -> ()
+
+        let differentRefs =
+            noNameByDisplay
+            |> Seq.choose (fun kv ->
+                let distinctRefs =
+                    kv.Value
+                    |> List.distinctBy (fun e -> RuntimeHelpers.GetHashCode(e))
+                    |> List.length
+
+                if distinctRefs > 1 then
+                    Some(kv.Key, distinctRefs)
+                else
+                    None
+            )
+            |> Seq.toList
+
+        {
+            CallCount = callCount
+            MaxDepth = maxDepth
+            EntitiesByName = nameCache.Count
+            EntitiesByRef = refCache.Count
+            NoNameEntityEncounters = noNameHits
+            DifferentRefNoNameEntities = differentRefs
+            HitLimit =
+                callCount
+                >= limit
+        }
+
+    [<Test>]
+    let ``entityToV1 traversal is bounded for record type`` () =
+        let source =
+            """
+module M
+type Foo = { X: int; Y: string; Z: float }
+let f (x: Foo) = x.X
+"""
+
+        let ctx = getContext projectOptions source
+        let symbols = ctx.CheckFileResults.GetAllUsesOfAllSymbolsInFile()
+        let stats = walkFrom symbols
+
+        printfn "=== Record type ==="
+        printfn "Calls: %d  MaxDepth: %d" stats.CallCount stats.MaxDepth
+        printfn "Entities by name: %d  by ref: %d" stats.EntitiesByName stats.EntitiesByRef
+        printfn "No-name encounters: %d" stats.NoNameEntityEncounters
+
+        for name, refs in stats.DifferentRefNoNameEntities do
+            printfn "!! DIFFERENT REFS for no-name entity '%s': %d distinct objects" name refs
+
+        Assert.That(stats.HitLimit, Is.False, "walk should terminate")
+
+        Assert.That(
+            stats.DifferentRefNoNameEntities,
+            Is.Empty,
+            "no no-name entity should have multiple distinct FCS object references"
+        )
+
+    [<Test>]
+    let ``entityToV1 traversal is bounded for code with System.Type`` () =
+        let source =
+            """
+module M
+open System
+open System.Collections.Generic
+
+type MyRecord = { Name: string; Value: int; Created: DateTime }
+let f (r: MyRecord) = r.Name
+let g () : Dictionary<string, int> = Dictionary()
+let h (t: Type) = t.Name
+"""
+
+        let ctx = getContext projectOptions source
+        let symbols = ctx.CheckFileResults.GetAllUsesOfAllSymbolsInFile()
+        let stats = walkFrom symbols
+
+        printfn "=== Complex BCL types ==="
+        printfn "Calls: %d  MaxDepth: %d" stats.CallCount stats.MaxDepth
+        printfn "Entities by name: %d  by ref: %d" stats.EntitiesByName stats.EntitiesByRef
+        printfn "No-name encounters: %d" stats.NoNameEntityEncounters
+
+        for name, refs in stats.DifferentRefNoNameEntities do
+            printfn "!! DIFFERENT REFS for no-name entity '%s': %d distinct objects" name refs
+
+        Assert.That(stats.HitLimit, Is.False, "walk should terminate")
+
+        Assert.That(
+            stats.DifferentRefNoNameEntities,
+            Is.Empty,
+            "no no-name entity should have multiple distinct FCS object references"
+        )
+
+    [<Test>]
+    let ``contextToV1 completes without overflow for type abbreviations`` () =
+        let source =
+            """
+module M
+
+let a (x: int) (y: bool) (z: string) (w: float) (u: unit) (o: obj) = ()
+let b : int list = []
+let c : bool option = None
+let d = System.Int32.MaxValue
+"""
+
+        let ctx = getContext projectOptions source
+        // This would stack-overflow before the AccessPath.DisplayName fix.
+        let v1Ctx = contextToV1 ctx
+        Assert.IsNotNull(v1Ctx, "contextToV1 should complete without overflow")

@@ -47,3 +47,6 @@ let optionValueAnalyzer: Analyzer =
 /// handles via its generic-return-type fallback.
 [<CliAnalyzer "InferredReturnAnalyzer">]
 let inferredReturnAnalyzer (_ctx: CliContext) = async { return [] }
+
+[<CliAnalyzer "ExplicitGenericAnalyzer">]
+let explicitGenericAnalyzer<'b> (_ctx: CliContext) : Async<'b list> = async { return [] }

@@ -70,7 +70,7 @@ module Client =
                     // This could still be generic, as in an empty list is returned from the analyzer
                     let msgType = listType.GenericTypeArguments.[0]
 
-                    msgType.Name = "a"
+                    msgType.IsGenericParameter
                     || msgType = typeof<Message>
                 else
                     false
@@ -95,9 +95,17 @@ module Client =
                     )
                 elif hasExpectReturnType m.ReturnType then
                     try
+                        let method =
+                            if m.ContainsGenericParameters then
+                                m.MakeGenericMethod(
+                                    Array.create (m.GetGenericArguments().Length) typeof<Message>
+                                )
+                            else
+                                m
+
                         let analyzer: Analyzer<'TContext> =
                             fun ctx ->
-                                m.Invoke(null, [| ctx |])
+                                method.Invoke(null, [| ctx |])
                                 |> unbox
 
                         Some analyzer
@@ -242,7 +250,7 @@ module internal V1Support =
             && listType.GenericTypeArguments.Length = 1
             && (let msgType = listType.GenericTypeArguments.[0] in
 
-                msgType.Name = "a"
+                msgType.IsGenericParameter
                 || msgType = typeof<FSharp.Analyzers.SDK.V1.Message>)
         else
             false
@@ -276,9 +284,19 @@ module internal V1Support =
                             |> unboxV1Analyzer
                         )
                     elif hasV1ExpectReturnType m.ReturnType then
+                        let method =
+                            if m.ContainsGenericParameters then
+                                m.MakeGenericMethod(
+                                    Array.create
+                                        (m.GetGenericArguments().Length)
+                                        typeof<FSharp.Analyzers.SDK.V1.Message>
+                                )
+                            else
+                                m
+
                         let analyzer: FSharp.Analyzers.SDK.V1.Analyzer =
                             fun ctx ->
-                                m.Invoke(null, [| ctx |])
+                                method.Invoke(null, [| ctx |])
                                 |> unbox
 
                         Some analyzer
@@ -391,7 +409,7 @@ module internal V1Support =
             && listType.GenericTypeArguments.Length = 1
             && (let msgType = listType.GenericTypeArguments.[0] in
 
-                msgType.Name = "a"
+                msgType.IsGenericParameter
                 || msgType = typeof<FSharp.Analyzers.SDK.V1.Message>)
         else
             false
@@ -425,9 +443,19 @@ module internal V1Support =
                             |> unboxV1Analyzer
                         )
                     elif hasV1EditorExpectedReturnType m.ReturnType then
+                        let method =
+                            if m.ContainsGenericParameters then
+                                m.MakeGenericMethod(
+                                    Array.create
+                                        (m.GetGenericArguments().Length)
+                                        typeof<FSharp.Analyzers.SDK.V1.Message>
+                                )
+                            else
+                                m
+
                         let analyzer: FSharp.Analyzers.SDK.V1.EditorAnalyzer =
                             fun ctx ->
-                                m.Invoke(null, [| ctx |])
+                                method.Invoke(null, [| ctx |])
                                 |> unbox
 
                         Some analyzer
