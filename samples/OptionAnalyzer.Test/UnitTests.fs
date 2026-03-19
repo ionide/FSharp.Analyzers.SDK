@@ -486,7 +486,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -518,7 +518,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -550,7 +550,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -583,7 +583,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -617,7 +617,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -670,7 +670,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Not.Empty)
             }
 
@@ -693,7 +693,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -715,7 +715,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -738,7 +738,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -762,6 +762,6 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
