@@ -7,16 +7,24 @@ open NUnit.Framework
 open FSharp.Compiler.Text
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
-open FSharp.Analyzers.SDK
 
 let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
+let mutable runtimeTfm: string = Unchecked.defaultof<_>
 
-[<SetUp>]
+[<OneTimeSetUp>]
 let Setup () =
+    runtimeTfm <-
+        let v = System.Environment.Version
+
+        "net"
+        + string v.Major
+        + "."
+        + string v.Minor
+
     task {
         let! opts =
             mkOptionsFromProject
-                "net8.0"
+                runtimeTfm
                 [
                     {
                         Name = "Newtonsoft.Json"
@@ -437,12 +445,12 @@ module ClientTests =
             let file = { FileName = "A.fs"; Source = source }
             getContextFor (TransparentCompilerOptions snapshot) [ file ] file
 
-        [<SetUp>]
+        [<OneTimeSetUp>]
         let Setup () =
             task {
                 let! opts =
                     mkSnapshotFromProject
-                        "net8.0"
+                        runtimeTfm
                         [
                             {
                                 Name = "Newtonsoft.Json"
@@ -478,7 +486,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -510,7 +518,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -542,7 +550,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -575,7 +583,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -609,7 +617,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzersSafely(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
 
                 match List.tryHead messages with
                 | Some message ->
@@ -624,12 +632,12 @@ module ClientTests =
 
         let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 
-        [<SetUp>]
+        [<OneTimeSetUp>]
         let Setup () =
             task {
                 let! opts =
                     mkOptionsFromProject
-                        "net8.0"
+                        runtimeTfm
                         [
                             {
                                 Name = "Newtonsoft.Json"
@@ -662,7 +670,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Not.Empty)
             }
 
@@ -685,7 +693,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -707,7 +715,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -730,7 +738,7 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
 
@@ -754,6 +762,6 @@ module ClientTests =
                 let stats = client.LoadAnalyzers(path)
                 let! messages = client.RunAnalyzers(ctx)
 
-                Assert.That(stats.Analyzers, Is.Not.EqualTo 0)
+                Assert.That(stats.AnalyzerNames, Is.Not.Empty)
                 Assert.That(messages, Is.Empty)
             }
