@@ -10,9 +10,17 @@ open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
 open FSharp.Analyzers.SDK.AdapterV1
 
+let runtimeTfm =
+    let v = System.Environment.Version
+
+    "net"
+    + string v.Major
+    + "."
+    + string v.Minor
+
 let mkProjectOptions () =
     mkOptionsFromProject
-        "net8.0"
+        runtimeTfm
         [
             {
                 Name = "Newtonsoft.Json"
@@ -142,11 +150,12 @@ module ClientIntegrationTests =
         }
 
     [<Test>]
-    let ``LoadAnalyzers includes V1 analyzers in count`` () =
+    let ``LoadAnalyzers includes V1 analyzers`` () =
         let client = Client<CliAnalyzerAttribute, CliContext>()
         let path = System.IO.Path.GetFullPath(".")
         let stats = client.LoadAnalyzers(path)
-        Assert.That(stats.Analyzers, Is.GreaterThanOrEqualTo 2)
+        Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
+        Assert.That(stats.AnalyzerNames, Does.Contain "InferredReturnAnalyzer")
 
     [<Test>]
     let ``RunAnalyzersSafely produces results from both legacy and V1`` () =
@@ -169,22 +178,29 @@ let notUsed() =
             let optionResults =
                 results
                 |> List.filter (fun r -> r.AnalyzerName = "OptionAnalyzer")
+                |> List.choose (fun r ->
+                    match r.Output with
+                    | Ok msgs -> Some msgs
+                    | Error ex ->
+                        Assert.Fail($"Analyzer result was Error: %A{ex}")
+                        None
+                )
 
+            // Both legacy and V1 OptionAnalyzer should produce results
             Assert.That(
-                optionResults.Length,
-                Is.GreaterThanOrEqualTo 2,
-                "Expected results from both legacy and V1 OptionAnalyzer"
+                optionResults
+                |> List.filter (fun msgs ->
+                    msgs
+                    |> List.exists (fun m -> m.Code = "OV001")
+                ),
+                Has.Count.GreaterThanOrEqualTo 2,
+                "Expected OV001 results from both legacy and V1 OptionAnalyzer"
             )
 
-            for r in optionResults do
-                match r.Output with
-                | Ok msgs ->
-                    Assert.That(msgs, Is.Not.Empty)
-
-                    for msg in msgs do
-                        Assert.AreEqual("OV001", msg.Code)
-                        Assert.AreEqual(Severity.Warning, msg.Severity)
-                | Error ex -> Assert.Fail($"Analyzer result was Error: %A{ex}")
+            for msgs in optionResults do
+                for msg in msgs do
+                    Assert.AreEqual("OV001", msg.Code)
+                    Assert.AreEqual(Severity.Warning, msg.Severity)
         }
 
     [<Test>]
@@ -193,13 +209,9 @@ let notUsed() =
         let path = System.IO.Path.GetFullPath(".")
         let stats = client.LoadAnalyzers(path)
 
-        // We expect at least 3 analyzers:
-        //   1. Legacy OptionAnalyzer (CliContext)
-        //   2. V1 OptionAnalyzer (explicitly typed as Analyzer)
-        //   3. V1 InferredReturnAnalyzer (method with inferred Async<'a list> return)
         Assert.That(
-            stats.Analyzers,
-            Is.GreaterThanOrEqualTo 3,
+            stats.AnalyzerNames,
+            Does.Contain "InferredReturnAnalyzer",
             "V1 analyzer with inferred Async<'a list> return type should be discovered"
         )
 
