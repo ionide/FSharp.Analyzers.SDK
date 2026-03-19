@@ -201,9 +201,11 @@ module Client =
 type AssemblyLoadStats =
     {
         AnalyzerAssemblies: int
-        Analyzers: int
+        AnalyzerNames: string list
         FailedAssemblies: int
     }
+
+    member x.Analyzers = x.AnalyzerNames.Length
 
 type ExcludeInclude =
     | ExcludeFilter of (AnalyzerName -> bool)
@@ -325,16 +327,17 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             let assemblyCount = Array.length analyzers
 
-            let analyzerCount =
+            let analyzerNames =
                 analyzers
-                |> Seq.sumBy (
+                |> Seq.collect (
                     snd
-                    >> Seq.length
+                    >> Seq.map (fun a -> a.Name)
                 )
+                |> Seq.toList
 
             {
                 AnalyzerAssemblies = assemblyCount
-                Analyzers = analyzerCount
+                AnalyzerNames = analyzerNames
                 FailedAssemblies = skippedAssemblies.Value
             }
         else
@@ -342,7 +345,7 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
             {
                 AnalyzerAssemblies = 0
-                Analyzers = 0
+                AnalyzerNames = []
                 FailedAssemblies = 0
             }
 
