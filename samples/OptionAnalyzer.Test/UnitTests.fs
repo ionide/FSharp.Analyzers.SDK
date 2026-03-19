@@ -7,16 +7,24 @@ open NUnit.Framework
 open FSharp.Compiler.Text
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.Testing
-open FSharp.Analyzers.SDK
 
 let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
+let mutable runtimeTfm: string = Unchecked.defaultof<_>
 
 [<SetUp>]
 let Setup () =
+    runtimeTfm <-
+        let v = System.Environment.Version
+
+        "net"
+        + string v.Major
+        + "."
+        + string v.Minor
+
     task {
         let! opts =
             mkOptionsFromProject
-                "net8.0"
+                runtimeTfm
                 [
                     {
                         Name = "Newtonsoft.Json"
@@ -442,7 +450,7 @@ module ClientTests =
             task {
                 let! opts =
                     mkSnapshotFromProject
-                        "net8.0"
+                        runtimeTfm
                         [
                             {
                                 Name = "Newtonsoft.Json"
@@ -629,7 +637,7 @@ module ClientTests =
             task {
                 let! opts =
                     mkOptionsFromProject
-                        "net8.0"
+                        runtimeTfm
                         [
                             {
                                 Name = "Newtonsoft.Json"
