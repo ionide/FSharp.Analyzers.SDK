@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.37.0] - 2026-02-27
+
+### Changed
+
+- We now expose stable backward-compatible APIs, independent of the FSharp.Compiler.Service API, which you are encouraged to use. If you use the stable API, then upgrading FSharp.Analyzers.SDK will not require you to rebuild your analyzers until you need to consume features from later versions of the SDK. (For example, if a new F# language version introduces new syntax that you wish to parse, then you will have to upgrade your analyzer to a later stable API version which understands that new syntax.)
+
 ## [0.36.0] - 2026-02-02
 
 ### Added

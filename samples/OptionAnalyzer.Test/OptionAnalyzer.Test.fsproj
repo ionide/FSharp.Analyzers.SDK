@@ -13,6 +13,7 @@
     <ItemGroup>
         <Compile Include="TestHelpers.fs" />
         <Compile Include="UnitTests.fs" />
+        <Compile Include="V1Tests.fs" />
     </ItemGroup>
 
     <ItemGroup>
@@ -21,12 +22,15 @@
         <PackageReference Include="NUnit" />
         <PackageReference Include="NUnit3TestAdapter" />
         <PackageReference Include="FSharp.Compiler.Service"/>
+        <PackageReference Include="FsCheck" />
+        <PackageReference Include="FsCheck.NUnit" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK.Testing\FSharp.Analyzers.SDK.Testing.fsproj" />
       <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
       <ProjectReference Include="..\OptionAnalyzer\OptionAnalyzer.fsproj" />
+      <ProjectReference Include="..\OptionAnalyzer.V1\OptionAnalyzer.V1.fsproj" />
     </ItemGroup>
 
 </Project>
