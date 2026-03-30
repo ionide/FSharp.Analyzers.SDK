@@ -5,7 +5,7 @@
     <NuGetAuditMode>direct</NuGetAuditMode>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="CliWrap" Version="3.10.0" />
+    <PackageVersion Include="CliWrap" Version="3.10.1" />
     <PackageVersion Include="FSharp.Core" Version="[10.0.101]" />
     <PackageVersion Include="FSharp.Compiler.Service" Version="[43.10.101]" />
     <PackageVersion Include="Ionide.KeepAChangelog.Tasks" Version="0.3.0" PrivateAssets="all" />
