@@ -7,7 +7,7 @@ on:
 
 permissions:
   id-token: write # needed to be able to do OIDC handshake for NuGet Trusted Publishing
-  contents: read
+  contents: write # needed to be able to make releases via the GitHub API
 
 jobs:
   release:
