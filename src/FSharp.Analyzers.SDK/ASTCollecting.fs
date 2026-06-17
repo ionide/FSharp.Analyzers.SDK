@@ -425,22 +425,23 @@ module ASTCollecting =
             | SynExpr.TypeApp(expr = e; typeArgs = tys) ->
                 List.iter (walkType nextPath) tys
                 walkExpr nextPath e
-            | SynExpr.LetOrUse(isBang = false; bindings = bindings; body = e; range = _) ->
-                List.iter (walkBinding nextPath) bindings
-                walkExpr nextPath e
-            | SynExpr.LetOrUse(isBang = true; bindings = bindings; body = e2; range = _) ->
-                match bindings with
-                | SynBinding(headPat = pat; expr = e1) :: andBangs ->
-                    walkPat nextPath pat
-                    walkExpr nextPath e1
-
-                    for SynBinding(headPat = pat; expr = body) in andBangs do
+            | SynExpr.LetOrUse synLetOrUse ->
+                if synLetOrUse.IsBang then
+                    // let! ... and! ... bindings in a computation expression
+                    match synLetOrUse.Bindings with
+                    | SynBinding(headPat = pat; expr = e1) :: andBangs ->
                         walkPat nextPath pat
-                        walkExpr nextPath body
+                        walkExpr nextPath e1
 
-                | [] -> // error case
+                        for SynBinding(headPat = pat; expr = body) in andBangs do
+                            walkPat nextPath pat
+                            walkExpr nextPath body
 
-                walkExpr nextPath e2
+                    | [] -> () // error case
+                else
+                    List.iter (walkBinding nextPath) synLetOrUse.Bindings
+
+                walkExpr nextPath synLetOrUse.Body
 
             | SynExpr.TryWith(tryExpr = e; withCases = clauses; range = _) ->
                 List.iter (walkClause nextPath) clauses
