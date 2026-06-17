@@ -39,6 +39,12 @@ jobs:
           version: ${{ steps.tag_name.outputs.current_version }}
           path: ./CHANGELOG.md
 
+      - name: Get NuGet Publishing Key
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{secrets.NUGET_USER}}
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         if: ${{ !contains(steps.tag_name.outputs.current_version, '-MsBuild') }}
@@ -49,4 +55,4 @@ jobs:
           prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
 
       - name: Push packages
-        run: dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" -k  ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        run: dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
