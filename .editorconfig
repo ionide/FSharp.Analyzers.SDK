@@ -35,7 +35,7 @@ fsharp_max_infix_operator_expression = 10
 
 
 # Visual Studio Solution Files
-[*.sln]
+[*.{sln,slnx}]
 indent_style = tab
 
 # XML project files

@@ -31,7 +31,8 @@ pipeline "Build" {
             "dotnet run --project src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj -- --project ./samples/OptionAnalyzer/OptionAnalyzer.fsproj --analyzers-path ./artifacts/bin/OptionAnalyzer/release --verbosity d --binlog-path temp/binlogs"
     }
     stage "docs" {
-        run "dotnet fsdocs build --properties Configuration=Release --eval --clean --strict"
+        run
+            "dotnet fsdocs build --projects src/FSharp.Analyzers.SDK/FSharp.Analyzers.SDK.fsproj src/FSharp.Analyzers.SDK.Testing/FSharp.Analyzers.SDK.Testing.fsproj --properties Configuration=Release --eval --clean --strict"
     }
     runIfOnlySpecified false
 }
@@ -45,7 +46,10 @@ pipeline "ReleaseBuild" {
 pipeline "Docs" {
     restoreStage
     buildStage
-    stage "fsdocs" { run "dotnet fsdocs watch --properties Configuration=Release --eval" }
+    stage "fsdocs" {
+        run
+            "dotnet fsdocs watch --projects src/FSharp.Analyzers.SDK/FSharp.Analyzers.SDK.fsproj src/FSharp.Analyzers.SDK.Testing/FSharp.Analyzers.SDK.Testing.fsproj --properties Configuration=Release --eval"
+    }
     runIfOnlySpecified true
 }
 
