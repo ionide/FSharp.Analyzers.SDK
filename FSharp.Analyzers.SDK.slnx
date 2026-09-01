@@ -1,0 +1,32 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/OptionAnalyzer.Test/OptionAnalyzer.Test.fsproj" />
+    <Project Path="samples/OptionAnalyzer/OptionAnalyzer.fsproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="CHANGELOG.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+    <File Path="resetTool.cmd" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/">
+    <File Path=".github/dependabot.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/workflows/">
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/FSharp.Analyzers.Build/FSharp.Analyzers.Build.csproj" />
+    <Project Path="src/FSharp.Analyzers.Cli/FSharp.Analyzers.Cli.fsproj" />
+    <Project Path="src/FSharp.Analyzers.SDK.Testing/FSharp.Analyzers.SDK.Testing.fsproj" />
+    <Project Path="src/FSharp.Analyzers.SDK/FSharp.Analyzers.SDK.fsproj" />
+  </Folder>
+</Solution>
