@@ -48,7 +48,7 @@ module Ignore =
     let (|ParseRegexCompiled|_|) = (|ParseRegexWithOptions|_|) RegexOptions.Compiled
 
     [<return: Struct>]
-    let (|SplitBy|_|) x (text: string) =
+    let (|SplitBy|_|) ([<ParamArray>] x: char[]) (text: string) =
         text.Split(x)
         |> Array.toList
         |> ValueSome
