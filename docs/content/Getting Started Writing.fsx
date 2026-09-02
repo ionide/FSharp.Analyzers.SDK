@@ -9,15 +9,15 @@ index: 1
 
 ## Premise
 
-Analyzers that are consumed by this SDK and from Ionide are simply .NET core class libraries.  
+Analyzers that are consumed by this SDK and from Ionide are simply .NET core class libraries.
 These class libraries expose a *value* of type [Analyzer<'TContext>](../reference/fsharp-analyzers-sdk-analyzer-1.html) which is effectively a function that has input of type [Context](../reference/fsharp-analyzers-sdk-context.html) and returns a list of [Message](../reference/fsharp-analyzers-sdk-message.html) records.
 
 ## Create project
 
-Create a new class library targeting `net8.0`
+Create a new class library targeting `net10.0`
 
 ```shell
-dotnet new classlib -lang F# -f net8.0 -n OptionValueAnalyzer
+dotnet new classlib -lang F# -f net10.0 -n OptionValueAnalyzer
 ```
 
 Note that the assembly name needs to contain `Analyzer` in the name in order for it to be picked up.
@@ -34,7 +34,7 @@ dotnet add package FSharp.Analyzers.SDK
 paket add FSharp.Analyzers.SDK
 ```
 
-The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https://www.nuget.org/packages/FSharp.Compiler.Service/), which has a strict dependency on `FSharp.Core`.  
+The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https://www.nuget.org/packages/FSharp.Compiler.Service/), which has a strict dependency on `FSharp.Core`.
 It is considered a best practice to use the correct `FSharp.Core` version and not the implicit one from the SDK.
 
 ```xml
@@ -43,20 +43,20 @@ It is considered a best practice to use the correct `FSharp.Core` version and no
 
 ## First analyzer
 
-An [Analyzer<'TContext>](../reference/fsharp-analyzers-sdk-analyzer-1.html) is a function that takes a `Context` and returns a list of `Message`.  
+An [Analyzer<'TContext>](../reference/fsharp-analyzers-sdk-analyzer-1.html) is a function that takes a `Context` and returns a list of `Message`.
 There are two flavours of analyzers:
 
 - Console application analyzers ([CliAnalyzer](../reference/fsharp-analyzers-sdk-clianalyzerattribute.html))
 - Editor analyzers ([EditorAnalyzer](../reference/fsharp-analyzers-sdk-editoranalyzerattribute.html))
 
-The key difference between them is that the console application analyzer will have the *full project* information.  
-Per file this includes the untyped tree, typed tree, type-check results of the file and project type-check results.  
+The key difference between them is that the console application analyzer will have the *full project* information.
+Per file this includes the untyped tree, typed tree, type-check results of the file and project type-check results.
 The [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool will collect all this information upfront and pass it down to the analyzer via the [CliContext](../reference/fsharp-analyzers-sdk-clicontext.html).
 
 In the case of an editor analyzer, the IDE might not have all the available information available and will be more selective in what it can pass down to the analyzer.
 The main reasoning behind this is performance. It might be desirable for some analyzers to run after every keystroke, while others should be executed more sparingly.
 
-In the following example we will be 
+In the following example we will be
 *)
 
 (*** hide ***)
@@ -100,7 +100,7 @@ let badCodeAnalyzer: Analyzer<EditorContext> =
 (**
 ## Running your first analyzer
 
-After building your project you can run your analyzer on a project of your choosing using the [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool.  
+After building your project you can run your analyzer on a project of your choosing using the [fsharp-analyzers](https://www.nuget.org/packages/fsharp-analyzers) tool.
 Again, please verify your analyzer is a `CliAnalyzerAttribute` and uses the `CliContext`!
 
 ```shell
@@ -113,20 +113,20 @@ fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/
 
 ### Packaging and Distribution
 
-Since analyzers are just .NET core libraries, you can distribute them to the nuget registry just like you would with a normal .NET package.  
+Since analyzers are just .NET core libraries, you can distribute them to the nuget registry just like you would with a normal .NET package.
 Simply run `dotnet pack --configuration Release` against the analyzer project to get a nuget package and publish it with
 
 ```shell
 dotnet nuget push {NugetPackageFullPath} -s nuget.org -k {NugetApiKey}
 ```
 
-However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies have to be right *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net8.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
+However, the story is different and slightly more complicated when your analyzer package has third-party dependencies also coming from nuget. Since the SDK dynamically loads the package assemblies (`.dll` files), the assemblies of the dependencies have to be right *next* to the main assembly of the analyzer. Using `dotnet pack` will **not** include these dependencies into the output Nuget package. More specifically, the `./lib/net10.0` directory of the nuget package must have all the required assemblies, also those from third-party packages. In order to package the analyzer properly with all the assemblies, you need to take the output you get from running:
 
 ```shell
-dotnet publish --configuration Release --framework net8.0
+dotnet publish --configuration Release --framework net10.0
 ```
 
-against the analyzer project and put every file from that output into the `./lib/net8.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
+against the analyzer project and put every file from that output into the `./lib/net10.0` directory of the nuget package. This requires some manual work by unzipping the nuget package first (because it is just an archive), modifying the directories then zipping the package again. It can be done using a FAKE build target to automate the work:
 *)
 
 // make ZipFile available
@@ -174,7 +174,7 @@ Target.create
             match
                 Shell.Exec(
                     "dotnet",
-                    "publish --configuration Release --framework net8.0",
+                    "publish --configuration Release --framework net10.0",
                     analyzerProject
                 )
             with
@@ -194,7 +194,7 @@ Target.create
                     analyzerProject
                     </> "bin"
                     </> "Release"
-                    </> "net8.0"
+                    </> "net10.0"
                     </> "publish"
                 // Unzip the nuget
                 ZipFile.ExtractToDirectory(
@@ -204,19 +204,19 @@ Target.create
                 )
                 // delete the initial nuget package
                 File.Delete nupkg
-                // remove stuff from ./lib/net8.0
+                // remove stuff from ./lib/net10.0
                 Shell.deleteDir (
                     nugetParent
                     </> nugetFileName
                     </> "lib"
-                    </> "net8.0"
+                    </> "net10.0"
                 )
-                // move the output of publish folder into the ./lib/net8.0 directory
+                // move the output of publish folder into the ./lib/net10.0 directory
                 Shell.copyDir
                     (nugetParent
                      </> nugetFileName
                      </> "lib"
-                     </> "net8.0")
+                     </> "net10.0")
                     publishPath
                     (fun _ -> true)
                 // re-create the nuget package
@@ -237,8 +237,8 @@ Target.create
 
 ### Known footguns to avoid
 
-There's a footgun in the FCS-API that you can easily trigger when working on an analyzer:  
-Accessing the [FullName](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html#FullName) property of the [FSharpEntity](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html) type throws an exception if the entity doesn't have one.  
+There's a footgun in the FCS-API that you can easily trigger when working on an analyzer:
+Accessing the [FullName](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html#FullName) property of the [FSharpEntity](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html) type throws an exception if the entity doesn't have one.
 Use the [TryGetFullName](https://fsharp.github.io/fsharp-compiler-docs/reference/fsharp-compiler-symbols-fsharpentity.html#TryGetFullName) function for safe access.
 
 [Previous]({{fsdocs-previous-page-link}})
