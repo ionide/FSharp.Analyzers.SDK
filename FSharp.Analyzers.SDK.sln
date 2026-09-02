@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 18
+VisualStudioVersion = 18.9.12120.119 stable
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{95A9FA19-723D-4D2C-A936-F0B45656B0D6}"
 EndProject
@@ -15,13 +15,16 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "OptionAnalyzer", "samples\O
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{937D2F4A-7EF4-469F-8DDA-3D75F3D32C69}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		.gitignore = .gitignore
-		Directory.Build.props = Directory.Build.props
-		global.json = global.json
-		README.md = README.md
 		CHANGELOG.md = CHANGELOG.md
-		resetTool.cmd = resetTool.cmd
+		Directory.Build.props = Directory.Build.props
+		Directory.Build.targets = Directory.Build.targets
+		Directory.Packages.props = Directory.Packages.props
+		global.json = global.json
 		nuget.config = nuget.config
+		README.md = README.md
+		resetTool.cmd = resetTool.cmd
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{7A9A1C69-ADF2-421C-90F8-AB3304D6E197}"
@@ -48,9 +51,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{C1D38B7A-0193-46AA-B033-ADBBF642AAA0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -126,6 +126,9 @@ Global
 		{34AD5A2D-5FDE-4A03-8AC5-100F54E6D2DF}.Release|x86.ActiveCfg = Release|Any CPU
 		{34AD5A2D-5FDE-4A03-8AC5-100F54E6D2DF}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C1D38B7A-0193-46AA-B033-ADBBF642AAA0} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
 		{96582FA1-CF16-455B-AF80-D825C1A40DB2} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
@@ -135,5 +138,8 @@ Global
 		{9A9AC3F8-E34B-4C30-A52A-A507D6E0CA01} = {0FE81935-26A8-45E1-A62E-5148C73BA6A2}
 		{3C70D1B2-DDCE-439A-BAB2-AC6B2E0919D5} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
 		{34AD5A2D-5FDE-4A03-8AC5-100F54E6D2DF} = {95A9FA19-723D-4D2C-A936-F0B45656B0D6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8127ADE9-AECC-49F4-AC0E-27F54EAEF1A8}
 	EndGlobalSection
 EndGlobal

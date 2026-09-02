@@ -1,4 +1,6 @@
-#r "nuget: Fun.Build, 0.5.2"
+#!/usr/bin/env -S dotnet fsi --
+
+#r "nuget: Fun.Build, 1.1.18"
 
 open Fun.Build
 open System.IO
