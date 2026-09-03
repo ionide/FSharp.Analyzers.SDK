@@ -461,6 +461,11 @@ module TASTCollecting =
 
     let rec visitDeclaration (f: TypedTreeCollectorBase) d =
 
+        let shouldIgnoreExprType typeName =
+            match typeName with
+            | None -> false
+            | Some name -> Set.contains name exprTypesToIgnore
+
         match d with
         | FSharpImplementationFileDeclaration.Entity(e, subDecls) ->
             f.WalkEntity e subDecls
@@ -474,7 +479,7 @@ module TASTCollecting =
                 not v.IsCompilerGenerated
                 || not (Set.contains v.CompiledName membersToIgnore)
                 || not e.Type.IsAbbreviation
-                || not (Set.contains e.Type.BasicQualifiedName exprTypesToIgnore)
+                || not (shouldIgnoreExprType e.Type.BasicQualifiedName)
             then
                 f.WalkMemberOrFunctionOrValue v vs e
 
