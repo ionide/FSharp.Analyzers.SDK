@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.38.0] - 2026-09-03
+
+### Changed
+
+- *Breaking*: [All packages now target .NET 10](https://github.com/ionide/FSharp.Analyzers.SDK/pull/311) (thanks @Corniel!)
+- [Update FSharp.Compiler.Service to 43.12.400 and FSharp.Core to 10.1.400](https://github.com/ionide/FSharp.Analyzers.SDK/pull/319) (thanks @Numpsy!)
+
 ## [0.37.2] - 2026-06-17
 
 ### Changed
