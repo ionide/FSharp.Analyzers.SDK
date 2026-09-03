@@ -1,8 +1,8 @@
 #!/usr/bin/env -S dotnet fsi --
 
 #r "nuget: Fun.Build, 1.1.18"
-#r "nuget: Ionide.KeepAChangelog, 0.1.8"
-#r "nuget: NuGet.Protocol, 6.7.0"
+#r "nuget: Ionide.KeepAChangelog, 0.2.0"
+#r "nuget: NuGet.Protocol, 7.9.0"
 
 open Fun.Build
 open System
@@ -168,12 +168,11 @@ let mapToGithubRelease (v: SemanticVersion, d: DateTime, cd: ChangelogData optio
             yield! (Map.toList cd.Custom)
         ]
         |> List.choose (fun (header, lines) ->
-            if lines.IsEmpty then
+            if String.IsNullOrWhiteSpace lines then
                 None
             else
                 lines
-                |> List.map (fun line -> line.TrimStart())
-                |> String.concat "\n"
+                |> _.TrimStart()
                 |> sprintf "### %s\n%s" header
                 |> Some
         )
