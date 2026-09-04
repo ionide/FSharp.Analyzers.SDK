@@ -277,6 +277,7 @@ let mkGitHubRelease
 
 pipeline "Release" {
     restoreStage
+    buildStage
     packStage
     stage "publish" {
         run (fun ctx ->
