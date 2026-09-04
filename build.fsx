@@ -32,7 +32,7 @@ let buildStage =
 
 pipeline "Build" {
     restoreStage
-    stage "lint" { run "dotnet fantomas . --check" }
+    stage "lint" { run "dotnet fantomas check" }
     stage "build" { run "dotnet build -c Release --no-restore -maxCpuCount" }
     stage "test" {
         purgeBinLogCache ()
@@ -80,14 +80,12 @@ let getLatestPublishedNugetVersion packageName =
         let cache = new SourceCacheContext()
         let repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json")
         let! resource = repository.GetResourceAsync<FindPackageByIdResource>()
-        let! versions = resource.GetAllVersionsAsync(packageName, cache, logger, cancellationToken)
+        let! versions =
+            resource.GetAllVersionsAsync(packageName, cache, logger, cancellationToken)
         if Seq.isEmpty versions then
             return None
         else
-            return
-                versions
-                |> Seq.max
-                |> Some
+            return versions |> Seq.max |> Some
     }
 
 let getLatestChangeLogVersion () : SemanticVersion * DateTime * ChangelogData option =
@@ -225,10 +223,7 @@ let getReleaseNotes
                         $"@{authors.[0]}"
                     else
                         authors
-                        |> Array.take (
-                            authors.Length
-                            - 1
-                        )
+                        |> Array.take (authors.Length - 1)
                         |> Array.map (sprintf "@%s")
                         |> String.concat ", "
                 $"Special thanks to %s{otherAuthors} and @%s{lastAuthor}!"
@@ -316,9 +311,7 @@ pipeline "Release" {
                     let! nugetResult =
                         releaseNuGetPackages commandRunner (string currentVersionText)
                     let! githubResult = mkGitHubRelease commandRunner currentVersion None
-                    return
-                        nugetResult
-                        + githubResult
+                    return nugetResult + githubResult
 
                 | Some nugetVersion when
                     (nugetVersion.OriginalVersion
@@ -342,9 +335,7 @@ pipeline "Release" {
 
                     let! githubResult =
                         mkGitHubRelease commandRunner currentVersion previousReleaseDate
-                    return
-                        nugetResult
-                        + githubResult
+                    return nugetResult + githubResult
 
                 | Some nugetVersion ->
                     printfn "%s is already published" nugetVersion.OriginalVersion

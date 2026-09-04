@@ -536,7 +536,7 @@ let writeReport (results: AnalyzerMessage list) (codeRoot: Uri) (report: string)
         driver.InformationUri <- Uri("https://ionide.io/FSharp.Analyzers.SDK/")
 
         driver.Version <-
-            string<Version> (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
+            string<Version>(System.Reflection.Assembly.GetExecutingAssembly().GetName().Version)
 
         let tool = Tool()
         tool.Driver <- driver
@@ -676,11 +676,7 @@ let getProperties (results: ParseResults<Arguments>) =
         | Some r, _, _ -> Some r
         | None, Some o, Some a -> Some $"{o}-{a}"
         | None, Some o, None ->
-            let archOfRid =
-                rid.Substring(
-                    rid.LastIndexOf('-')
-                    + 1
-                )
+            let archOfRid = rid.Substring(rid.LastIndexOf('-') + 1)
 
             Some $"{o}-{archOfRid}"
         | None, None, Some a ->
@@ -721,11 +717,7 @@ let main argv =
         | Some "normal" -> LogLevel.Warning
         | None -> LogLevel.Warning
         | Some x ->
-            use factory =
-                LoggerFactory.Create(fun b ->
-                    b.AddConsole()
-                    |> ignore
-                )
+            use factory = LoggerFactory.Create(fun b -> b.AddConsole() |> ignore)
 
             let logger = factory.CreateLogger("")
             logger.LogError("unknown verbosity level given {0}", x)
@@ -750,7 +742,8 @@ let main argv =
         logLevel
         <= LogLevel.Information
     then
-        Ionide.ProjInfo.Logging.Providers.MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory
+        Ionide.ProjInfo.Logging.Providers
+            .MicrosoftExtensionsLoggingProvider.setMicrosoftLoggerFactory
             factory
 
     logger.LogInformation("Running in verbose mode")
@@ -887,9 +880,7 @@ let main argv =
              |> String.concat ", ")
         )
 
-        let excludeFiles =
-            excludeFiles
-            |> List.map Glob
+        let excludeFiles = excludeFiles |> List.map Glob
 
         let includeFiles = results.GetResult(<@ Include_Files @>, [])
 
@@ -899,9 +890,7 @@ let main argv =
              |> String.concat ", ")
         )
 
-        let includeFiles =
-            includeFiles
-            |> List.map Glob
+        let includeFiles = includeFiles |> List.map Glob
 
         match excludeFiles, includeFiles with
         | e, [] -> Choice1Of2 e
@@ -1024,11 +1013,7 @@ let main argv =
                 ->
                 logger.LogError("`--project` and `--fsc-args` cannot be combined.")
                 exit (int ExitErrorCodes.ProjectAndFscArgs)
-            | Some _ when
-                scripts
-                |> List.isEmpty
-                |> not
-                ->
+            | Some _ when scripts |> List.isEmpty |> not ->
                 logger.LogError("`--script` and `--fsc-args` cannot be combined.")
                 exit (int ExitErrorCodes.ProjectAndFscArgs)
             | Some fscArgs ->
@@ -1127,18 +1112,14 @@ let main argv =
             | Ok results -> results, false
             | Error(results, _errors) -> results, true
 
-        let results =
-            results
-            |> List.concat
+        let results = results |> List.concat
 
         let codeRoot =
             match codeRoot with
             | None ->
                 Directory.GetCurrentDirectory()
                 |> Uri
-            | Some root ->
-                Path.GetFullPath root
-                |> Uri
+            | Some root -> Path.GetFullPath root |> Uri
 
         match outputFormat with
         | OutputFormat.Default -> printMessagesInDefaultFormat results
