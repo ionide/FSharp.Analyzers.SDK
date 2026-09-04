@@ -2,8 +2,9 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+  workflow_dispatch:
 
 permissions:
   id-token: write # needed to be able to do OIDC handshake for NuGet Trusted Publishing
@@ -14,49 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get version from tag
-        id: tag_name
-        run: |
-          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
-        shell: bash
-
       - uses: actions/checkout@v7
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
-        with:  
-          global-json-file: 'global.json'
-          dotnet-version: |
-            8.x
-            9.x
-
-
-      - name: Run Release Build
-        run: dotnet fsi build.fsx -p ReleaseBuild
-
-      - name: Get Changelog Entry
-        id: changelog_reader
-        if: ${{ !contains(steps.tag_name.outputs.current_version, '-MsBuild') }}
-        uses: mindsers/changelog-reader-action@v2
         with:
-          validation_level: warn
-          version: ${{ steps.tag_name.outputs.current_version }}
-          path: ./CHANGELOG.md
+          global-json-file: 'global.json'
+          dotnet-version: 10.x
 
-      - name: Get NuGet Publishing Key
+      - name: NuGet login (trusted publishing)
         uses: NuGet/login@v1
         id: nuget-login
         with:
-          user: ${{secrets.NUGET_USER}}
+          user: ${{ secrets.NUGET_USER }}
 
-      - name: Create Release
-        uses: ncipollo/release-action@v1
-        if: ${{ !contains(steps.tag_name.outputs.current_version, '-MsBuild') }}
-        with:
-          artifacts: "**/*.nupkg"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: ${{ steps.changelog_reader.outputs.changes }}
-          prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
-
-      - name: Push packages
-        run: dotnet nuget push "**/*.nupkg" -s "https://api.nuget.org/v3/index.json" --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --skip-duplicate
+      - name: Release
+        run: dotnet fsi build.fsx -- -p Release
+        env:
+          NUGET_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
