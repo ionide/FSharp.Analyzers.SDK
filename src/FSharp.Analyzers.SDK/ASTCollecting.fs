@@ -17,12 +17,7 @@ module ASTCollecting =
             =
             match e with
             | SynExpr.Sequential(expr1 = e1; expr2 = e2) ->
-                visit
-                    e2
-                    (fun xs ->
-                        e1 :: xs
-                        |> finalContinuation
-                    )
+                visit e2 (fun xs -> e1 :: xs |> finalContinuation)
             | e -> finalContinuation [ e ]
 
         match e with
@@ -34,9 +29,7 @@ module ASTCollecting =
     let (|ConstructorPats|) =
         function
         | SynArgPats.Pats ps -> ps
-        | SynArgPats.NamePatPairs(pats = xs) ->
-            xs
-            |> List.map _.Pattern
+        | SynArgPats.NamePatPairs(pats = xs) -> xs |> List.map _.Pattern
 
     type SyntaxCollectorBase() =
         abstract WalkSynModuleOrNamespace: path: SyntaxVisitorPath * SynModuleOrNamespace -> unit
@@ -180,9 +173,7 @@ module ASTCollecting =
         and walkPat (path: SyntaxVisitorPath) s =
             walker.WalkPat(path, s)
 
-            let nextPath =
-                SyntaxNode.SynPat s
-                :: path
+            let nextPath = SyntaxNode.SynPat s :: path
 
             match s with
             | SynPat.Tuple(elementPats = pats)
@@ -266,9 +257,7 @@ module ASTCollecting =
         and walkType (path: SyntaxVisitorPath) s =
             walker.WalkType(path, s)
 
-            let nextPath =
-                SyntaxNode.SynType s
-                :: path
+            let nextPath = SyntaxNode.SynType s :: path
 
             match s with
             | SynType.Array(_, t, _)
@@ -341,9 +330,7 @@ module ASTCollecting =
         and walkExpr (path: SyntaxVisitorPath) s =
             walker.WalkExpr(path, s)
 
-            let nextPath =
-                SyntaxNode.SynExpr s
-                :: path
+            let nextPath = SyntaxNode.SynExpr s :: path
 
             match s with
             | SynExpr.Typed(expr = e) -> walkExpr nextPath e
@@ -577,16 +564,13 @@ module ASTCollecting =
             =
             walker.WalkValSig(path, s)
 
-            let nextPath =
-                SyntaxNode.SynValSig s
-                :: path
+            let nextPath = SyntaxNode.SynValSig s :: path
 
             List.iter (walkAttribute nextPath) attrs
             walkType nextPath t
 
             argInfo
-            :: (argInfos
-                |> List.concat)
+            :: (argInfos |> List.concat)
             |> List.collect (fun (SynArgInfo(attributes = AllAttrs attrs)) -> attrs)
             |> List.iter (walkAttribute nextPath)
 
