@@ -66,11 +66,7 @@ let private topologicallySortedOpenStatementsAnalyzer
 
         let isSystemOpenStatement (openStatement: string list, mOpen: range) =
             let isFromBCL () =
-                let line =
-                    sourceText.GetLineString(
-                        mOpen.EndLine
-                        - 1
-                    )
+                let line = sourceText.GetLineString(mOpen.EndLine - 1)
 
                 match
                     checkResults.GetSymbolUseAtLocation(

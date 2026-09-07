@@ -327,10 +327,7 @@ module TASTCollecting =
 
             handler.WalkLetRec recursiveBindings' bodyExpr
 
-            List.iter
-                (snd
-                 >> visitExpr handler)
-                recursiveBindings'
+            List.iter (snd >> visitExpr handler) recursiveBindings'
 
             visitExpr handler bodyExpr
         | NewArray(arrayType, argExprs) ->
@@ -386,10 +383,7 @@ module TASTCollecting =
             handler.WalkDecisionTree decisionExpr decisionTargets
             visitExpr handler decisionExpr
 
-            List.iter
-                (snd
-                 >> visitExpr handler)
-                decisionTargets
+            List.iter (snd >> visitExpr handler) decisionTargets
         | DecisionTreeSuccess(decisionTargetIdx, decisionTargetExprs) ->
             handler.WalkDecisionTreeSuccess decisionTargetIdx decisionTargetExprs
             visitExprs handler decisionTargetExprs

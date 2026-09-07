@@ -149,24 +149,15 @@ module Client =
                 | File -> true
                 | Range(commentStart, commentEnd) ->
                     if
-                        message.Range.StartLine
-                        - 1
+                        message.Range.StartLine - 1
                         >= commentStart
-                        && message.Range.EndLine
-                           - 1
+                        && message.Range.EndLine - 1
                            <= commentEnd
                     then
                         true
                     else
                         false
-                | NextLine line ->
-                    if
-                        message.Range.StartLine
-                        - 1 = line
-                    then
-                        true
-                    else
-                        false
+                | NextLine line -> if message.Range.StartLine - 1 = line then true else false
                 | CurrentLine line -> if message.Range.StartLine = line then true else false
             )
         | None -> false

@@ -61,11 +61,7 @@ module Ignore =
         match ct with
         | CommentTrivia.BlockComment _ -> None
         | CommentTrivia.LineComment r ->
-            let commentText =
-                sourceText.GetLineString(
-                    r.StartLine
-                    - 1
-                )
+            let commentText = sourceText.GetLineString(r.StartLine - 1)
 
             // pattern to match is:
             // prefix: command [codes]
@@ -103,12 +99,7 @@ module Ignore =
                     Map.tryFind code codeToRanges
                     |> Option.defaultValue []
 
-                codeToRanges <-
-                    Map.add
-                        code
-                        (range
-                         :: existingRanges)
-                        codeToRanges
+                codeToRanges <- Map.add code (range :: existingRanges) codeToRanges
 
         let mutable rangeStack = []
 

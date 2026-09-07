@@ -146,9 +146,7 @@ let releaseNotes = ReleaseNotes.load "RELEASE_NOTES.md"
 Target.create
     "PackAnalyzer"
     (fun _ ->
-        let analyzerProject =
-            "src"
-            </> "BadCodeAnalyzer"
+        let analyzerProject = "src" </> "BadCodeAnalyzer"
 
         let args =
             [
@@ -165,10 +163,7 @@ Target.create
         // create initial nuget package
         let exitCode = Shell.Exec("dotnet", String.concat " " args, analyzerProject)
 
-        if
-            exitCode
-            <> 0
-        then
+        if exitCode <> 0 then
             failwith "dotnet pack failed"
         else
             match
@@ -197,11 +192,7 @@ Target.create
                     </> "net10.0"
                     </> "publish"
                 // Unzip the nuget
-                ZipFile.ExtractToDirectory(
-                    nupkg,
-                    nugetParent
-                    </> nugetFileName
-                )
+                ZipFile.ExtractToDirectory(nupkg, nugetParent </> nugetFileName)
                 // delete the initial nuget package
                 File.Delete nupkg
                 // remove stuff from ./lib/net10.0
@@ -220,16 +211,9 @@ Target.create
                     publishPath
                     (fun _ -> true)
                 // re-create the nuget package
-                ZipFile.CreateFromDirectory(
-                    nugetParent
-                    </> nugetFileName,
-                    nupkg
-                )
+                ZipFile.CreateFromDirectory(nugetParent </> nugetFileName, nupkg)
                 // delete intermediate directory
-                Shell.deleteDir (
-                    nugetParent
-                    </> nugetFileName
-                )
+                Shell.deleteDir (nugetParent </> nugetFileName)
             | _ -> failwith "dotnet publish failed"
     )
 

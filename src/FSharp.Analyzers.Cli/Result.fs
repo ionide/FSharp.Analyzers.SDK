@@ -9,10 +9,7 @@ let allOkOrError<'ok, 'err>
         ||> List.fold (fun (oks, errs) result ->
             match result with
             | Ok ok -> ok :: oks, errs
-            | Error err ->
-                oks,
-                err
-                :: errs
+            | Error err -> oks, err :: errs
         )
 
     let oks = List.rev oks
