@@ -10,13 +10,20 @@ open System.IO
 open System.Reflection.Metadata
 open System.Reflection.PortableExecutable
 
-let paths = fsi.CommandLineArgs |> Array.skip 1
+let paths =
+    fsi.CommandLineArgs
+    |> Array.skip 1
 
 if Array.isEmpty paths then
     eprintfn "Usage: dotnet fsi sdk-version.fsx <analyzer.dll> [more dlls...]"
     exit 2
 
-let analyzerAttributes = set [ "CliAnalyzerAttribute"; "EditorAnalyzerAttribute" ]
+let analyzerAttributes =
+    set
+        [
+            "CliAnalyzerAttribute"
+            "EditorAnalyzerAttribute"
+        ]
 
 /// Name of the type that declares the constructor of a custom attribute.
 let attributeTypeName (md: MetadataReader) (ca: CustomAttribute) =
@@ -28,7 +35,9 @@ let attributeTypeName (md: MetadataReader) (ca: CustomAttribute) =
         | HandleKind.TypeReference ->
             Some(md.GetString(md.GetTypeReference(TypeReferenceHandle.op_Explicit mr.Parent).Name))
         | HandleKind.TypeDefinition ->
-            Some(md.GetString(md.GetTypeDefinition(TypeDefinitionHandle.op_Explicit mr.Parent).Name))
+            Some(
+                md.GetString(md.GetTypeDefinition(TypeDefinitionHandle.op_Explicit mr.Parent).Name)
+            )
         | _ -> None
     | HandleKind.MethodDefinition ->
         let m = md.GetMethodDefinition(MethodDefinitionHandle.op_Explicit ca.Constructor)
@@ -61,9 +70,18 @@ let analyzerNames (md: MetadataReader) =
     |> Seq.collect (fun td ->
         Seq.concat
             [
-                td.GetMethods() |> Seq.collect (fun h -> fromAttributes (md.GetMethodDefinition(h).GetCustomAttributes()))
-                td.GetProperties() |> Seq.collect (fun h -> fromAttributes (md.GetPropertyDefinition(h).GetCustomAttributes()))
-                td.GetFields() |> Seq.collect (fun h -> fromAttributes (md.GetFieldDefinition(h).GetCustomAttributes()))
+                td.GetMethods()
+                |> Seq.collect (fun h ->
+                    fromAttributes (md.GetMethodDefinition(h).GetCustomAttributes())
+                )
+                td.GetProperties()
+                |> Seq.collect (fun h ->
+                    fromAttributes (md.GetPropertyDefinition(h).GetCustomAttributes())
+                )
+                td.GetFields()
+                |> Seq.collect (fun h ->
+                    fromAttributes (md.GetFieldDefinition(h).GetCustomAttributes())
+                )
             ]
     )
     |> Seq.distinct
@@ -81,7 +99,10 @@ for path in paths do
         |> Seq.tryFind (fun r -> md.GetString r.Name = "FSharp.Analyzers.SDK")
 
     match sdkRef with
-    | None -> printfn "%s: no reference to FSharp.Analyzers.SDK, not an analyzer assembly" (Path.GetFileName path)
+    | None ->
+        printfn
+            "%s: no reference to FSharp.Analyzers.SDK, not an analyzer assembly"
+            (Path.GetFileName path)
     | Some r ->
         let names = analyzerNames md
         printfn "%s" (Path.GetFileName path)
