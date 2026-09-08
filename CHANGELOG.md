@@ -9,7 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- [Allow glob patterns in the `--treat-as-*` switches](https://github.com/ionide/FSharp.Analyzers.SDK/issues/325), e.g. `--treat-as-error "*"` or `--treat-as-error "GRA-*"`. An exact code takes precedence over a pattern.
+- [Allow wildcards in the `--treat-as-*` switches](https://github.com/ionide/FSharp.Analyzers.SDK/pull/330), e.g. `--treat-as-error "*"` or `--treat-as-error "GRA-*"`. An exact code takes precedence over a pattern.
 
 ## [0.38.0] - 2026-09-04
 
