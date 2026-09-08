@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- [Allow glob patterns in the `--treat-as-*` switches](https://github.com/ionide/FSharp.Analyzers.SDK/issues/325), e.g. `--treat-as-error "*"` or `--treat-as-error "GRA-*"`. An exact code takes precedence over a pattern.
+
 ## [0.38.0] - 2026-09-04
 
 ### Changed

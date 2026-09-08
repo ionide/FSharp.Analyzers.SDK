@@ -17,6 +17,14 @@
   <ItemGroup>
     <Compile Include="CustomLogging.fs" />
     <Compile Include="Result.fs" />
+    <Compile Include="ExitErrorCodes.fs" />
+    <Compile Include="Arguments.fs" />
+    <Compile Include="SeverityMapping.fs" />
+    <Compile Include="Output.fs" />
+    <Compile Include="SarifReport.fs" />
+    <Compile Include="MsBuildProperties.fs" />
+    <Compile Include="ProjectLoading.fs" />
+    <Compile Include="Analysis.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
