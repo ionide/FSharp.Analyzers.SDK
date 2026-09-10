@@ -111,7 +111,7 @@ dotnet tool install --global fsharp-analyzers
 fsharp-analyzers --project YourProject.fsproj --analyzers-path ./OptionAnalyzer/bin/Release --verbosity d
 ```
 
-### Packaging and Distribution
+## Packaging and Distribution
 
 Since analyzers are just .NET core libraries, you can distribute them to the nuget registry just like you would with a normal .NET package.
 Simply run `dotnet pack --configuration Release` against the analyzer project to get a nuget package and publish it with
@@ -218,6 +218,32 @@ Target.create
     )
 
 (**
+
+### Package metadata for consumers
+
+Two pieces of metadata make life much easier for people (and tools) consuming your analyzer package.
+
+**Tag the package with `fsharp-analyzer`.** This is how analyzer packages are found on NuGet, both by humans
+([search by tag](https://www.nuget.org/packages?q=Tags%3A%22fsharp-analyzer%22)) and by tooling that needs to tell
+analyzer packages apart from ordinary package references.
+
+**State the SDK version in your release notes.** The `fsharp-analyzers` tool only loads analyzers built against the same
+major.minor of `FSharp.Analyzers.SDK` as the tool itself, and skips the rest with an error in the log. Your package does not
+declare the SDK as a NuGet dependency, so the release notes are the only place a consumer can see which SDK a given release
+targets without downloading and inspecting the assembly. Every time you bump the SDK, add a line such as
+`Update FSharp.Analyzers.SDK to 0.38.0` to your changelog and make sure it ends up in the package release notes.
+[Ionide.Analyzers](https://github.com/ionide/ionide-analyzers/blob/main/CHANGELOG.md) and
+[G-Research.FSharp.Analyzers](https://github.com/G-Research/fsharp-analyzers/blob/main/CHANGELOG.md) follow this convention.
+
+```xml
+<PropertyGroup>
+    <PackageTags>F#, fsharp, analyzers, fsharp-analyzer</PackageTags>
+    <!-- Ionide.KeepAChangelog.Tasks fills PackageReleaseNotes from CHANGELOG.md automatically -->
+    <PackageReleaseNotes>https://github.com/you/your-analyzers/blob/main/CHANGELOG.md</PackageReleaseNotes>
+</PropertyGroup>
+```
+
+Consumers upgrading with the [upgrade-fsharp-analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/tree/main/skills/upgrade-fsharp-analyzers) agent skill rely on both of these.
 
 ### Known footguns to avoid
 
