@@ -6,12 +6,12 @@ open System.Text.RegularExpressions
 open Argu
 open Microsoft.Extensions.Logging
 
-/// If multiple MSBuild properties are given in one -p flag like -p:prop1="val1a;val1b;val1c";prop2="1;2;3";prop3=val3
-/// argu will think it means prop1 has the value: "val1a;val1b;val1c";prop2="1;2;3";prop3=val3
-/// so this function expands the value into multiple key-value properties
 // built once for every property, not per element
 let private multiPropertyRegex = Regex(";([a-z,A-Z,0-9,_,-]*)=")
 
+/// If multiple MSBuild properties are given in one -p flag like -p:prop1="val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// argu will think it means prop1 has the value: "val1a;val1b;val1c";prop2="1;2;3";prop3=val3
+/// so this function expands the value into multiple key-value properties
 let expandMultiProperties (logger: ILogger) (properties: (string * string) list) =
     properties
     |> List.map (fun (k, v) ->
