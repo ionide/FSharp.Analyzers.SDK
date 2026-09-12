@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.2] - 2026-09-12
+
+### Fixed
+
+- [A repeated `--script` flag no longer silently drops all but the last occurrence](https://github.com/ionide/FSharp.Analyzers.SDK/issues/336). Every list-valued flag now accumulates the way `--project` and `--analyzers-path` already did, so `--script a.fsx --script b.fsx` means the same as `--script a.fsx b.fsx`. Previously a caller that built its arguments in a loop analyzed a subset of what it asked for and still got a clean run reported. The `--treat-as-*`, `--exclude-files`, `--include-files`, `--exclude-analyzers` and `--include-analyzers` flags rejected a repeat outright and now accumulate too.
+
 ## [0.39.1] - 2026-09-12
 
 ### Fixed
