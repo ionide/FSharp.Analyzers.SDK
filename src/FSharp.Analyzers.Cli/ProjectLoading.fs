@@ -7,6 +7,7 @@ open FSharp.Compiler.Text
 open GlobExpressions
 open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
+open Ionide.ProjInfo.Types
 
 /// <summary>Runs MSBuild to create FSharpProjectOptions based on the projPaths.</summary>
 /// <returns>Returns only the FSharpProjectOptions based on the projPaths and not any referenced projects.</returns>
@@ -138,8 +139,45 @@ let resolveScriptPaths (cwd: DirectoryInfo) (scriptGlobs: string list) =
         |> Seq.toList
     )
 
+/// <summary>
+/// Locates the assembly that gives a script its <c>fsi</c> object (<c>fsi.CommandLineArgs</c>, <c>fsi.EventLoop</c>, ...).
+/// </summary>
+/// <remarks>
+/// <c>dotnet fsi</c> references FSharp.Compiler.Interactive.Settings.dll implicitly, and FCS looks for it next to its
+/// own binaries. For a dotnet tool those are the tool's own files, which do not include it, so every use of
+/// <c>fsi</c> fails to type check and takes the surrounding expressions down with it through error recovery.
+/// The assembly ships in the <c>FSharp</c> folder of the SDK that toolsPath points into.
+/// See https://github.com/ionide/FSharp.Analyzers.SDK/issues/334
+/// </remarks>
+let fsiSettingsFlags (logger: ILogger) (ToolsPath toolsPath) =
+    // Init.init resolves toolsPath to the MSBuild.dll of a single SDK version.
+    let assembly =
+        Path.Combine(
+            Path.GetDirectoryName(toolsPath: string),
+            "FSharp",
+            "FSharp.Compiler.Interactive.Settings.dll"
+        )
+
+    if File.Exists assembly then
+        [| $"-r:%s{assembly}" |]
+    else
+        logger.LogWarning("Could not find {0}. Scripts using `fsi` will not type check.", assembly)
+
+        Array.empty
+
 /// Creates FSharpProjectOptions for each script.
-let loadScripts (logger: ILogger) (checker: FSharpChecker) (scripts: string list) =
+let loadScripts
+    (logger: ILogger)
+    (toolsPath: ToolsPath)
+    (checker: FSharpChecker)
+    (scripts: string list)
+    =
+    let otherFlags =
+        if List.isEmpty scripts then
+            Array.empty
+        else
+            fsiSettingsFlags logger toolsPath
+
     scripts
     |> List.map (fun script ->
         async {
@@ -158,7 +196,8 @@ let loadScripts (logger: ILogger) (checker: FSharpChecker) (scripts: string list
                     // becomes an error-recovery node in the typed tree, which analyzers silently skip.
                     // See https://github.com/ionide/FSharp.Analyzers.SDK/issues/332
                     assumeDotNetFramework = false,
-                    useSdkRefs = true
+                    useSdkRefs = true,
+                    otherFlags = otherFlags
                 )
 
             if not (List.isEmpty diagnostics) then

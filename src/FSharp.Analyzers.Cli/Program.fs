@@ -329,7 +329,7 @@ let main argv =
 
                             exit (int ExitErrorCodes.InvalidProjectArguments)
 
-                    let scriptOptions = loadScripts logger checker scripts
+                    let scriptOptions = loadScripts logger toolsPath checker scripts
 
                     for projPath in projects do
                         if not (File.Exists(projPath)) then

@@ -5,11 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.39.1] - 2026-09-12
 
 ### Fixed
 
 - [The typed tree of a `.fsx` passed to `--script` no longer omits most of the script](https://github.com/ionide/FSharp.Analyzers.SDK/issues/332). Scripts were resolved against the .NET Framework reference assemblies, so `FSharp.Core` failed to load and everything coming from it (`printfn`, `string`, `int`, ...) became an error recovery node that typed tree analyzers could not see.
+- [A `.fsx` passed to `--script` can use the `fsi` object](https://github.com/ionide/FSharp.Analyzers.SDK/issues/334), such as `fsi.CommandLineArgs`. `FSharp.Compiler.Interactive.Settings.dll`, which `dotnet fsi` references implicitly, was not referenced, so every use of `fsi` failed to type check and took the surrounding expressions with it.
 
 ### Added
 
