@@ -3,6 +3,7 @@ module FSharp.Analyzers.Cli.Analysis
 open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.Diagnostics
 open FSharp.Compiler.Text
 open GlobExpressions
 open Microsoft.Extensions.Logging
@@ -23,6 +24,21 @@ let runProject
         logger.LogInformation("Checking project {0}", fsharpOptions.ProjectFileName)
         let! checkProjectResults = checker.ParseAndCheckProject(fsharpOptions)
         let analyzerOptions = BackgroundCompilerOptions fsharpOptions
+
+        // A type error is replaced with an error recovery node in the typed tree, so any analyzer looking
+        // at that part of the tree silently reports nothing. Surface the errors instead of looking clean.
+        let typeCheckErrors =
+            checkProjectResults.Diagnostics
+            |> Array.filter (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
+
+        if not (Array.isEmpty typeCheckErrors) then
+            logger.LogWarning(
+                "{0} did not type check, results may be incomplete. Analyzers using the typed tree cannot see code that failed to type check.",
+                fsharpOptions.ProjectFileName
+            )
+
+            for d in typeCheckErrors do
+                logger.LogWarning("{0}: {1}", d.Range, d.Message)
 
         let! messagesPerAnalyzer =
             fsharpOptions.SourceFiles

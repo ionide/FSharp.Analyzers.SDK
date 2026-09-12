@@ -149,7 +149,17 @@ let loadScripts (logger: ILogger) (checker: FSharpChecker) (scripts: string list
 
             let sourceText = SourceText.ofString fileContent
             // GetProjectOptionsFromScript cannot be run in parallel, it is not thread-safe.
-            let! options, diagnostics = checker.GetProjectOptionsFromScript(script, sourceText)
+            let! options, diagnostics =
+                checker.GetProjectOptionsFromScript(
+                    script,
+                    sourceText,
+                    // Without these, the script is resolved against the .NET Framework reference assemblies.
+                    // FSharp.Core then fails to load and every construct that comes from it (printfn, string, int, ...)
+                    // becomes an error-recovery node in the typed tree, which analyzers silently skip.
+                    // See https://github.com/ionide/FSharp.Analyzers.SDK/issues/332
+                    assumeDotNetFramework = false,
+                    useSdkRefs = true
+                )
 
             if not (List.isEmpty diagnostics) then
                 diagnostics
