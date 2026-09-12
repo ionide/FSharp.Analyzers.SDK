@@ -11,14 +11,14 @@ type Arguments =
     | [<Unique; AltCommandLine("-r")>] Runtime of string
     | [<Unique; AltCommandLine("-a")>] Arch of string
     | [<Unique>] Os of string
-    | [<Unique>] Treat_As_Info of string list
-    | [<Unique>] Treat_As_Hint of string list
-    | [<Unique>] Treat_As_Warning of string list
-    | [<Unique>] Treat_As_Error of string list
-    | [<Unique>] Exclude_Files of string list
-    | [<Unique>] Include_Files of string list
-    | [<Unique>] Exclude_Analyzers of string list
-    | [<Unique>] Include_Analyzers of string list
+    | Treat_As_Info of string list
+    | Treat_As_Hint of string list
+    | Treat_As_Warning of string list
+    | Treat_As_Error of string list
+    | Exclude_Files of string list
+    | Include_Files of string list
+    | Exclude_Analyzers of string list
+    | Include_Analyzers of string list
     | [<Unique>] Report of string
     | [<Unique>] FSC_Args of string
     | [<Unique>] FSC_Args_File of string
@@ -68,3 +68,15 @@ type Arguments =
                 "Format in which to write analyzer results to stdout. The available options are: default, github."
             | BinLog_Path(_) ->
                 "Path to a directory where MSBuild binary logs (binlog) will be written. You can use https://msbuildlog.com/ to view them."
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Arguments =
+
+    /// Argu's `GetResult` only returns the last occurrence of a repeated flag and silently drops the earlier ones.
+    /// List-valued flags accumulate instead, so `--script a --script b` means the same as `--script a b`.
+    let getAll
+        (results: ParseResults<Arguments>)
+        (argument: Quotations.Expr<string list -> Arguments>)
+        =
+        results.GetResults argument
+        |> List.concat

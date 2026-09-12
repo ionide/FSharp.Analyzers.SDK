@@ -90,8 +90,10 @@ let main argv =
         exit (int ExitErrorCodes.UnhandledException)
     )
 
+    let getAllResults argument = Arguments.getAll results argument
+
     let parseSeverityCodes (argument: Quotations.Expr<string list -> Arguments>) =
-        results.GetResult(argument, [])
+        getAllResults argument
         |> List.distinct
         |> List.map (fun input ->
             match SeverityCode.tryParse input with
@@ -132,9 +134,7 @@ let main argv =
         factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
         exit (int ExitErrorCodes.AnalyzerListedMultipleTimesInTreatAsSeverity)
 
-    let projOpts =
-        results.GetResults <@ Project @>
-        |> List.concat
+    let projOpts = getAllResults <@ Project @>
 
     let fscArgs = results.TryGetResult <@ FSC_Args @>
     let fscArgsFile = results.TryGetResult <@ FSC_Args_File @>
@@ -159,10 +159,10 @@ let main argv =
         Directory.GetCurrentDirectory()
         |> DirectoryInfo
 
-    let scripts = resolveScriptPaths cwd (results.GetResult(<@ Script @>, []))
+    let scripts = resolveScriptPaths cwd (getAllResults <@ Script @>)
 
     let exclInclFiles =
-        let excludeFiles = results.GetResult(<@ Exclude_Files @>, [])
+        let excludeFiles = getAllResults <@ Exclude_Files @>
 
         logger.LogInformation(
             "Exclude Files: [{0}]",
@@ -172,7 +172,7 @@ let main argv =
 
         let excludeFiles = excludeFiles |> List.map Glob
 
-        let includeFiles = results.GetResult(<@ Include_Files @>, [])
+        let includeFiles = getAllResults <@ Include_Files @>
 
         logger.LogInformation(
             "Include Files: [{0}]",
@@ -214,8 +214,7 @@ let main argv =
         )
 
     let analyzersPaths =
-        results.GetResults(<@ Analyzers_Path @>)
-        |> List.concat
+        getAllResults <@ Analyzers_Path @>
         |> function
             | [] -> [ "packages/Analyzers" ]
             | paths -> paths
@@ -229,8 +228,8 @@ let main argv =
     logger.LogInformation("Loading analyzers from {0}", (String.concat ", " analyzersPaths))
 
     let exclInclAnalyzers =
-        let excludeAnalyzers = results.GetResult(<@ Exclude_Analyzers @>, [])
-        let includeAnalyzers = results.GetResult(<@ Include_Analyzers @>, [])
+        let excludeAnalyzers = getAllResults <@ Exclude_Analyzers @>
+        let includeAnalyzers = getAllResults <@ Include_Analyzers @>
 
         match excludeAnalyzers, includeAnalyzers with
         | e, [] ->
