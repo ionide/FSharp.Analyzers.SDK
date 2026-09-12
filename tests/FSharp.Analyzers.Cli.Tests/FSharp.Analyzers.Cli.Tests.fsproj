@@ -11,6 +11,7 @@
   <ItemGroup>
     <Compile Include="SeverityMappingTests.fs" />
     <Compile Include="MsBuildPropertiesTests.fs" />
+    <Compile Include="ScriptLoadingTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
