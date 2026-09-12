@@ -1,5 +1,6 @@
 module FSharp.Analyzers.Cli.Tests.ScriptLoadingTests
 
+open System
 open System.IO
 open NUnit.Framework
 open Microsoft.Extensions.Logging.Abstractions
@@ -8,6 +9,10 @@ open FSharp.Compiler.Symbols
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.SDK.TASTCollecting
 open FSharp.Analyzers.Cli.ProjectLoading
+open Ionide.ProjInfo
+
+let private toolsPath =
+    lazy (Init.init (DirectoryInfo Environment.CurrentDirectory) None)
 
 /// Writes the source to a temporary script, type checks it the way the CLI does and
 /// returns the project diagnostics together with the typed tree of the script.
@@ -20,7 +25,7 @@ let private checkScript (source: string) =
         let checker = Utils.createFCS None
 
         let options =
-            loadScripts NullLogger.Instance checker [ script ]
+            loadScripts NullLogger.Instance toolsPath.Value checker [ script ]
             |> Async.RunSynchronously
             |> Array.exactlyOne
 
@@ -81,3 +86,24 @@ let ``the typed tree of a script contains the body of a top-level binding`` () =
     let _, typedTree = checkScript "let f (y: int) = string y\n"
 
     Assert.That(calls typedTree, Does.Contain "Microsoft.FSharp.Core.Operators.string")
+
+// `dotnet fsi` references FSharp.Compiler.Interactive.Settings.dll implicitly, so a script may use `fsi`
+// without saying anything. FCS does not find that assembly from a dotnet tool on its own.
+// See https://github.com/ionide/FSharp.Analyzers.SDK/issues/334
+[<Test>]
+let ``a script can use the fsi object`` () =
+    let diagnostics, _ = checkScript "let args: string array = fsi.CommandLineArgs\n"
+
+    let errors =
+        diagnostics
+        |> Array.filter (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
+        |> Array.map (fun d -> d.Message)
+
+    Assert.That(errors, Is.Empty)
+
+[<Test>]
+let ``the typed tree of a script contains a call on the fsi object`` () =
+    let _, typedTree =
+        checkScript "printfn \"%b\" (fsi.CommandLineArgs[0].EndsWith(\"p\"))\n"
+
+    Assert.That(calls typedTree, Does.Contain "System.String.EndsWith")
