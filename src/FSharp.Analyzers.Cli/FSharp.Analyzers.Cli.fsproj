@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RollForward>LatestMajor</RollForward>
     <OutputType>Exe</OutputType>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -10,12 +10,21 @@
     <PackageId>fsharp-analyzers</PackageId>
     <ToolCommandName>fsharp-analyzers</ToolCommandName>
     <Description>A dotnet CLI tool for running F# analyzers</Description>
-	<WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="CustomLogging.fs" />
     <Compile Include="Result.fs" />
+    <Compile Include="ExitErrorCodes.fs" />
+    <Compile Include="Arguments.fs" />
+    <Compile Include="SeverityMapping.fs" />
+    <Compile Include="Output.fs" />
+    <Compile Include="SarifReport.fs" />
+    <Compile Include="MsBuildProperties.fs" />
+    <Compile Include="ProjectLoading.fs" />
+    <Compile Include="Analysis.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

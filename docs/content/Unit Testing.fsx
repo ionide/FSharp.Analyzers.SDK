@@ -19,7 +19,7 @@ For a complete example of an unit testing project, take a look at [`OptionAnalyz
 (*** hide ***)
 #r "../../artifacts/bin/FSharp.Analyzers.Cli/release/FSharp.Compiler.Service.dll"
 #r "../../artifacts/bin/FSharp.Analyzers.SDK/release/FSharp.Analyzers.SDK.dll"
-#r "../../artifacts/bin/FSharp.Analyzers.SDK.Testing/release_net8.0/FSharp.Analyzers.SDK.Testing.dll"
+#r "../../artifacts/bin/FSharp.Analyzers.SDK.Testing/release/FSharp.Analyzers.SDK.Testing.dll"
 #r "../../artifacts/bin/OptionAnalyzer.Test/release/nunit.framework.dll"
 #r "../../artifacts/bin/OptionAnalyzer.Test/release/OptionAnalyzer.dll"
 (** *)
@@ -36,7 +36,7 @@ let Setup () =
     task {
         let! opts =
             mkOptionsFromProject
-                "net7.0"
+                "net10.0"
                 [
                     // The SDK uses this in a "dotnet add package x --version y" command
                     // to generate the needed FSharpProjectOptions

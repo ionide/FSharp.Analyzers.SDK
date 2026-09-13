@@ -37,6 +37,9 @@ type AnalyzerAttribute =
     member HelpUri: string option
 
 /// Marks an analyzer for scanning during the console application run.
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type CliAnalyzerAttribute =
     new:
         [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *
@@ -48,6 +51,9 @@ type CliAnalyzerAttribute =
     member Name: string
 
 /// Marks an analyzer for scanning during IDE integration.
+[<AttributeUsage(AttributeTargets.Method
+                 ||| AttributeTargets.Property
+                 ||| AttributeTargets.Field)>]
 type EditorAnalyzerAttribute =
     new:
         [<Optional; DefaultParameterValue("Analyzer" :> obj)>] name: string *

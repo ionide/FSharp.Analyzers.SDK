@@ -24,6 +24,16 @@ You can also set up a run configuration of FSharp.Analyzers.Cli in your favorite
 
 Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/getting-started/Installing%20Analyzers.html) guide for analyzer users!
 
+### Upgrading with an AI agent
+
+This repository ships an [agent skill](./skills/upgrade-fsharp-analyzers/SKILL.md) that upgrades the `fsharp-analyzers` tool and your analyzer packages to a matching set of versions, re-runs the analyzers and reports what is new. Install it globally with:
+
+```shell
+npx skills add ionide/FSharp.Analyzers.SDK --skill upgrade-fsharp-analyzers -g
+```
+
+Then ask your agent to "upgrade the F# analyzers" in a repository that uses them.
+
 ## Writing Analyzers
 
 Checkout our [Getting Started](https://ionide.io/FSharp.Analyzers.SDK/content/Getting%20Started%20Writing.html) guide for analyzer authors!

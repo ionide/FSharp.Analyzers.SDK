@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.39.2] - 2026-09-12
+
+### Fixed
+
+- [A repeated `--script` flag no longer silently drops all but the last occurrence](https://github.com/ionide/FSharp.Analyzers.SDK/issues/336). Every list-valued flag now accumulates the way `--project` and `--analyzers-path` already did, so `--script a.fsx --script b.fsx` means the same as `--script a.fsx b.fsx`. Previously a caller that built its arguments in a loop analyzed a subset of what it asked for and still got a clean run reported. The `--treat-as-*`, `--exclude-files`, `--include-files`, `--exclude-analyzers` and `--include-analyzers` flags rejected a repeat outright and now accumulate too.
+
+## [0.39.1] - 2026-09-12
+
+### Fixed
+
+- [The typed tree of a `.fsx` passed to `--script` no longer omits most of the script](https://github.com/ionide/FSharp.Analyzers.SDK/issues/332). Scripts were resolved against the .NET Framework reference assemblies, so `FSharp.Core` failed to load and everything coming from it (`printfn`, `string`, `int`, ...) became an error recovery node that typed tree analyzers could not see.
+- [A `.fsx` passed to `--script` can use the `fsi` object](https://github.com/ionide/FSharp.Analyzers.SDK/issues/334), such as `fsi.CommandLineArgs`. `FSharp.Compiler.Interactive.Settings.dll`, which `dotnet fsi` references implicitly, was not referenced, so every use of `fsi` failed to type check and took the surrounding expressions with it.
+
+### Added
+
+- Type check errors in a project or script are now reported as a warning, instead of silently producing fewer analyzer messages.
+
+## [0.39.0] - 2026-09-10
+
+### Added
+
+- [Allow wildcards in the `--treat-as-*` switches](https://github.com/ionide/FSharp.Analyzers.SDK/pull/330), e.g. `--treat-as-error "*"` or `--treat-as-error "GRA-*"`. An exact code takes precedence over a pattern.
+- Agent skill `upgrade-fsharp-analyzers` for upgrading the tool and analyzer packages to matching versions, installable via `npx skills add ionide/FSharp.Analyzers.SDK`.
+- Document the `fsharp-analyzer` NuGet tag and SDK version release notes convention for analyzer authors.
+
+## [0.38.0] - 2026-09-04
+
+### Changed
+
+- *Breaking*: [All packages now target .NET 10](https://github.com/ionide/FSharp.Analyzers.SDK/pull/311) (thanks @Corniel!)
+- [Update FSharp.Compiler.Service to 43.12.400 and FSharp.Core to 10.1.400](https://github.com/ionide/FSharp.Analyzers.SDK/pull/319) (thanks @Numpsy!)
+
 ## [0.37.2] - 2026-06-17
 
 ### Changed

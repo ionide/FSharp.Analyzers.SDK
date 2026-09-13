@@ -1,18 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RollForward>LatestMajor</RollForward>
 
     <IsPackable>false</IsPackable>
-    <GenerateProgramFile>false</GenerateProgramFile>
     <IsTestProject>true</IsTestProject>
-    <OutputType>Library</OutputType>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="TestHelpers.fs" />
-    <Compile Include="UnitTests.fs" />
+    <Compile Include="ArgumentsTests.fs" />
+    <Compile Include="SeverityMappingTests.fs" />
+    <Compile Include="MsBuildPropertiesTests.fs" />
+    <Compile Include="ScriptLoadingTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,13 +20,11 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
-    <PackageReference Include="FSharp.Compiler.Service"/>
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK.Testing\FSharp.Analyzers.SDK.Testing.fsproj" />
+    <ProjectReference Include="..\..\src\FSharp.Analyzers.Cli\FSharp.Analyzers.Cli.fsproj" />
     <ProjectReference Include="..\..\src\FSharp.Analyzers.SDK\FSharp.Analyzers.SDK.fsproj" />
-    <ProjectReference Include="..\OptionAnalyzer\OptionAnalyzer.fsproj" />
   </ItemGroup>
 
 </Project>
