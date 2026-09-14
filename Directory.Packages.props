@@ -27,6 +27,6 @@
     <PackageVersion Include="MSBuild.StructuredLogger" Version="2.2.240" />
     <PackageVersion Include="NUnit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.4.2" />
-    <PackageVersion Include="Sarif.Sdk" Version="4.3.4" />
+    <PackageVersion Include="Sarif.Sdk" Version="5.7.0" />
   </ItemGroup>
 </Project>
