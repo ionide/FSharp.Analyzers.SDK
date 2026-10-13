@@ -38,7 +38,7 @@ The `FSharp.Analyzers.SDK` takes a dependency on [FSharp.Compiler.Service](https
 It is considered a best practice to use the correct `FSharp.Core` version and not the implicit one from the SDK.
 
 ```xml
-<PackageReference Update="FSharp.Core" Version="10.0.100" />
+<PackageReference Update="FSharp.Core" Version="10.1.402" />
 ```
 
 ## First analyzer

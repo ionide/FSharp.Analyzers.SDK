@@ -277,10 +277,31 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
 
                         false
                 )
-                |> Array.map (fun (path, assembly) ->
+                |> Array.choose (fun (path, assembly) ->
+                    // Discovering analyzers loads the types of the assembly, which fails when one of its
+                    // dependencies cannot be resolved, e.g. a newer FSharp.Compiler.Service than this host has.
+                    try
+                        let discovered =
+                            assembly.GetExportedTypes()
+                            |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
+                            |> Seq.toList
+
+                        Some(path, assembly, discovered)
+                    with ex ->
+                        System.Threading.Interlocked.Increment skippedAssemblies
+                        |> ignore
+
+                        logger.LogError(
+                            "Could not load the analyzers from {Name}, assembly will be skipped: {Message}",
+                            path,
+                            ex.Message
+                        )
+
+                        None
+                )
+                |> Array.map (fun (path, assembly, discovered) ->
                     let analyzers =
-                        assembly.GetExportedTypes()
-                        |> Seq.collect (Client.analyzersFromType<'TAttribute, 'TContext> path)
+                        discovered
                         |> Seq.filter (fun registeredAnalyzer ->
                             match excludeInclude with
                             | Some(ExcludeFilter excludeFilter) ->
