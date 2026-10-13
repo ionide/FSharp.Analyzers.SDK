@@ -13,6 +13,7 @@
     <Compile Include="SeverityMappingTests.fs" />
     <Compile Include="MsBuildPropertiesTests.fs" />
     <Compile Include="ScriptLoadingTests.fs" />
+    <Compile Include="AnalyzerLoadingTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

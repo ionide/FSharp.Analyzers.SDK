@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.40.0] - 2026-10-13
+
+### Changed
+
+- *Breaking*: [Update FSharp.Compiler.Service to 43.12.402 and FSharp.Core to 10.1.402](https://github.com/ionide/FSharp.Analyzers.SDK/pull/346). FSharp.Compiler.Service is not binary compatible between releases, so analyzers built against 0.39 need to be rebuilt.
+- FSharp.Compiler.Service is now pinned to an exact version, like FSharp.Core already was. NuGet now warns (NU1608) when an analyzer project resolves a newer FSharp.Compiler.Service than the SDK was built with, instead of accepting it silently.
+
+### Fixed
+
+- `InlineAnnotation` is `AlwaysInline` again for `inline` values from assemblies built with F# 4.7 or older ([dotnet/fsharp#20260](https://github.com/dotnet/fsharp/pull/20260)).
+- An analyzer assembly with a dependency that cannot be loaded, such as a newer FSharp.Compiler.Service than the tool ships, is now skipped with an error. Previously the `FileNotFoundException` crashed the run and no analyzer ran at all.
+
 ## [0.39.2] - 2026-09-12
 
 ### Fixed
