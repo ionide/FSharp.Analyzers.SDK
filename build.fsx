@@ -7,6 +7,7 @@
 open Fun.Build
 open System
 open System.IO
+open System.Runtime.CompilerServices
 open System.Threading
 open Ionide.KeepAChangelog
 open Ionide.KeepAChangelog.Domain
@@ -111,6 +112,8 @@ let getPackageFiles (version: string) =
 type CommandRunner =
     abstract member LogWhenDryRun: string -> unit
     abstract member RunCommand: string -> Async<Result<unit, string>>
+    /// Runs a command whose format arguments are masked in the log, such as an API key.
+    abstract member RunSensitiveCommand: FormattableString -> Async<Result<unit, string>>
     abstract member RunCommandCaptureOutput: string -> Async<Result<string, string>>
 
 /// Push the *.nupkg files for the given version.
@@ -125,9 +128,15 @@ let releaseNuGetPackages (ctx: CommandRunner) (version: string) =
         else
             let mutable result = 0
             for package in packages do
+                // Only the key is a format argument, so the log shows the package but masks the key.
+                // GitHub cannot mask it either: the log wraps long lines and splits the key.
                 let! pushResult =
-                    ctx.RunCommand
-                        $"dotnet nuget push \"%s{package}\" --api-key %s{key} --source \"https://api.nuget.org/v3/index.json\" --skip-duplicate"
+                    ctx.RunSensitiveCommand(
+                        FormattableStringFactory.Create(
+                            $"dotnet nuget push \"%s{package}\" --api-key {{0}} --source \"https://api.nuget.org/v3/index.json\" --skip-duplicate",
+                            box key
+                        )
+                    )
 
                 match pushResult with
                 | Error _ -> result <- 1
@@ -214,7 +223,9 @@ let getReleaseNotes
                 |> Array.distinct
                 |> Array.sort
 
-            if authors.Length = 1 then
+            if authors.Length = 0 then
+                ""
+            elif authors.Length = 1 then
                 $"Special thanks to @%s{authors.[0]}!"
             else
                 let lastAuthor = Array.last authors
@@ -283,6 +294,7 @@ pipeline "Release" {
                         { new CommandRunner with
                             member x.LogWhenDryRun _ = ()
                             member x.RunCommand command = ctx.RunCommand command
+                            member x.RunSensitiveCommand command = ctx.RunSensitiveCommand command
                             member x.RunCommandCaptureOutput command =
                                 ctx.RunCommandCaptureOutput command
                         }
@@ -292,6 +304,14 @@ pipeline "Release" {
                             member x.RunCommand command =
                                 async {
                                     printfn $"[dry-run]:{command}"
+                                    return Ok()
+                                }
+                            member x.RunSensitiveCommand command =
+                                async {
+                                    let masked =
+                                        command.GetArguments()
+                                        |> Array.map (fun _ -> box "***")
+                                    printfn $"[dry-run]:%s{String.Format(command.Format, masked)}"
                                     return Ok()
                                 }
                             member x.RunCommandCaptureOutput command =
