@@ -14,7 +14,7 @@ type AnalyzerName = string
 type AnalysisResult =
     {
         AnalyzerName: AnalyzerName
-        Output: Result<Message list, exn>
+        Output: Result<AnalyzerMessage list, exn>
     }
 
 module Client =
@@ -97,7 +97,15 @@ module Client =
                     try
                         let analyzer: Analyzer<'TContext> =
                             fun ctx ->
-                                m.Invoke(null, [| ctx |])
+                                // Without DoNotWrapExceptions, what the analyzer throws before it returns its async
+                                // arrives wrapped in a TargetInvocationException, which hides its message.
+                                m.Invoke(
+                                    null,
+                                    BindingFlags.DoNotWrapExceptions,
+                                    null,
+                                    [| ctx |],
+                                    null
+                                )
                                 |> unbox
 
                         Some analyzer
@@ -361,60 +369,10 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
                 FailedAssemblies = 0
             }
 
-    member x.RunAnalyzers(ctx: 'TContext) : Async<AnalyzerMessage list> =
+    member x.RunAnalyzers(ctx: 'TContext) : Async<AnalysisResult list> =
         x.RunAnalyzers(ctx, fun _ -> true)
 
     member x.RunAnalyzers
-        (ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool)
-        : Async<AnalyzerMessage list>
-        =
-        async {
-            let analyzers =
-                registeredAnalyzers.Values
-                |> Seq.collect id
-                |> Seq.filter analyzerPredicate
-
-            let! messagesPerAnalyzer =
-                analyzers
-                |> Seq.map (fun registeredAnalyzer ->
-                    try
-                        async {
-                            let! messages = registeredAnalyzer.Analyzer ctx
-
-                            return
-                                messages
-                                |> List.choose (fun message ->
-                                    let analyzerMessage =
-                                        {
-                                            Message = message
-                                            Name = registeredAnalyzer.Name
-                                            AssemblyPath = registeredAnalyzer.AssemblyPath
-                                            ShortDescription = registeredAnalyzer.ShortDescription
-                                            HelpUri = registeredAnalyzer.HelpUri
-                                        }
-
-                                    if Client.shouldIgnoreMessage ctx message then
-                                        None
-                                    else
-                                        Some analyzerMessage
-                                )
-                        }
-                    with error ->
-                        async.Return []
-                )
-                |> Async.Parallel
-
-            return
-                [
-                    for messages in messagesPerAnalyzer do
-                        yield! messages
-                ]
-        }
-
-    member x.RunAnalyzersSafely(ctx: 'TContext) : Async<AnalysisResult list> =
-        x.RunAnalyzersSafely(ctx, fun _ -> true)
-
-    member x.RunAnalyzersSafely
         (ctx: 'TContext, analyzerPredicate: Client.RegisteredAnalyzer<'TContext> -> bool)
         : Async<AnalysisResult list>
         =
@@ -427,15 +385,26 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
             let! results =
                 analyzers
                 |> Seq.map (fun registeredAnalyzer ->
+                    // The try must be inside the async: an analyzer returns an async, which throws when it runs, not when it is created.
                     async {
                         try
                             let! messages = registeredAnalyzer.Analyzer ctx
 
                             let messages =
                                 messages
-                                |> List.filter (
-                                    Client.shouldIgnoreMessage ctx
-                                    >> not
+                                |> List.choose (fun message ->
+                                    if Client.shouldIgnoreMessage ctx message then
+                                        None
+                                    else
+                                        Some
+                                            {
+                                                Message = message
+                                                Name = registeredAnalyzer.Name
+                                                AssemblyPath = registeredAnalyzer.AssemblyPath
+                                                ShortDescription =
+                                                    registeredAnalyzer.ShortDescription
+                                                HelpUri = registeredAnalyzer.HelpUri
+                                            }
                                 )
 
                             return

@@ -23,7 +23,22 @@ open FSharp.Analyzers.SDK
 let client = Client<CliAnalyzerAttribute, CliContext>()
 let countLoaded = client.LoadAnalyzers @"C:\MyAnalyzers"
 let ctx = Unchecked.defaultof<CliContext> // Construct your context...
-client.RunAnalyzers(ctx)
+
+(**
+`RunAnalyzers` does not throw. It returns a result per analyzer, with either the messages of that analyzer or the exception it threw.
+An analyzer that throws does not affect the messages of the other analyzers.
+*)
+
+async {
+    let! results = client.RunAnalyzers(ctx)
+
+    for result in results do
+        match result.Output with
+        | Ok messages ->
+            for message in messages do
+                printfn "%s: %s" message.Message.Code message.Message.Message
+        | Error error -> printfn "Analyzer %s failed: %s" result.AnalyzerName error.Message
+}
 
 (**
 [Previous]({{fsdocs-previous-page-link}})

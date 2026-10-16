@@ -23,6 +23,11 @@ dotnet fsharp-analyzers /
   --report ./analysis.sarif
 ```
 
+### Code that does not type check
+
+On CI, analyzers often run on a fresh checkout. A project whose referenced projects are not built, or a script that `#r`s an assembly that is not built, does not type check, and analyzers using the typed tree cannot see that code.
+Pass `--fail-on-type-errors` to make such a run fail instead of passing with incomplete results. See [Command Line Arguments](getting-started/CLI.html#Code-That-Does-Not-Type-Check).
+
 ### Code root
 
 Use the `--code-root` flag to specify the root directory where all reported problems should be relative to.

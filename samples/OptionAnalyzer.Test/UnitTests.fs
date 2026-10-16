@@ -416,7 +416,7 @@ module IgnoreRangeTests =
 
 module ClientTests =
 
-    module RunAnalyzersSafelyTests =
+    module TransparentCompilerTests =
 
         let mutable projectOptions: FSharpProjectSnapshot = FSharpProjectSnapshot.zero
 
@@ -432,86 +432,81 @@ module ClientTests =
             }
 
         [<Test>]
-        let ``run analyzers safely captures messages`` () =
+        let ``run analyzers captures messages`` () =
             async {
                 let! ctx =
                     getContext projectOptions ClientTestSources.optionValue
                     |> Async.AwaitTask
 
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzersSafely(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                messages
-                |> assertSafeResult false
+                results |> assertResult false
             }
 
         [<Test>]
-        let ``run analyzer safely ignores next line comment properly`` () =
+        let ``run analyzer ignores next line comment properly`` () =
             async {
                 let! ctx =
                     getContext projectOptions ClientTestSources.ignoreNextLine
                     |> Async.AwaitTask
 
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzersSafely(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                messages
-                |> assertSafeResult true
+                results |> assertResult true
             }
 
         [<Test>]
-        let ``run analyzer safely ignores current line comment properly`` () =
+        let ``run analyzer ignores current line comment properly`` () =
             async {
                 let! ctx =
                     getContext projectOptions ClientTestSources.ignoreCurrentLine
                     |> Async.AwaitTask
 
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzersSafely(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                messages
-                |> assertSafeResult true
+                results |> assertResult true
             }
 
         [<Test>]
-        let ``run analyzer safely ignores file comment properly`` () =
+        let ``run analyzer ignores file comment properly`` () =
             async {
                 let! ctx =
                     getContext projectOptions ClientTestSources.ignoreFile
                     |> Async.AwaitTask
 
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzersSafely(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                messages
-                |> assertSafeResult true
+                results |> assertResult true
             }
 
         [<Test>]
-        let ``run analyzer safely ignores range comment properly`` () =
+        let ``run analyzer ignores range comment properly`` () =
             async {
                 let! ctx =
                     getContext projectOptions ClientTestSources.ignoreRange
                     |> Async.AwaitTask
 
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzersSafely(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
 
-                messages
-                |> assertSafeResult true
+                results |> assertResult true
             }
 
-    module RunAnalyzersTests =
+    module BackgroundCompilerTests =
 
         let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
 
@@ -527,10 +522,10 @@ module ClientTests =
             async {
                 let ctx = getContext projectOptions ClientTestSources.optionValue
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzers(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
-                Assert.That(messages, Is.Not.Empty)
+                results |> assertResult false
             }
 
         [<Test>]
@@ -538,10 +533,10 @@ module ClientTests =
             async {
                 let ctx = getContext projectOptions ClientTestSources.ignoreNextLine
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzers(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
-                Assert.That(messages, Is.Empty)
+                results |> assertResult true
             }
 
         [<Test>]
@@ -549,10 +544,10 @@ module ClientTests =
             async {
                 let ctx = getContext projectOptions ClientTestSources.ignoreCurrentLine
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzers(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
-                Assert.That(messages, Is.Empty)
+                results |> assertResult true
             }
 
         [<Test>]
@@ -560,10 +555,10 @@ module ClientTests =
             async {
                 let ctx = getContext projectOptions ClientTestSources.ignoreFile
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzers(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
-                Assert.That(messages, Is.Empty)
+                results |> assertResult true
             }
 
         [<Test>]
@@ -571,8 +566,8 @@ module ClientTests =
             async {
                 let ctx = getContext projectOptions ClientTestSources.ignoreRange
                 let client, stats = loadAnalyzers ()
-                let! messages = client.RunAnalyzers(ctx)
+                let! results = client.RunAnalyzers(ctx)
 
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
-                Assert.That(messages, Is.Empty)
+                results |> assertResult true
             }

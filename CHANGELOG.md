@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.41.0] - 2026-10-16
+
+### Added
+
+- [A run where a project or script does not type check no longer looks clean outside the log](https://github.com/ionide/FSharp.Analyzers.SDK/issues/350). The SARIF report lists every type error as a `toolExecutionNotifications` entry and sets `executionSuccessful` to `false`. Pass `--fail-on-type-errors` to also exit with code `-5` (`TypeCheckFailed`) in that case. The switch is opt-in, so a run that analyzes before building keeps its exit code. A `#load` or `#r` in a script that cannot be resolved counts as a type error too.
+
+### Changed
+
+- *Breaking*: `Client.RunAnalyzersSafely` is now `Client.RunAnalyzers`, and the old `Client.RunAnalyzers`, which only returned the messages, is gone. It hid an analyzer that threw in the log, so a caller could not tell its messages were missing. `RunAnalyzers` returns an `AnalysisResult` per analyzer and does not throw. To get only the messages, collect the `Ok` outputs.
+- *Breaking*: `AnalysisResult.Output` is now `Result<AnalyzerMessage list, exn>` instead of `Result<Message list, exn>`, so a caller keeps the name, help link and short description of the analyzer behind each message. Read `.Message` on each item to get the `Message` as before.
+- An error from loading a script, such as a `#load` that cannot be resolved, is no longer logged at error level as `Script ... has a diagnostic`. It is logged with the type errors, as a warning under `did not type check`, and each type error now names its file and error code. A warning from loading a script is still logged as `Script ... has a diagnostic`, but at warning level instead of error level.
+
+### Fixed
+
+- File paths in the SARIF report and in `--output-format github` are relative to the code root. Without a trailing separator on `--code-root` (or the current directory, its default), every path started with the name of the code root directory, such as `repo/src/A.fs` instead of `src/A.fs`. A code root with a trailing separator is unaffected. GitHub code scanning re-creates open alerts once at the corrected paths, because it ties an alert to its file path.
+- `--warnaserror`, which `TreatWarningsAsErrors` passes to the compiler, is ignored when type checking for the analyzers, so a warning no longer counts as a type error.
+- An analyzer that throws no longer crashes the CLI. Its exception is logged, the other analyzers keep their messages, the SARIF report lists the failure as a `toolExecutionNotifications` entry with `executionSuccessful` set to `false`, and the CLI exits with `-4` (`AnalysisAborted`). Previously the run stopped with exit code `22`, without a SARIF report and without the messages of the other analyzers.
+- An analyzer written as a function that throws before it returns its `Async` now reports its own exception, instead of a `TargetInvocationException` with the message `Exception has been thrown by the target of an invocation.`
+
 ## [0.40.0] - 2026-10-13
 
 ### Changed

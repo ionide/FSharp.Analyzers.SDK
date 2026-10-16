@@ -153,6 +153,7 @@ let main argv =
         | None -> fscArgs
 
     let report = results.TryGetResult <@ Report @>
+    let failOnTypeErrors = results.Contains <@ Fail_On_Type_Errors @>
     let codeRoot = results.TryGetResult <@ Code_Root @>
 
     let cwd =
@@ -308,6 +309,7 @@ let main argv =
             | Some fscArgs ->
                 runFscArgs logger checker client fscArgs exclInclFiles severityMapping
                 |> Async.RunSynchronously
+                |> List.singleton
                 |> Some
             | None ->
                 match projOpts, scripts with
@@ -353,48 +355,60 @@ let main argv =
 
                         let loadedProjects =
                             Array.toList scriptOptions
-                            @ loadedProjects
+                            @ (loadedProjects
+                               |> List.map (fun projectOptions -> projectOptions, []))
 
                         return!
                             loadedProjects
-                            |> List.map (fun (projPath: FSharpProjectOptions) ->
+                            |> List.map (fun (projPath: FSharpProjectOptions, loadErrors) ->
                                 runProject
                                     logger
                                     checker
                                     client
                                     projPath
+                                    loadErrors
                                     exclInclFiles
                                     severityMapping
                             )
                             |> Async.Parallel
                     }
                     |> Async.RunSynchronously
-                    |> List.concat
+                    |> Array.toList
                     |> Some
 
     match results with
     | None -> int ExitErrorCodes.NoAnalyzersFound
     | Some results ->
-        let results, hasError =
+        let typeCheckFailures =
+            results
+            |> List.choose _.TypeCheckFailure
+
+        let results =
+            results
+            |> List.collect _.Results
+
+        let results, analyzerFailures =
             match Result.allOkOrError results with
-            | Ok results -> results, false
-            | Error(results, _errors) -> results, true
+            | Ok results -> results, []
+            | Error(results, failures) -> results, failures
 
         let results = results |> List.concat
 
         let codeRoot =
             match codeRoot with
+            | Some root -> codeRootUri root
             | None ->
                 Directory.GetCurrentDirectory()
-                |> Uri
-            | Some root -> Path.GetFullPath root |> Uri
+                |> codeRootUri
 
         match outputFormat with
         | OutputFormat.Default -> printMessagesInDefaultFormat logger results
         | OutputFormat.GitHub -> printMessagesInGitHubFormat logger codeRoot results
 
         report
-        |> Option.iter (SarifReport.writeReport logger results codeRoot)
+        |> Option.iter (
+            SarifReport.writeReport logger results typeCheckFailures analyzerFailures codeRoot
+        )
 
         let check =
             results
@@ -412,6 +426,21 @@ let main argv =
 
             exit (int ExitErrorCodes.FailedAssemblyLoading)
 
-        if check then (int ExitErrorCodes.AnalyzerFoundError)
-        elif hasError then (int ExitErrorCodes.AnalysisAborted)
-        else (int ExitErrorCodes.Success)
+        if check then
+            (int ExitErrorCodes.AnalyzerFoundError)
+        elif not (List.isEmpty analyzerFailures) then
+            (int ExitErrorCodes.AnalysisAborted)
+        elif
+            failOnTypeErrors
+            && not (List.isEmpty typeCheckFailures)
+        then
+            logger.LogError(
+                "Exiting because {0} did not type check and --fail-on-type-errors was passed",
+                (typeCheckFailures
+                 |> List.map _.ProjectFileName
+                 |> String.concat ", ")
+            )
+
+            (int ExitErrorCodes.TypeCheckFailed)
+        else
+            (int ExitErrorCodes.Success)

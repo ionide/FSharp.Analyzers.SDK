@@ -26,6 +26,7 @@ type Arguments =
     | [<Unique; AltCommandLine("-v")>] Verbosity of string
     | [<Unique>] Output_Format of string
     | [<Unique>] BinLog_Path of string
+    | [<Unique>] Fail_On_Type_Errors
 
     interface IArgParserTemplate with
         member s.Usage =
@@ -68,6 +69,8 @@ type Arguments =
                 "Format in which to write analyzer results to stdout. The available options are: default, github."
             | BinLog_Path(_) ->
                 "Path to a directory where MSBuild binary logs (binlog) will be written. You can use https://msbuildlog.com/ to view them."
+            | Fail_On_Type_Errors ->
+                "Exit with a non-zero code when a project or script does not type check. Analyzers using the typed tree cannot see code that failed to type check, so the run is incomplete."
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Arguments =

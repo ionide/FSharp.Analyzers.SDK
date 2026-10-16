@@ -5,7 +5,8 @@ open Microsoft.Extensions.Logging
 type AnalysisResult =
     {
         AnalyzerName: string
-        Output: Result<Message list, exn>
+        /// The messages of the analyzer, or the exception it threw.
+        Output: Result<AnalyzerMessage list, exn>
     }
 
 module Client =
@@ -48,27 +49,16 @@ type Client<'TAttribute, 'TContext when 'TAttribute :> AnalyzerAttribute and 'TC
     /// <returns>number of found dlls matching `*Analyzer*.dll` and number of registered analyzers</returns>
     member LoadAnalyzers: dir: string * ?excludeInclude: ExcludeInclude -> AssemblyLoadStats
     /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <remarks>Does not throw. An analyzer that throws only fails its own result, the other analyzers keep their messages.</remarks>
     /// <param name="ctx">The context (file) to analyze.</param>
-    /// <returns>list of messages. Ignores errors from the analyzers</returns>
-    member RunAnalyzers: ctx: 'TContext -> Async<AnalyzerMessage list>
+    /// <returns>list of results per analyzer which can either be messages or the exception the analyzer threw.</returns>
+    member RunAnalyzers: ctx: 'TContext -> Async<AnalysisResult list>
 
     /// <summary>Runs all registered analyzers for given context (file).</summary>
+    /// <remarks>Does not throw. An analyzer that throws only fails its own result, the other analyzers keep their messages.</remarks>
     /// <param name="ctx">The context (file) to analyze.</param>
     /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
-    /// <returns>list of messages. Ignores errors from the analyzers</returns>
+    /// <returns>list of results per analyzer which can either be messages or the exception the analyzer threw.</returns>
     member RunAnalyzers:
-        ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) ->
-            Async<AnalyzerMessage list>
-
-    /// <summary>Runs all registered analyzers for given context (file).</summary>
-    /// <param name="ctx">The context (file) to analyze.</param>
-    /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
-    member RunAnalyzersSafely: ctx: 'TContext -> Async<AnalysisResult list>
-
-    /// <summary>Runs all registered analyzers for given context (file).</summary>
-    /// <param name="ctx">The context (file) to analyze.</param>
-    /// <param name="analyzerPredicate">A predicate function to filter which analyzers to run.</param>
-    /// <returns>list of results per analyzer which can either be messages or an exception.</returns>
-    member RunAnalyzersSafely:
         ctx: 'TContext * analyzerPredicate: (Client.RegisteredAnalyzer<'TContext> -> bool) ->
             Async<AnalysisResult list>

@@ -3,11 +3,22 @@ module FSharp.Analyzers.Cli.ProjectLoading
 open System
 open System.IO
 open FSharp.Compiler.CodeAnalysis
+open FSharp.Compiler.Diagnostics
 open FSharp.Compiler.Text
 open GlobExpressions
 open Microsoft.Extensions.Logging
 open Ionide.ProjInfo
 open Ionide.ProjInfo.Types
+
+/// <summary>
+/// Whether the compiler option is one of the <c>--warnaserror</c> flags, such as the ones <c>TreatWarningsAsErrors</c> passes.
+/// </summary>
+/// <remarks>
+/// They give a warning error severity, so a project with a warning would look as if it did not type check,
+/// while its typed tree is complete. Analyzers do not need them, so the CLI removes them before type checking.
+/// </remarks>
+let isWarnAsError (option: string) =
+    option.StartsWith("--warnaserror", StringComparison.Ordinal)
 
 /// <summary>Runs MSBuild to create FSharpProjectOptions based on the projPaths.</summary>
 /// <returns>Returns only the FSharpProjectOptions based on the projPaths and not any referenced projects.</returns>
@@ -56,6 +67,18 @@ let loadProjects
         if Seq.length failedLoads > 0 then
             logger.LogError("Failed to load project '{0}'", failedLoads)
             exit (int ExitErrorCodes.FailedToLoadProject)
+
+        // Removed before mapping, so a project and the projects referencing it agree on its options.
+        // Otherwise FCS would type check a referenced project twice.
+        let projectOptions =
+            projectOptions
+            |> Seq.map (fun p ->
+                { p with
+                    OtherOptions =
+                        p.OtherOptions
+                        |> List.filter (isWarnAsError >> not)
+                }
+            )
 
         let loaded =
             FCS.mapManyOptions projectOptions
@@ -165,7 +188,9 @@ let fsiSettingsFlags (logger: ILogger) (ToolsPath toolsPath) =
 
         Array.empty
 
-/// Creates FSharpProjectOptions for each script.
+/// Creates FSharpProjectOptions for each script, together with the errors from loading it.
+/// A <c>#load</c> or <c>#r</c> that cannot be resolved is an error here and not in the type check of the script,
+/// so the code it would have brought in is missing without anything in the typed tree to show for it.
 let loadScripts
     (logger: ILogger)
     (toolsPath: ToolsPath)
@@ -200,18 +225,20 @@ let loadScripts
                     otherFlags = otherFlags
                 )
 
-            if not (List.isEmpty diagnostics) then
+            // The errors are logged with the type errors of the script, by runProject.
+            let loadErrors, otherDiagnostics =
                 diagnostics
-                |> List.iter (fun d ->
-                    logger.LogError(
-                        "Script {0} has a diagnostic: {1} at {2}",
-                        script,
-                        d.Message,
-                        d.Range
-                    )
+                |> List.partition (fun d -> d.Severity = FSharpDiagnosticSeverity.Error)
+
+            for d in otherDiagnostics do
+                logger.LogWarning(
+                    "Script {0} has a diagnostic: {1} at {2}",
+                    script,
+                    d.Message,
+                    d.Range
                 )
 
-            return options
+            return options, loadErrors
         }
     )
     |> Async.Sequential
