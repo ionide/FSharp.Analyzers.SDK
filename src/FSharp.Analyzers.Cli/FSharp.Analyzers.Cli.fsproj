@@ -18,6 +18,7 @@
     <Compile Include="CustomLogging.fs" />
     <Compile Include="Result.fs" />
     <Compile Include="ExitErrorCodes.fs" />
+    <Compile Include="Failures.fs" />
     <Compile Include="Arguments.fs" />
     <Compile Include="SeverityMapping.fs" />
     <Compile Include="Output.fs" />

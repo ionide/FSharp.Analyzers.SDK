@@ -8,7 +8,7 @@ open FSharp.Compiler.Diagnostics
 open FSharp.Analyzers.SDK
 
 /// Compiles the source to a library at outputPath, referencing the assemblies this test runs with.
-let private compile (references: string list) (outputPath: string) (source: string) =
+let compile (references: string list) (outputPath: string) (source: string) =
     let sourcePath = Path.ChangeExtension(outputPath, ".fs")
     File.WriteAllText(sourcePath, source)
 

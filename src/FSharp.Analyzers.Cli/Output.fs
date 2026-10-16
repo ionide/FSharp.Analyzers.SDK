@@ -1,6 +1,7 @@
 module FSharp.Analyzers.Cli.Output
 
 open System
+open System.IO
 open Microsoft.Extensions.Logging
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.Cli.CustomLogging
@@ -15,6 +16,24 @@ let parseOutputFormat =
     | "github" -> Ok OutputFormat.GitHub
     | "default" -> Ok OutputFormat.Default
     | other -> Error $"Unknown output format: %s{other}."
+
+/// <summary>
+/// The URI of the directory that file paths in the report are relative to.
+/// </summary>
+/// <remarks>
+/// Without a trailing separator, <c>Uri.MakeRelativeUri</c> treats the last segment as a file,
+/// so <c>/repo/src/A.fs</c> becomes <c>repo/src/A.fs</c> instead of <c>src/A.fs</c>.
+/// </remarks>
+let codeRootUri (path: string) =
+    let path = Path.GetFullPath path
+
+    if Path.EndsInDirectorySeparator path then
+        Uri path
+    else
+        Uri(
+            path
+            + string Path.DirectorySeparatorChar
+        )
 
 let printMessagesInDefaultFormat (logger: ILogger) (msgs: AnalyzerMessage list) =
 

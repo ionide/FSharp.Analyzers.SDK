@@ -30,7 +30,7 @@ let mkTestProjectOptions () =
 let mkTestProjectSnapshot () =
     mkSnapshotFromProject runtimeTfm testPackages
 
-/// Source snippets shared by RunAnalyzersSafely and RunAnalyzers tests.
+/// Source snippets shared by the RunAnalyzers tests.
 module ClientTestSources =
 
     let optionValue =
@@ -90,9 +90,9 @@ let loadAnalyzers () =
     let stats = client.LoadAnalyzers(path)
     client, stats
 
-/// Assert that the first AnalysisResult from RunAnalyzersSafely
+/// Assert that the first AnalysisResult from RunAnalyzers
 /// contains messages (expectEmpty = false) or is empty (expectEmpty = true).
-let assertSafeResult expectEmpty (results: AnalysisResult list) =
+let assertResult expectEmpty (results: AnalysisResult list) =
     match List.tryHead results with
     | Some result ->
         match result.Output with

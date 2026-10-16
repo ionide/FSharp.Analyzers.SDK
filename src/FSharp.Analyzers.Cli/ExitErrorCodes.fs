@@ -6,6 +6,7 @@ type ExitErrorCodes =
     | AnalyzerFoundError = -2
     | FailedAssemblyLoading = -3
     | AnalysisAborted = -4
+    | TypeCheckFailed = -5
     | FailedToLoadProject = 10
     | EmptyFscArgs = 11
     | MissingPropertyValue = 12
