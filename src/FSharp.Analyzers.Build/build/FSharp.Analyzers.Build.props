@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <AnalyzeFSharpProject Condition="'$(AnalyzeFSharpProject)' == ''">true</AnalyzeFSharpProject>
+    <EnforceFSharpAnalysisOnBuild Condition="'$(EnforceFSharpAnalysisOnBuild)' == ''">true</EnforceFSharpAnalysisOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Analyzer properties">
+    <FSharpAnalyzersCodeRoot Condition="$(FSharpAnalyzersCodeRoot) == ''">.</FSharpAnalyzersCodeRoot>
+    <FSharpAnalyzersVerbosity Condition="$(FSharpAnalyzersVerbosity) == ''">d</FSharpAnalyzersVerbosity>
+    <FSharpAnalyzersOutputFormat Condition="$(FSharpAnalyzersOutputFormat) == ''">github</FSharpAnalyzersOutputFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectsToAnalyze Include="**/*.fsproj" />
+  </ItemGroup>
+
+</Project>
