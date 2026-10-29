@@ -1,85 +1,86 @@
 <Project>
 
+  <PropertyGroup>
+    <!-- Used for dotnet host discovery -->
+    <FSharpAnalyzersExeHost Condition="'$(FSharpAnalyzersExeHost)' == ''">dotnet</FSharpAnalyzersExeHost>
+    <!-- Points to the dotnet tool or the FSharp.Analyzers.Cli.dll for debugging -->
+    <FSharpAnalyzersExe Condition="'$(FSharpAnalyzersExe)' == ''">fsharp-analyzers</FSharpAnalyzersExe>
+    <!-- The build will continue even if the analyzer fails -->
+    <FSharpAnalyzersContinueOnError Condition="'$(FSharpAnalyzersContinueOnError)' == ''">true</FSharpAnalyzersContinueOnError>
+    <_FSharpAnalyzersProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_FSharpAnalyzersProjectOptions>
+  </PropertyGroup>
+
+  <Target Name="_AnalyzeFSharpProject">
+    <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+    <Exec
+      ContinueOnError="$(FSharpAnalyzersContinueOnError)"
+      IgnoreExitCode="true"
+      Command="$(FSharpAnalyzersExeHost) $(FSharpAnalyzersExe) $(_FSharpAnalyzersProjectOptions) $(FSharpAnalyzersOtherFlags)" />
+  </Target>
+
+  <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
+
+  <Target Name="_FSharpAnalyzersDetermineRunAnalyzersValues" BeforeTargets="CoreCompile">
+    <!-- 
+      Roslyn uses multiple values for determining whether to run analyzers 
+      see: https://learn.microsoft.com/en-us/visualstudio/code-quality/disable-code-analysis?view=vs-2019#net-framework-projects-1
+
+      RunAnalyzersDuringBuild : 	Controls whether analyzers run at build time.
+      RunAnalyzers:  It takes precedence over RunAnalyzersDuringBuild
+    -->
     <PropertyGroup>
-        <!-- Used for dotnet host discovery -->
-        <FSharpAnalyzersExeHost Condition="'$(FSharpAnalyzersExeHost)' == ''">dotnet</FSharpAnalyzersExeHost>
-        <!-- Points to the dotnet tool or the FSharp.Analyzers.Cli.dll for debugging -->
-        <FSharpAnalyzersExe Condition="'$(FSharpAnalyzersExe)' == ''">fsharp-analyzers</FSharpAnalyzersExe>
-        <!-- The build will continue even if the analyzer fails -->
-        <FSharpAnalyzersContinueOnError Condition="'$(FSharpAnalyzersContinueOnError)' == ''">true</FSharpAnalyzersContinueOnError>
-        <_FSharpAnalyzersProjectOptions>--project &quot;$(MSBuildProjectFile)&quot;</_FSharpAnalyzersProjectOptions>
+      <_FSharpAnalyzersRunDuringBuild Condition="'$(RunAnalyzersDuringBuild)' != ''">$(RunAnalyzersDuringBuild)</_FSharpAnalyzersRunDuringBuild>
+      <_FSharpAnalyzersRunDuringBuild Condition="'$(RunAnalyzers)' != ''">$(RunAnalyzers)</_FSharpAnalyzersRunDuringBuild>
     </PropertyGroup>
+  </Target>
 
-    <Target Name="_AnalyzeFSharpProject">
-        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
-        <Exec
-                ContinueOnError="$(FSharpAnalyzersContinueOnError)"
-                IgnoreExitCode="true"
-                Command="$(FSharpAnalyzersExeHost) $(FSharpAnalyzersExe) $(_FSharpAnalyzersProjectOptions) $(FSharpAnalyzersOtherFlags)" />
-    </Target>
+  <Target
+      Name="_SetupFSharpAnalyzerProjectOptions"
+      DependsOnTargets="_FSharpAnalyzersDetermineRunAnalyzersValues"
+      BeforeTargets="CoreCompile"
+      Condition="'$(_FSharpAnalyzersRunDuringBuild)' == 'true'">
+    <PropertyGroup>
+      <!-- 
+        Required for F# Targets CoreCompile to output command line arguments 
+        https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Fsc.fs#L721-L725 
+        https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Microsoft.FSharp.Targets#L418C19-L418C32
+       -->
+      <ProvideCommandLineArgs>true</ProvideCommandLineArgs>
+    </PropertyGroup>
+  </Target>
 
-    <Target Name="AnalyzeFSharpProject" DependsOnTargets="_AnalyzeFSharpProject" />
+  <Target
+      Name="_FSharpAnalyzerAfterBuild"
+      DependsOnTargets="_SetupFSharpAnalyzerProjectOptions;CoreCompile"
+      AfterTargets="AfterBuild"
+      Condition="'$(_FSharpAnalyzersRunDuringBuild)' == 'true'">
+    <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
+    <PropertyGroup>
+      <!-- 
+        If FscCommandLineArgs is empty, then CoreCompile did not run, we'll try to skip running the analyzer if this wasn't explicitly set to true
+      -->
+      <FSharpAnalyzersAlwaysRunAfterBuild Condition="'$(FSharpAnalyzersAlwaysRunAfterBuild)' == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzersAlwaysRunAfterBuild>
+      <!-- Define the RSP file path in the intermediate output directory -->
+      <_FSharpAnalyzersFscArgsFile Condition="'$(IntermediateOutputPath)' != '' and '@(FscCommandLineArgs->Count())' != '0'">$(IntermediateOutputPath)fsc-analyzers.rsp</_FSharpAnalyzersFscArgsFile>
+    </PropertyGroup>
+    <!-- Write FscCommandLineArgs to RSP file to avoid command-line length limits -->
+    <WriteLinesToFile
+      Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''"
+      File="$(_FSharpAnalyzersFscArgsFile)"
+      Lines="@(FscCommandLineArgs)"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true" />
+    <PropertyGroup>
+      <!-- Use RSP file if it was created, otherwise fall back to direct args -->
+      <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''">--fsc-args-file &quot;$(_FSharpAnalyzersFscArgsFile)&quot;</_FSharpAnalyzersProjectOptions>
+      <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' == '' and '@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzersProjectOptions>
+    </PropertyGroup>
+    <Exec
+      ContinueOnError="$(FSharpAnalyzersContinueOnError)"
+      Condition="'$(FSharpAnalyzersAlwaysRunAfterBuild)' == 'true'"
+      Command="$(FSharpAnalyzersExeHost) $(FSharpAnalyzersExe) $(_FSharpAnalyzersProjectOptions) $(FSharpAnalyzersOtherFlags)" />
+  </Target>
 
-    <Target Name="_FSharpAnalyzersDetermineRunAnalyzersValues" BeforeTargets="CoreCompile">
-        <!-- 
-            Roslyn uses multiple values for determining whether to run analyzers 
-            see: https://learn.microsoft.com/en-us/visualstudio/code-quality/disable-code-analysis?view=vs-2019#net-framework-projects-1
+  <Target Name="FSharpAnalyzerAfterBuild" DependsOnTargets="_FSharpAnalyzerAfterBuild"/>
 
-            RunAnalyzersDuringBuild : 	Controls whether analyzers run at build time.
-            RunAnalyzers:  It takes precedence over RunAnalyzersDuringBuild
-        -->
-        <PropertyGroup>
-            <_FSharpAnalyzersRunDuringBuild Condition="'$(RunAnalyzersDuringBuild)' != ''">$(RunAnalyzersDuringBuild)</_FSharpAnalyzersRunDuringBuild>
-            <_FSharpAnalyzersRunDuringBuild Condition="'$(RunAnalyzers)' != ''">$(RunAnalyzers)</_FSharpAnalyzersRunDuringBuild>
-        </PropertyGroup>
-    </Target>
-
-    <Target 
-        Name="_SetupFSharpAnalyzerProjectOptions" 
-        DependsOnTargets="_FSharpAnalyzersDetermineRunAnalyzersValues"
-        BeforeTargets="CoreCompile" 
-        Condition="'$(_FSharpAnalyzersRunDuringBuild)' == 'true'">
-        <PropertyGroup>
-            <!-- 
-                Required for F# Targets CoreCompile to output command line arguments 
-                https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Fsc.fs#L721-L725 
-                https://github.com/dotnet/fsharp/blob/53929f2e01281a614a15033dfaae6fb6d00bb543/src/FSharp.Build/Microsoft.FSharp.Targets#L418C19-L418C32
-            -->
-            <ProvideCommandLineArgs>true</ProvideCommandLineArgs>
-        </PropertyGroup>
-    </Target>
-
-    <Target 
-        Name="_FSharpAnalyzerAfterBuild" 
-        DependsOnTargets="_SetupFSharpAnalyzerProjectOptions;CoreCompile" 
-        AfterTargets="AfterBuild" 
-        Condition="'$(_FSharpAnalyzersRunDuringBuild)' == 'true'">
-        <Error Condition="$(FSharpAnalyzersOtherFlags) == ''" Text="A property FSharpAnalyzersOtherFlags should exists with all the analyzer cli arguments!" />
-        <PropertyGroup>
-            <!-- 
-                If FscCommandLineArgs is empty, then CoreCompile did not run, we'll try to skip running the analyzer if this wasn't explicitly set to true
-            -->
-            <FSharpAnalyzersAlwaysRunAfterBuild Condition="'$(FSharpAnalyzersAlwaysRunAfterBuild)' == '' and '@(FscCommandLineArgs->Count())' != '0'">true</FSharpAnalyzersAlwaysRunAfterBuild>
-            <!-- Define the RSP file path in the intermediate output directory -->
-            <_FSharpAnalyzersFscArgsFile Condition="'$(IntermediateOutputPath)' != '' and '@(FscCommandLineArgs->Count())' != '0'">$(IntermediateOutputPath)fsc-analyzers.rsp</_FSharpAnalyzersFscArgsFile>
-        </PropertyGroup>
-        <!-- Write FscCommandLineArgs to RSP file to avoid command-line length limits -->
-        <WriteLinesToFile 
-            Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''"
-            File="$(_FSharpAnalyzersFscArgsFile)"
-            Lines="@(FscCommandLineArgs)"
-            Overwrite="true"
-            WriteOnlyWhenDifferent="true" />
-        <PropertyGroup>
-            <!-- Use RSP file if it was created, otherwise fall back to direct args -->
-            <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' != ''">--fsc-args-file &quot;$(_FSharpAnalyzersFscArgsFile)&quot;</_FSharpAnalyzersProjectOptions>
-            <_FSharpAnalyzersProjectOptions Condition="'$(_FSharpAnalyzersFscArgsFile)' == '' and '@(FscCommandLineArgs->Count())' != '0'">--fsc-args &quot;@(FscCommandLineArgs)&quot;</_FSharpAnalyzersProjectOptions>
-        </PropertyGroup>
-        <Exec
-                ContinueOnError="$(FSharpAnalyzersContinueOnError)"
-                Condition="'$(FSharpAnalyzersAlwaysRunAfterBuild)' == 'true'"
-                Command="$(FSharpAnalyzersExeHost) $(FSharpAnalyzersExe) $(_FSharpAnalyzersProjectOptions) $(FSharpAnalyzersOtherFlags)" />
-    </Target>
-
-    <Target Name="FSharpAnalyzerAfterBuild" DependsOnTargets="_FSharpAnalyzerAfterBuild"/>
 </Project>
