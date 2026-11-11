@@ -571,3 +571,40 @@ module ClientTests =
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
                 results |> assertResult true
             }
+
+module TypedTreeTests =
+
+    let countCalls (tree: FSharp.Compiler.Symbols.FSharpImplementationFileContents) =
+        let mutable calls = 0
+
+        let collector =
+            { new TASTCollecting.TypedTreeCollectorBase() with
+                override _.WalkCall _ _ _ _ _ _ = calls <- calls + 1
+            }
+
+        TASTCollecting.walkTast collector tree
+        calls
+
+    [<Test>]
+    let ``declarations of a typed tree are converted once and shared`` () =
+        let ctx = getContext projectOptions ClientTestSources.optionValue
+
+        match ctx.TypedTree with
+        | None -> Assert.Fail "Expected a typed tree"
+        | Some tree ->
+            let first = TASTCollecting.getDeclarations tree
+            let second = TASTCollecting.getDeclarations tree
+
+            Assert.That(obj.ReferenceEquals(first, second), Is.True)
+
+    [<Test>]
+    let ``walking the shared declarations visits the same calls every time`` () =
+        let ctx = getContext projectOptions ClientTestSources.optionValue
+
+        match ctx.TypedTree with
+        | None -> Assert.Fail "Expected a typed tree"
+        | Some tree ->
+            let first = countCalls tree
+
+            Assert.That(first, Is.GreaterThan 0)
+            Assert.That(countCalls tree, Is.EqualTo first)

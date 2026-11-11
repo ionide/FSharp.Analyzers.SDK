@@ -492,6 +492,34 @@ module TASTCollecting =
                     logger.LogDebug("{0}", ex.StackTrace)
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
+    // FSharpImplementationFileContents.Declarations converts the whole typed tree into fresh objects on each access,
+    // so every analyzer walking the same file would pay for the conversion again. The list is shared per file instead.
+    let private declarationsCache =
+        System.Runtime.CompilerServices.ConditionalWeakTable<
+            FSharpImplementationFileContents,
+            Lazy<FSharpImplementationFileDeclaration list>
+         >()
+
+    let getDeclarations
+        (tast: FSharpImplementationFileContents)
+        : FSharpImplementationFileDeclaration list
+        =
+        // FSharpExpr converts its sub expressions on first access without synchronization, so concurrent walkers
+        // over the same tree would each convert it again. One walk here materializes the tree before it is shared.
+        declarationsCache
+            .GetValue(
+                tast,
+                fun tast ->
+                    lazy
+                        (let declarations = tast.Declarations
+
+                         declarations
+                         |> List.iter (visitDeclaration (TypedTreeCollectorBase()))
+
+                         declarations)
+            )
+            .Value
+
     let walkTast (walker: TypedTreeCollectorBase) (tast: FSharpImplementationFileContents) : unit =
-        tast.Declarations
+        getDeclarations tast
         |> List.iter (visitDeclaration walker)

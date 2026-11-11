@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Analyzers that walk the typed tree no longer each convert it again. `FSharpImplementationFileContents.Declarations` rebuilds the tree on every access and `FSharpExpr` converts its sub expressions on first use without synchronization, so analyzers running in parallel on the same file each paid for the whole conversion. `TASTCollecting.walkTast` now materializes a file's declarations once and shares them, and the CLI does so before the analyzers of a file run in parallel. Analyzers that read `Declarations` directly can call the new `TASTCollecting.getDeclarations` to share the same tree.
+
 ## [0.41.0] - 2026-10-16
 
 ### Added
