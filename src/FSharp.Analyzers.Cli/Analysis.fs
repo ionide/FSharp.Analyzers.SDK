@@ -152,18 +152,6 @@ let runProject
                                 analyzerOptions
 
                         logger.LogInformation("Running analyzers for {0}", ctx.FileName)
-
-                        // Materialized here, on one thread, so the analyzers running in parallel below share one typed tree.
-                        // A tree that fails to convert fails again inside each analyzer, which is where it is reported.
-                        try
-                            ctx.TypedTree
-                            |> Option.iter (
-                                TASTCollecting.getDeclarations
-                                >> ignore
-                            )
-                        with _ ->
-                            ()
-
                         let! results = client.RunAnalyzers ctx
 
                         // An analyzer that throws only loses its own messages for this file, the other analyzers keep theirs.

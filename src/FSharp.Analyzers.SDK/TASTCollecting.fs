@@ -500,22 +500,45 @@ module TASTCollecting =
             Lazy<FSharpImplementationFileDeclaration list>
          >()
 
+    // FSharpExpr converts its sub expressions on first access without synchronization, so concurrent readers of a
+    // shared tree would each convert it again. This pass converts every expression up front, including the ones the
+    // walker above hands to a callback without visiting (ILFieldSet.valueExpr, TryWith.filterExpr, ignored members).
+    // ImmediateSubExpressions covers every expression case except the filter of a TryWith.
+    let rec private materializeExpr (e: FSharpExpr) =
+        for subExpr in e.ImmediateSubExpressions do
+            materializeExpr subExpr
+
+        match e with
+        | TryWith(_, _, filterExpr, _, _, _, _) -> materializeExpr filterExpr
+        | _ -> ()
+
+    // A body that fails to convert is left as it is: the walk that follows fails at the same place and reports it.
+    let rec private materializeDeclaration (d: FSharpImplementationFileDeclaration) =
+        match d with
+        | FSharpImplementationFileDeclaration.Entity(_, declarations) ->
+            List.iter materializeDeclaration declarations
+        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, body) ->
+            try
+                materializeExpr body
+            with _ ->
+                ()
+        | FSharpImplementationFileDeclaration.InitAction e ->
+            try
+                materializeExpr e
+            with _ ->
+                ()
+
     let getDeclarations
         (tast: FSharpImplementationFileContents)
         : FSharpImplementationFileDeclaration list
         =
-        // FSharpExpr converts its sub expressions on first access without synchronization, so concurrent walkers
-        // over the same tree would each convert it again. One walk here materializes the tree before it is shared.
         declarationsCache
             .GetValue(
                 tast,
                 fun tast ->
                     lazy
                         (let declarations = tast.Declarations
-
-                         declarations
-                         |> List.iter (visitDeclaration (TypedTreeCollectorBase()))
-
+                         List.iter materializeDeclaration declarations
                          declarations)
             )
             .Value
