@@ -492,6 +492,46 @@ module TASTCollecting =
                     logger.LogDebug("{0}", ex.StackTrace)
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
+    // Each read of FSharpImplementationFileContents.Declarations returns new FSharpExpr roots, and each new root
+    // converts its body again. The list is shared per file instead.
+    let private declarationsCache =
+        System.Runtime.CompilerServices.ConditionalWeakTable<
+            FSharpImplementationFileContents,
+            Lazy<FSharpImplementationFileDeclaration list>
+         >()
+
+    // FSharpExpr.E converts a whole top-level body on first read, without a lock, and builds every sub expression
+    // eagerly. Reading each root once is enough to force the tree before the list is shared.
+    // A body that fails to convert stays lazy. The analyzer walk then fails at the same place and reports the error.
+    let private forceBody (body: FSharpExpr) =
+        try
+            body.ImmediateSubExpressions
+            |> ignore
+        with _ ->
+            ()
+
+    let rec private forceDeclaration (d: FSharpImplementationFileDeclaration) =
+        match d with
+        | FSharpImplementationFileDeclaration.Entity(_, declarations) ->
+            List.iter forceDeclaration declarations
+        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, body) -> forceBody body
+        | FSharpImplementationFileDeclaration.InitAction e -> forceBody e
+
+    let getDeclarations
+        (tast: FSharpImplementationFileContents)
+        : FSharpImplementationFileDeclaration list
+        =
+        declarationsCache
+            .GetValue(
+                tast,
+                fun tast ->
+                    lazy
+                        (let declarations = tast.Declarations
+                         List.iter forceDeclaration declarations
+                         declarations)
+            )
+            .Value
+
     let walkTast (walker: TypedTreeCollectorBase) (tast: FSharpImplementationFileContents) : unit =
-        tast.Declarations
+        getDeclarations tast
         |> List.iter (visitDeclaration walker)

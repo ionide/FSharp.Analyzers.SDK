@@ -571,3 +571,90 @@ module ClientTests =
                 Assert.That(stats.AnalyzerNames, Does.Contain "OptionAnalyzer")
                 results |> assertResult true
             }
+
+module TypedTreeTests =
+
+    open FSharp.Compiler.Symbols
+
+    let mutable projectOptions: FSharpProjectOptions = FSharpProjectOptions.zero
+
+    [<OneTimeSetUp>]
+    let Setup () =
+        task {
+            let! opts = mkTestProjectOptions ()
+            projectOptions <- opts
+        }
+
+    let typedTreeOf source =
+        match (getContext projectOptions source).TypedTree with
+        | Some tree -> tree
+        | None -> failwith "Expected a typed tree"
+
+    let countCalls (tree: FSharpImplementationFileContents) =
+        let mutable calls = 0
+
+        let collector =
+            { new TASTCollecting.TypedTreeCollectorBase() with
+                override _.WalkCall _ _ _ _ _ _ = calls <- calls + 1
+            }
+
+        TASTCollecting.walkTast collector tree
+        calls
+
+    let rec bodiesOf (declarations: FSharpImplementationFileDeclaration list) =
+        [
+            for declaration in declarations do
+                match declaration with
+                | FSharpImplementationFileDeclaration.Entity(_, nested) -> yield! bodiesOf nested
+                | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, body) -> body
+                | FSharpImplementationFileDeclaration.InitAction body -> body
+        ]
+
+    [<Test>]
+    let ``declarations of a typed tree are converted once and shared`` () =
+        let tree = typedTreeOf ClientTestSources.optionValue
+        let first = TASTCollecting.getDeclarations tree
+        let second = TASTCollecting.getDeclarations tree
+
+        Assert.That(obj.ReferenceEquals(first, second), Is.True)
+
+    [<Test>]
+    let ``walkTast hands the collector the bodies that getDeclarations returns`` () =
+        let tree = typedTreeOf ClientTestSources.optionValue
+        let expectedBodies = bodiesOf (TASTCollecting.getDeclarations tree)
+        let walkedBodies = ResizeArray<FSharpExpr>()
+
+        let collector =
+            { new TASTCollecting.TypedTreeCollectorBase() with
+                override _.WalkMemberOrFunctionOrValue _ _ body = walkedBodies.Add body
+            }
+
+        TASTCollecting.walkTast collector tree
+
+        Assert.That(expectedBodies, Is.Not.Empty)
+
+        for body in walkedBodies do
+            Assert.That(
+                expectedBodies
+                |> List.exists (fun expected -> obj.ReferenceEquals(expected, body)),
+                Is.True
+            )
+
+    [<Test>]
+    let ``walking the shared declarations visits the same calls every time`` () =
+        let tree = typedTreeOf ClientTestSources.optionValue
+        let first = countCalls tree
+
+        Assert.That(first, Is.GreaterThan 0)
+        Assert.That(countCalls tree, Is.EqualTo first)
+
+    [<Test>]
+    let ``a body with twenty thousand statements is walked without a stack overflow`` () =
+        let source =
+            "module Deep\nlet run () =\n"
+            + String.replicate 20000 "    ignore 1\n"
+            + "    ()\n"
+
+        let tree = typedTreeOf source
+
+        Assert.That(countCalls tree, Is.GreaterThanOrEqualTo 20000)
