@@ -5,15 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.41.1] - 2026-11-11
 
 ### Added
 
-- `TASTCollecting.getDeclarations` returns the declarations of a typed tree. Calls with the same `FSharpImplementationFileContents` object share one converted list.
+- [`TASTCollecting.getDeclarations`](https://github.com/ionide/FSharp.Analyzers.SDK/pull/360) returns the declarations of a typed tree. Calls with the same `FSharpImplementationFileContents` object share one converted list.
 
 ### Fixed
 
-- `TASTCollecting.walkTast` converts the typed tree of a file once and shares it between analyzers. Before, each analyzer converted the tree again, because `FSharpImplementationFileContents.Declarations` returns new objects on each read.
+- [`TASTCollecting.walkTast` converts the typed tree of a file once and shares it between analyzers](https://github.com/ionide/FSharp.Analyzers.SDK/pull/360). Before, each analyzer converted the tree again, because `FSharpImplementationFileContents.Declarations` returns new objects on each read. (thanks @1eyewonder!)
 
 ## [0.41.0] - 2026-10-16
 
