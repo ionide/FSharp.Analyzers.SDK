@@ -394,8 +394,8 @@ module TASTCollecting =
         abstract WalkValue: valueToGet: FSharpMemberOrFunctionOrValue -> unit
         default WalkValue: valueToGet: FSharpMemberOrFunctionOrValue -> unit
 
-    /// The declarations of the typed tree, converted once per file and shared by every analyzer that asks for them.
-    /// Prefer this over FSharpImplementationFileContents.Declarations, which converts the whole tree again on each access.
+    /// Returns the declarations of the typed tree. Calls with the same FSharpImplementationFileContents object share one converted list.
+    /// Pass ctx.TypedTree. Each read of FSharpCheckFileResults.ImplementationFile returns a new object, which converts the tree again.
     val getDeclarations:
         tast: FSharpImplementationFileContents -> FSharpImplementationFileDeclaration list
 

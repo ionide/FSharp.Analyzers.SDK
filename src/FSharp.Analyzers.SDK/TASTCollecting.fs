@@ -492,40 +492,30 @@ module TASTCollecting =
                     logger.LogDebug("{0}", ex.StackTrace)
         | FSharpImplementationFileDeclaration.InitAction e -> visitExpr f e
 
-    // FSharpImplementationFileContents.Declarations converts the whole typed tree into fresh objects on each access,
-    // so every analyzer walking the same file would pay for the conversion again. The list is shared per file instead.
+    // Each read of FSharpImplementationFileContents.Declarations returns new FSharpExpr roots, and each new root
+    // converts its body again. The list is shared per file instead.
     let private declarationsCache =
         System.Runtime.CompilerServices.ConditionalWeakTable<
             FSharpImplementationFileContents,
             Lazy<FSharpImplementationFileDeclaration list>
          >()
 
-    // FSharpExpr converts its sub expressions on first access without synchronization, so concurrent readers of a
-    // shared tree would each convert it again. This pass converts every expression up front, including the ones the
-    // walker above hands to a callback without visiting (ILFieldSet.valueExpr, TryWith.filterExpr, ignored members).
-    // ImmediateSubExpressions covers every expression case except the filter of a TryWith.
-    // A node that fails to convert is left as it is and its siblings are still converted. The walk that follows
-    // fails at the same node and reports it.
-    let rec private materializeExpr (e: FSharpExpr) =
-        let children =
-            try
-                match e with
-                | TryWith(_, _, filterExpr, _, _, _, _) ->
-                    filterExpr
-                    :: e.ImmediateSubExpressions
-                | _ -> e.ImmediateSubExpressions
-            with _ ->
-                []
+    // FSharpExpr.E converts a whole top-level body on first read, without a lock, and builds every sub expression
+    // eagerly. Reading each root once is enough to force the tree before the list is shared.
+    // A body that fails to convert stays lazy. The analyzer walk then fails at the same place and reports the error.
+    let private forceBody (body: FSharpExpr) =
+        try
+            body.ImmediateSubExpressions
+            |> ignore
+        with _ ->
+            ()
 
-        List.iter materializeExpr children
-
-    let rec private materializeDeclaration (d: FSharpImplementationFileDeclaration) =
+    let rec private forceDeclaration (d: FSharpImplementationFileDeclaration) =
         match d with
         | FSharpImplementationFileDeclaration.Entity(_, declarations) ->
-            List.iter materializeDeclaration declarations
-        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, body) ->
-            materializeExpr body
-        | FSharpImplementationFileDeclaration.InitAction e -> materializeExpr e
+            List.iter forceDeclaration declarations
+        | FSharpImplementationFileDeclaration.MemberOrFunctionOrValue(_, _, body) -> forceBody body
+        | FSharpImplementationFileDeclaration.InitAction e -> forceBody e
 
     let getDeclarations
         (tast: FSharpImplementationFileContents)
@@ -537,7 +527,7 @@ module TASTCollecting =
                 fun tast ->
                     lazy
                         (let declarations = tast.Declarations
-                         List.iter materializeDeclaration declarations
+                         List.iter forceDeclaration declarations
                          declarations)
             )
             .Value

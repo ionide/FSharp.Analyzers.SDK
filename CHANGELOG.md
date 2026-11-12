@@ -7,9 +7,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `TASTCollecting.getDeclarations` returns the declarations of a typed tree. Calls with the same `FSharpImplementationFileContents` object share one converted list.
+
 ### Fixed
 
-- Analyzers that walk the typed tree no longer each convert it again. `FSharpImplementationFileContents.Declarations` rebuilds the tree on every access and `FSharpExpr` converts its sub expressions on first use without synchronization, so analyzers running in parallel on the same file each paid for the whole conversion. `TASTCollecting.walkTast` now materializes a file's declarations once, on the first call, and shares them with every later walk of that file. Analyzers that read `Declarations` directly can call the new `TASTCollecting.getDeclarations` to share the same tree.
+- `TASTCollecting.walkTast` converts the typed tree of a file once and shares it between analyzers. Before, each analyzer converted the tree again, because `FSharpImplementationFileContents.Declarations` returns new objects on each read.
 
 ## [0.41.0] - 2026-10-16
 
