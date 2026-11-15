@@ -16,6 +16,9 @@ open FSharp.Analyzers.Cli.Analysis
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
+// A script being checked holds its own incremental builder, about 1 GB for a script with many #r references.
+let maxConcurrentScripts = 4
+
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -353,24 +356,48 @@ let main argv =
                         let! loadedProjects = loadedProjects
                         let! scriptOptions = scriptOptions
 
-                        let loadedProjects =
-                            Array.toList scriptOptions
-                            @ (loadedProjects
-                               |> List.map (fun projectOptions -> projectOptions, []))
+                        let runScript (options: FSharpProjectOptions, loadErrors) =
+                            async {
+                                let! analysis =
+                                    runProject
+                                        logger
+                                        checker
+                                        client
+                                        options
+                                        loadErrors
+                                        exclInclFiles
+                                        severityMapping
 
-                        return!
+                                // No project references a script, so its incremental builder is never used again.
+                                checker.ClearCache [ options ]
+                                // Without this, the GC keeps the released builders in gen 2 for many more scripts.
+                                GC.Collect(2, GCCollectionMode.Forced, false)
+                                return analysis
+                            }
+
+                        let! scriptAnalyses =
+                            Async.Parallel(
+                                Array.map runScript scriptOptions,
+                                maxDegreeOfParallelism = maxConcurrentScripts
+                            )
+                            |> Async.StartChild
+
+                        let! projectAnalyses =
                             loadedProjects
-                            |> List.map (fun (projPath: FSharpProjectOptions, loadErrors) ->
+                            |> List.map (fun options ->
                                 runProject
                                     logger
                                     checker
                                     client
-                                    projPath
-                                    loadErrors
+                                    options
+                                    []
                                     exclInclFiles
                                     severityMapping
                             )
                             |> Async.Parallel
+
+                        let! scriptAnalyses = scriptAnalyses
+                        return Array.append scriptAnalyses projectAnalyses
                     }
                     |> Async.RunSynchronously
                     |> Array.toList
