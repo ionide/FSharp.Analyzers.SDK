@@ -1,10 +1,19 @@
 namespace FSharp.Analyzers.Cli
 
+open System
+open System.Globalization
 open Argu
+
+module ArgumentDefaults =
+
+    [<Literal>]
+    let MaxConcurrentScripts = 4
 
 type Arguments =
     | Project of string list
     | Script of string list
+    | Define of string list
+    | [<Unique>] Max_Concurrent_Scripts of int
     | Analyzers_Path of string list
     | [<EqualsAssignment; AltCommandLine("-p:"); AltCommandLine("-p")>] Property of string * string
     | [<Unique; AltCommandLine("-c")>] Configuration of string
@@ -34,7 +43,11 @@ type Arguments =
             | Project _ ->
                 "List of paths to your .fsproj file. Cannot be combined with `--fsc-args`."
             | Script _ ->
-                "List of paths to your .fsx file. Supports globs. Cannot be combined with `--fsc-args`."
+                "List of paths to your .fsx file. Supports globs. Each path or glob must match at least one file. Cannot be combined with `--fsc-args`."
+            | Define _ ->
+                "List of conditional compilation symbols to define when checking the `--script` files, one symbol per value, like `--define` of `dotnet fsi`. Does not apply to `--project`, which gets its symbols from `DefineConstants`."
+            | Max_Concurrent_Scripts _ ->
+                $"The maximum number of `--script` files to check at the same time. The default is %d{ArgumentDefaults.MaxConcurrentScripts}. A higher value can be faster and uses more memory."
             | Analyzers_Path _ ->
                 "List of path to a folder where your analyzers are located. This will search recursively."
             | Property _ -> "A key=value pair of an MSBuild property."
@@ -75,6 +88,13 @@ type Arguments =
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Arguments =
 
+    /// The value of `--max-concurrent-scripts`, or its default. The error is a value below 1.
+    let maxConcurrentScripts (results: ParseResults<Arguments>) : Result<int, int> =
+        match results.TryGetResult <@ Max_Concurrent_Scripts @> with
+        | None -> Ok ArgumentDefaults.MaxConcurrentScripts
+        | Some count when count >= 1 -> Ok count
+        | Some count -> Error count
+
     /// Argu's `GetResult` only returns the last occurrence of a repeated flag and silently drops the earlier ones.
     /// List-valued flags accumulate instead, so `--script a --script b` means the same as `--script a b`.
     let getAll
@@ -83,3 +103,38 @@ module Arguments =
         =
         results.GetResults argument
         |> List.concat
+
+    /// The `--define` values. The error lists each value that is not one conditional compilation symbol.
+    let defines (results: ParseResults<Arguments>) : Result<string list, string list> =
+        // The identifier rules of the F# preprocessor lexer, pplex.fsl in dotnet/fsharp.
+        let isLetter (c: char) =
+            match Char.GetUnicodeCategory c with
+            | UnicodeCategory.UppercaseLetter
+            | UnicodeCategory.LowercaseLetter
+            | UnicodeCategory.TitlecaseLetter
+            | UnicodeCategory.ModifierLetter
+            | UnicodeCategory.OtherLetter
+            | UnicodeCategory.LetterNumber -> true
+            | _ -> false
+
+        let isSymbolChar (c: char) =
+            match Char.GetUnicodeCategory c with
+            | _ when isLetter c || c = '\'' -> true
+            | UnicodeCategory.ConnectorPunctuation
+            | UnicodeCategory.NonSpacingMark
+            | UnicodeCategory.SpacingCombiningMark
+            | UnicodeCategory.Format
+            | UnicodeCategory.DecimalDigitNumber -> true
+            | _ -> false
+
+        let isSymbol (value: string) =
+            value.Length > 0
+            && (isLetter value[0]
+                || value[0] = '_')
+            && Seq.forall isSymbolChar value
+
+        let defines = getAll results <@ Define @>
+
+        match List.filter (isSymbol >> not) defines with
+        | [] -> Ok defines
+        | invalid -> Error invalid

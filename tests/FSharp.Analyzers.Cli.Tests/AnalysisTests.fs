@@ -2,9 +2,12 @@ module FSharp.Analyzers.Cli.Tests.AnalysisTests
 
 open System
 open System.IO
+open System.Threading
+open System.Threading.Tasks
 open NUnit.Framework
 open Microsoft.Extensions.Logging
 open GlobExpressions
+open FSharp.Compiler.CodeAnalysis
 open Ionide.ProjInfo
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.Cli.Analysis
@@ -53,7 +56,7 @@ let private runScriptWithFilters
         let checker = Utils.createFCS None
 
         let options, loadErrors =
-            loadScripts logger toolsPath.Value checker [ script ]
+            loadScripts logger toolsPath.Value checker [] [ script ]
             |> Async.RunSynchronously
             |> Array.exactlyOne
 
@@ -128,6 +131,105 @@ let ``a script that type checks has no type check failure`` () =
         runScript logger (Client<CliAnalyzerAttribute, CliContext>(logger)) "let x = 1\n"
 
     Assert.That(analysis.TypeCheckFailure, Is.EqualTo None)
+
+/// Compiles a type provider whose GetNamespaces throws, and gives f a script that references it and has a type error.
+/// FCS drops the errors of a type provider that fails while it is set up, and returns no check results and no diagnostics.
+/// A type provider that is not safe to use from several projects at the same time fails in this way.
+let private withThrowingProviderScript f =
+    let providerDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
+
+    Directory.CreateDirectory providerDir
+    |> ignore
+
+    try
+        let provider = Path.Combine(providerDir, "ThrowingProvider.dll")
+
+        compile
+            []
+            provider
+            """
+namespace ThrowingProvider
+
+open System
+open Microsoft.FSharp.Core.CompilerServices
+
+[<TypeProvider>]
+type ThrowingProvider(_config: TypeProviderConfig) =
+    let invalidate = Event<EventHandler, EventArgs>()
+
+    interface ITypeProvider with
+        member _.GetNamespaces() = failwith "boom"
+        member _.GetStaticParameters _ = [||]
+        member _.ApplyStaticArguments(_, _, _) = failwith "not used"
+        member _.GetInvokerExpression(_, _) = failwith "not used"
+        member _.GetGeneratedAssemblyContents _ = failwith "not used"
+
+        [<CLIEvent>]
+        member _.Invalidate = invalidate.Publish
+
+    interface IDisposable with
+        member _.Dispose() = ()
+
+[<assembly: TypeProviderAssembly>]
+do ()
+"""
+
+        f providerDir $"#r @\"%s{provider}\"\nlet x: int = \"not an int\"\n"
+    finally
+        try
+            Directory.Delete(providerDir, true)
+        with _ ->
+            ()
+
+[<Test>]
+let ``a script that FCS returns no check results for counts as a type check failure`` () =
+    withThrowingProviderScript (fun _ script ->
+        let messages = ResizeArray()
+        let logger = recordingLogger messages
+
+        let analysis =
+            runScript logger (Client<CliAnalyzerAttribute, CliContext>(logger)) script
+
+        Assert.That(analysis.TypeCheckFailure, Is.Not.EqualTo None)
+        Assert.That(messages, Has.Some.Contains "did not type check")
+    )
+
+// Without check results there is nothing to analyze, and the project results throw on use.
+[<Test>]
+let ``no analyzer runs on a script that FCS returns no check results for`` () =
+    withThrowingProviderScript (fun providerDir script ->
+        let analyzersDir = Path.Combine(providerDir, "analyzers")
+
+        Directory.CreateDirectory analyzersDir
+        |> ignore
+
+        compile
+            []
+            (Path.Combine(analyzersDir, "ProjectResultsAnalyzer.dll"))
+            """
+module ProjectResultsAnalyzer
+
+open FSharp.Analyzers.SDK
+
+[<CliAnalyzer "ProjectResultsAnalyzer">]
+let projectResults: Analyzer<CliContext> =
+    fun ctx ->
+        async {
+            ctx.CheckProjectResults.AssemblyContents |> ignore
+            return []
+        }
+"""
+
+        let messages = ResizeArray()
+        let logger = recordingLogger messages
+        let client = Client<CliAnalyzerAttribute, CliContext>(logger)
+        Assert.That((client.LoadAnalyzers analyzersDir).Analyzers, Is.EqualTo 1)
+
+        let analysis = runScript logger client script
+
+        Assert.That(analysis.TypeCheckFailure, Is.Not.EqualTo None)
+        Assert.That(analysis.Results, Is.Empty)
+    )
 
 /// Compiles an analyzer that throws while it runs, one that throws before it returns its async,
 /// and one that reports a message on every file, and gives them to f in a client that logs to messages.
@@ -252,3 +354,75 @@ let ``an analyzer that throws keeps the type errors and the messages of the othe
 
     Assert.That(messages, Has.Some.Contains "did not type check")
     Assert.That(messages, Has.Some.Contains "Analyzer ThrowingAnalyzer failed on")
+
+[<Test>]
+let ``scripts are analyzed at most the given number at the same time, and each one is analyzed``
+    ()
+    =
+    let limit = 2
+
+    let scripts =
+        [|
+            for i in 1..6 ->
+                {
+                    ProjectFileName = $"script%d{i}.fsx.fsproj"
+                    ProjectId = None
+                    SourceFiles = [||]
+                    OtherOptions = [||]
+                    ReferencedProjects = [||]
+                    IsIncompleteTypeCheckEnvironment = false
+                    UseScriptResolutionRules = true
+                    LoadTime = DateTime.Now
+                    UnresolvedReferences = None
+                    OriginalLoadReferences = []
+                    Stamp = None
+                },
+                []
+        |]
+
+    let active = ref 0
+    let maxActive = ref 0
+    let analyzed = ref 0
+
+    let limitReached =
+        TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+    let analyze _ =
+        async {
+            let now = Interlocked.Increment &active.contents
+            lock maxActive (fun () -> maxActive.Value <- max maxActive.Value now)
+
+            if now >= limit then
+                limitReached.TrySetResult()
+                |> ignore
+
+            let! cancellationToken = Async.CancellationToken
+
+            do!
+                limitReached.Task.WaitAsync(cancellationToken)
+                |> Async.AwaitTask
+
+            Interlocked.Decrement &active.contents
+            |> ignore
+
+            Interlocked.Increment &analyzed.contents
+            |> ignore
+
+            return
+                {
+                    TypeCheckFailure = None
+                    Results = []
+                }
+        }
+
+    use deadline = new CancellationTokenSource(TimeSpan.FromMinutes 1.0)
+
+    let analyses =
+        Async.RunSynchronously(
+            runScripts (Utils.createFCS None) limit analyze scripts,
+            cancellationToken = deadline.Token
+        )
+
+    Assert.That(analyses, Has.Length.EqualTo scripts.Length)
+    Assert.That(analyzed.Value, Is.EqualTo scripts.Length)
+    Assert.That(maxActive.Value, Is.EqualTo limit)

@@ -26,10 +26,12 @@ let private withScript (source: string) (f: string -> 'a) =
     finally
         File.Delete script
 
-let private loadScript checker script =
-    loadScripts NullLogger.Instance toolsPath.Value checker [ script ]
+let private loadScriptWithDefines checker defines script =
+    loadScripts NullLogger.Instance toolsPath.Value checker defines [ script ]
     |> Async.RunSynchronously
     |> Array.exactlyOne
+
+let private loadScript checker script = loadScriptWithDefines checker [] script
 
 let private errors (diagnostics: FSharpDiagnostic array) =
     diagnostics
@@ -196,3 +198,80 @@ let ``an assembly reference that cannot be resolved is only reported for the fil
     Assert.That(loadErrors, Is.Empty)
     Assert.That(projectErrors, Is.Empty)
     Assert.That(fileErrors, Has.Some.Contains "missing/Library.dll")
+
+let private errorsWithDefines defines =
+    withScript
+        "#if FOO\nlet x: int = \"not an int\"\n#endif\n"
+        (fun script ->
+            let checker = Utils.createFCS None
+            let options, _ = loadScriptWithDefines checker defines script
+            errors (projectDiagnostics checker options)
+        )
+
+[<Test>]
+let ``code under #if is type checked when its symbol is defined`` () =
+    Assert.That(errorsWithDefines [ "FOO" ], Is.Not.Empty)
+
+[<Test>]
+let ``code under #if is not type checked when its symbol is not defined`` () =
+    Assert.That(errorsWithDefines [], Is.Empty)
+
+let private withScriptDirectory (f: DirectoryInfo -> 'a) =
+    let dir =
+        Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName()))
+
+    try
+        File.WriteAllText(Path.Combine(dir.FullName, "a.fsx"), "let x = 1\n")
+        f dir
+    finally
+        dir.Delete true
+
+[<Test>]
+let ``script values that match no file are reported`` () =
+    let result =
+        withScriptDirectory (fun dir ->
+            resolveScriptPaths
+                dir
+                [
+                    "a.fsx"
+                    "missing.fsx"
+                    "*.nothing"
+                ]
+        )
+
+    Assert.That(
+        result,
+        Is.EqualTo(
+            Error
+                [
+                    "missing.fsx"
+                    "*.nothing"
+                ]
+            : Result<string list, string list>
+        )
+    )
+
+[<Test>]
+let ``script values that each match a file resolve to their full paths`` () =
+    let result, expected =
+        withScriptDirectory (fun dir ->
+            resolveScriptPaths dir [ "*.fsx" ], Path.Combine(dir.FullName, "a.fsx")
+        )
+
+    Assert.That(result, Is.EqualTo(Ok [ expected ]: Result<string list, string list>))
+
+// The CLI clears a script's builder after its analysis, so a second copy of the script must not run beside the first.
+[<Test>]
+let ``a script that several values match resolves once`` () =
+    let result, expected =
+        withScriptDirectory (fun dir ->
+            resolveScriptPaths
+                dir
+                [
+                    "a.fsx"
+                    "*.fsx"
+                ],
+            Path.Combine(dir.FullName, "a.fsx")
+        )
+
+    Assert.That(result, Is.EqualTo(Ok [ expected ]: Result<string list, string list>))

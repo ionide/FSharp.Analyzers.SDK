@@ -160,7 +160,45 @@ let main argv =
         Directory.GetCurrentDirectory()
         |> DirectoryInfo
 
-    let scripts = resolveScriptPaths cwd (getAllResults <@ Script @>)
+    let scripts =
+        match resolveScriptPaths cwd (getAllResults <@ Script @>) with
+        | Ok scripts -> scripts
+        | Error unmatched ->
+            for scriptGlob in unmatched do
+                logger.LogError(
+                    "Invalid `--script` argument. It matches no file: '{script}'",
+                    scriptGlob
+                )
+
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
+
+    let defines =
+        match Arguments.defines results with
+        | Ok defines -> defines
+        | Error invalid ->
+            for define in invalid do
+                logger.LogError(
+                    "Invalid `--define` argument. It is not one conditional compilation symbol: '{define}'",
+                    define
+                )
+
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
+
+    if
+        not (List.isEmpty defines)
+        && List.isEmpty scripts
+    then
+        logger.LogWarning("`--define` only applies to `--script` files, and no script was given.")
+
+    let maxConcurrentScripts =
+        match Arguments.maxConcurrentScripts results with
+        | Ok count -> count
+        | Error count ->
+            logger.LogError("`--max-concurrent-scripts` must be 1 or more, but it is {0}.", count)
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
 
     let exclInclFiles =
         let excludeFiles = getAllResults <@ Exclude_Files @>
@@ -320,17 +358,7 @@ let main argv =
 
                     exit (int ExitErrorCodes.EmptyFscArgs)
                 | projects, scripts ->
-
-                    for script in scripts do
-                        if not (File.Exists(script)) then
-                            logger.LogError(
-                                "Invalid `--script` argument. File does not exist: '{script}'",
-                                script
-                            )
-
-                            exit (int ExitErrorCodes.InvalidProjectArguments)
-
-                    let scriptOptions = loadScripts logger toolsPath checker scripts
+                    let scriptOptions = loadScripts logger toolsPath checker defines scripts
 
                     for projPath in projects do
                         if not (File.Exists(projPath)) then
@@ -353,24 +381,44 @@ let main argv =
                         let! loadedProjects = loadedProjects
                         let! scriptOptions = scriptOptions
 
-                        let loadedProjects =
-                            Array.toList scriptOptions
-                            @ (loadedProjects
-                               |> List.map (fun projectOptions -> projectOptions, []))
+                        let scriptAnalyses =
+                            runScripts
+                                checker
+                                maxConcurrentScripts
+                                (fun (options, loadErrors) ->
+                                    runProject
+                                        logger
+                                        checker
+                                        client
+                                        options
+                                        loadErrors
+                                        exclInclFiles
+                                        severityMapping
+                                )
+                                scriptOptions
 
-                        return!
+                        let projectAnalyses =
                             loadedProjects
-                            |> List.map (fun (projPath: FSharpProjectOptions, loadErrors) ->
+                            |> List.map (fun options ->
                                 runProject
                                     logger
                                     checker
                                     client
-                                    projPath
-                                    loadErrors
+                                    options
+                                    []
                                     exclInclFiles
                                     severityMapping
                             )
                             |> Async.Parallel
+
+                        let! analyses =
+                            Async.Parallel
+                                [
+                                    scriptAnalyses
+                                    projectAnalyses
+                                ]
+
+                        return Array.concat analyses
                     }
                     |> Async.RunSynchronously
                     |> Array.toList

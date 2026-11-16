@@ -68,6 +68,20 @@ let runProject
             |> List.distinctBy (fun d -> d.Range, d.ErrorNumber, d.Message)
             |> List.sortBy (fun d -> d.Range.FileName, d.Range.StartLine, d.Range.StartColumn)
 
+        // FCS drops the errors of a type provider that fails while it is set up, so it can return no results without a diagnostic.
+        let typeCheckErrors =
+            match typeCheckErrors with
+            | [] when checkProjectResults.HasCriticalErrors ->
+                [
+                    FSharpDiagnostic.Create(
+                        FSharpDiagnosticSeverity.Error,
+                        "The F# compiler service returned no check results and no error for this project, so its code was not type checked.",
+                        0,
+                        Range.range0
+                    )
+                ]
+            | errors -> errors
+
         let typeCheckFailure =
             match typeCheckErrors with
             | [] -> None
@@ -96,9 +110,16 @@ let runProject
                         Errors = errors
                     }
 
+        // Without check results, each file result is empty and the project results throw on use.
+        let filesToAnalyze =
+            if checkProjectResults.HasCriticalErrors then
+                Array.empty
+            else
+                checkedFiles
+
         // The type errors are logged before the analyzers run, so an analyzer that throws does not hide them.
         let! resultsPerFile =
-            checkedFiles
+            filesToAnalyze
             |> Array.choose (fun (fileName, parseAndCheckResults) ->
                 let included =
                     match excludeIncludeFiles with
@@ -191,6 +212,30 @@ let runProject
                 Results = results
             }
     }
+
+/// <summary>
+/// Analyzes the scripts, at most <c>maxConcurrentScripts</c> at the same time, and removes the state of each script
+/// from the checker after its analysis.
+/// </summary>
+/// <remarks>
+/// The checker keeps the incremental builder of each project until it is removed, and no project references a script.
+/// </remarks>
+let runScripts
+    (checker: FSharpChecker)
+    (maxConcurrentScripts: int)
+    (analyze: FSharpProjectOptions * FSharpDiagnostic list -> Async<ProjectAnalysis>)
+    (scripts: (FSharpProjectOptions * FSharpDiagnostic list) array)
+    : Async<ProjectAnalysis array>
+    =
+    let runScript (options: FSharpProjectOptions, loadErrors) =
+        async {
+            let! analysis = analyze (options, loadErrors)
+            checker.ClearCache [ options ]
+            GC.Collect(2, GCCollectionMode.Forced, false)
+            return analysis
+        }
+
+    Async.Parallel(Array.map runScript scripts, maxDegreeOfParallelism = maxConcurrentScripts)
 
 let runFscArgs
     (logger: ILogger)
