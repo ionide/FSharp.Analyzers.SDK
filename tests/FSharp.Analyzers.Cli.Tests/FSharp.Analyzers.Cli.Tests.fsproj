@@ -17,6 +17,7 @@
     <Compile Include="OutputTests.fs" />
     <Compile Include="AnalyzerLoadingTests.fs" />
     <Compile Include="AnalysisTests.fs" />
+    <Compile Include="CliProcessTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

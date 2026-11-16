@@ -136,14 +136,18 @@ let readFscArgsFromFile (logger: ILogger) (filePath: string) : string =
 
     args
 
-/// Resolves `--script` arguments, which may be globs, to absolute file paths.
-let resolveScriptPaths (cwd: DirectoryInfo) (scriptGlobs: string list) =
+/// <summary>Resolves `--script` arguments, which may be globs, to absolute file paths.</summary>
+/// <returns>Each matched path once, or the arguments that match no file.</returns>
+let resolveScriptPaths
+    (cwd: DirectoryInfo)
+    (scriptGlobs: string list)
+    : Result<string list, string list>
+    =
     let beginsWithCurrentPath (path: string) =
         path.StartsWith("./")
         || path.StartsWith(".\\")
 
-    scriptGlobs
-    |> List.collect (fun scriptGlob ->
+    let resolve (scriptGlob: string) =
         let root, scriptGlob =
             if Path.IsPathRooted scriptGlob then
                 // Glob can't handle absolute paths, so we need to make sure the scriptGlob is a relative path
@@ -160,7 +164,22 @@ let resolveScriptPaths (cwd: DirectoryInfo) (scriptGlobs: string list) =
         root.GlobFiles scriptGlob
         |> Seq.map (fun file -> file.FullName)
         |> Seq.toList
-    )
+
+    let resolved =
+        scriptGlobs
+        |> List.map (fun scriptGlob -> scriptGlob, resolve scriptGlob)
+
+    match
+        resolved
+        |> List.filter (snd >> List.isEmpty)
+        |> List.map fst
+    with
+    | [] ->
+        resolved
+        |> List.collect snd
+        |> List.distinct
+        |> Ok
+    | unmatched -> Error unmatched
 
 /// <summary>
 /// Locates the assembly that gives a script its <c>fsi</c> object (<c>fsi.CommandLineArgs</c>, <c>fsi.EventLoop</c>, ...).
@@ -195,13 +214,18 @@ let loadScripts
     (logger: ILogger)
     (toolsPath: ToolsPath)
     (checker: FSharpChecker)
+    (defines: string list)
     (scripts: string list)
     =
     let otherFlags =
         if List.isEmpty scripts then
             Array.empty
         else
-            fsiSettingsFlags logger toolsPath
+            [|
+                yield! fsiSettingsFlags logger toolsPath
+                for define in defines do
+                    $"--define:%s{define}"
+            |]
 
     scripts
     |> List.map (fun script ->

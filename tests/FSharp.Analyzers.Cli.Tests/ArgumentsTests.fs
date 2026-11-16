@@ -63,6 +63,7 @@ let ``an absent list flag yields an empty list`` () =
 /// https://github.com/ionide/FSharp.Analyzers.SDK/issues/336
 [<TestCase("--project")>]
 [<TestCase("--script")>]
+[<TestCase("--define")>]
 [<TestCase("--analyzers-path")>]
 [<TestCase("--treat-as-info")>]
 [<TestCase("--treat-as-hint")>]
@@ -83,3 +84,103 @@ let ``every list flag can be repeated`` (flag: string) =
             |]
 
     Assert.That(results.GetAllResults(), Has.Exactly(2).Items)
+
+[<Test>]
+let ``a define after the scripts is not taken as a script`` () =
+    let results =
+        parse
+            [|
+                "--script"
+                "a.fsx"
+                "--define"
+                "FOO"
+                "BAR"
+            |]
+
+    Assert.That(Arguments.getAll results <@ Script @>, Is.EqualTo [ "a.fsx" ])
+
+    Assert.That(
+        Arguments.getAll results <@ Define @>,
+        Is.EqualTo
+            [
+                "FOO"
+                "BAR"
+            ]
+    )
+
+[<Test>]
+let ``the script limit is 4 by default`` () =
+    let results =
+        parse
+            [|
+                "--script"
+                "a.fsx"
+            |]
+
+    Assert.That(Arguments.maxConcurrentScripts results, Is.EqualTo(Ok 4: Result<int, int>))
+
+[<Test>]
+let ``the number of scripts checked at the same time can be set`` () =
+    let results =
+        parse
+            [|
+                "--max-concurrent-scripts"
+                "1"
+            |]
+
+    Assert.That(Arguments.maxConcurrentScripts results, Is.EqualTo(Ok 1: Result<int, int>))
+
+[<TestCase("0")>]
+[<TestCase("-1")>]
+let ``fewer than one script at a time is rejected`` (value: string) =
+    let results =
+        parse
+            [|
+                "--max-concurrent-scripts"
+                value
+            |]
+
+    Assert.That(
+        Arguments.maxConcurrentScripts results,
+        Is.EqualTo(Error(int value): Result<int, int>)
+    )
+
+[<Test>]
+let ``conditional compilation symbols are accepted as defines`` () =
+    let results =
+        parse
+            [|
+                "--define"
+                "FOO"
+                "_Bar1"
+            |]
+
+    Assert.That(
+        Arguments.defines results,
+        Is.EqualTo(
+            Ok
+                [
+                    "FOO"
+                    "_Bar1"
+                ]
+            : Result<string list, string list>
+        )
+    )
+
+[<TestCase("A;B")>]
+[<TestCase("A B")>]
+[<TestCase("1A")>]
+[<TestCase("")>]
+let ``a define that is not one symbol is rejected`` (value: string) =
+    let results =
+        parse
+            [|
+                "--define"
+                "FOO"
+                value
+            |]
+
+    Assert.That(
+        Arguments.defines results,
+        Is.EqualTo(Error [ value ]: Result<string list, string list>)
+    )

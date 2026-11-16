@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- [`--define` defines conditional compilation symbols for `--script` files](https://github.com/ionide/FSharp.Analyzers.SDK/pull/361), like `dotnet fsi --define`. Code under `#if SYMBOL` is type checked and analyzed only when its symbol is defined. A value that is not one symbol, such as `A;B`, is an error with exit code `20`. `--define` does not apply to `--project`, which gets its symbols from `DefineConstants`.
+- [`--max-concurrent-scripts` sets how many scripts the CLI checks at the same time](https://github.com/ionide/FSharp.Analyzers.SDK/pull/361). The default is 4.
+
+### Changed
+
+- [The CLI checks at most 4 scripts at the same time, and releases the type check state of each script after its analysis](https://github.com/ionide/FSharp.Analyzers.SDK/pull/361). Before, it checked all scripts at once and kept the state of each script until the run ended, so memory grew by about 0.4 GB per script. In one repository, 40 scripts used 15 GB and 60 scripts used more than 16 GB. Now 284 scripts use 6 GB. `--project` inputs are unchanged.
+- [A `--script` path or glob that matches no file is an error, with exit code `20`](https://github.com/ionide/FSharp.Analyzers.SDK/pull/361). Before, the CLI dropped it silently, so a typo or an unknown flag after `--script` gave a clean run that checked less than expected.
+
+### Fixed
+
+- [A project or script that the F# compiler service returns no check results for no longer looks type checked](https://github.com/ionide/FSharp.Analyzers.SDK/pull/361). The compiler service returns no results and no error when a type provider fails while it is set up, for example when several scripts set up FSharp.Data providers at the same time. The CLI now reports it as not type checked and runs no analyzer on it, so `--fail-on-type-errors` exits with `-5` as for other type errors.
+
 ## [0.41.1] - 2026-11-11
 
 ### Added

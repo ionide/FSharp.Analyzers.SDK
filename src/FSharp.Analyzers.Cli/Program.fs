@@ -16,9 +16,6 @@ open FSharp.Analyzers.Cli.Analysis
 
 let parser = ArgumentParser.Create<Arguments>(errorHandler = ProcessExiter())
 
-// A script being checked holds its own incremental builder, about 1 GB for a script with many #r references.
-let maxConcurrentScripts = 4
-
 [<EntryPoint>]
 let main argv =
     let toolsPath = Init.init (DirectoryInfo Environment.CurrentDirectory) None
@@ -163,7 +160,45 @@ let main argv =
         Directory.GetCurrentDirectory()
         |> DirectoryInfo
 
-    let scripts = resolveScriptPaths cwd (getAllResults <@ Script @>)
+    let scripts =
+        match resolveScriptPaths cwd (getAllResults <@ Script @>) with
+        | Ok scripts -> scripts
+        | Error unmatched ->
+            for scriptGlob in unmatched do
+                logger.LogError(
+                    "Invalid `--script` argument. It matches no file: '{script}'",
+                    scriptGlob
+                )
+
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
+
+    let defines =
+        match Arguments.defines results with
+        | Ok defines -> defines
+        | Error invalid ->
+            for define in invalid do
+                logger.LogError(
+                    "Invalid `--define` argument. It is not one conditional compilation symbol: '{define}'",
+                    define
+                )
+
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
+
+    if
+        not (List.isEmpty defines)
+        && List.isEmpty scripts
+    then
+        logger.LogWarning("`--define` only applies to `--script` files, and no script was given.")
+
+    let maxConcurrentScripts =
+        match Arguments.maxConcurrentScripts results with
+        | Ok count -> count
+        | Error count ->
+            logger.LogError("`--max-concurrent-scripts` must be 1 or more, but it is {0}.", count)
+            factory.Dispose() // Flush any logs https://github.com/dotnet/extensions/issues/2395
+            exit (int ExitErrorCodes.InvalidScriptArguments)
 
     let exclInclFiles =
         let excludeFiles = getAllResults <@ Exclude_Files @>
@@ -323,17 +358,7 @@ let main argv =
 
                     exit (int ExitErrorCodes.EmptyFscArgs)
                 | projects, scripts ->
-
-                    for script in scripts do
-                        if not (File.Exists(script)) then
-                            logger.LogError(
-                                "Invalid `--script` argument. File does not exist: '{script}'",
-                                script
-                            )
-
-                            exit (int ExitErrorCodes.InvalidProjectArguments)
-
-                    let scriptOptions = loadScripts logger toolsPath checker scripts
+                    let scriptOptions = loadScripts logger toolsPath checker defines scripts
 
                     for projPath in projects do
                         if not (File.Exists(projPath)) then
@@ -368,21 +393,18 @@ let main argv =
                                         exclInclFiles
                                         severityMapping
 
-                                // No project references a script, so its incremental builder is never used again.
                                 checker.ClearCache [ options ]
-                                // Without this, the GC keeps the released builders in gen 2 for many more scripts.
                                 GC.Collect(2, GCCollectionMode.Forced, false)
                                 return analysis
                             }
 
-                        let! scriptAnalyses =
+                        let scriptAnalyses =
                             Async.Parallel(
                                 Array.map runScript scriptOptions,
                                 maxDegreeOfParallelism = maxConcurrentScripts
                             )
-                            |> Async.StartChild
 
-                        let! projectAnalyses =
+                        let projectAnalyses =
                             loadedProjects
                             |> List.map (fun options ->
                                 runProject
@@ -396,8 +418,14 @@ let main argv =
                             )
                             |> Async.Parallel
 
-                        let! scriptAnalyses = scriptAnalyses
-                        return Array.append scriptAnalyses projectAnalyses
+                        let! analyses =
+                            Async.Parallel
+                                [
+                                    scriptAnalyses
+                                    projectAnalyses
+                                ]
+
+                        return Array.concat analyses
                     }
                     |> Async.RunSynchronously
                     |> Array.toList
