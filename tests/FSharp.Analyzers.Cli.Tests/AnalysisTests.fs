@@ -2,9 +2,12 @@ module FSharp.Analyzers.Cli.Tests.AnalysisTests
 
 open System
 open System.IO
+open System.Threading
+open System.Threading.Tasks
 open NUnit.Framework
 open Microsoft.Extensions.Logging
 open GlobExpressions
+open FSharp.Compiler.CodeAnalysis
 open Ionide.ProjInfo
 open FSharp.Analyzers.SDK
 open FSharp.Analyzers.Cli.Analysis
@@ -351,3 +354,75 @@ let ``an analyzer that throws keeps the type errors and the messages of the othe
 
     Assert.That(messages, Has.Some.Contains "did not type check")
     Assert.That(messages, Has.Some.Contains "Analyzer ThrowingAnalyzer failed on")
+
+[<Test>]
+let ``scripts are analyzed at most the given number at the same time, and each one is analyzed``
+    ()
+    =
+    let limit = 2
+
+    let scripts =
+        [|
+            for i in 1..6 ->
+                {
+                    ProjectFileName = $"script%d{i}.fsx.fsproj"
+                    ProjectId = None
+                    SourceFiles = [||]
+                    OtherOptions = [||]
+                    ReferencedProjects = [||]
+                    IsIncompleteTypeCheckEnvironment = false
+                    UseScriptResolutionRules = true
+                    LoadTime = DateTime.Now
+                    UnresolvedReferences = None
+                    OriginalLoadReferences = []
+                    Stamp = None
+                },
+                []
+        |]
+
+    let active = ref 0
+    let maxActive = ref 0
+    let analyzed = ref 0
+
+    let limitReached =
+        TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)
+
+    let analyze _ =
+        async {
+            let now = Interlocked.Increment &active.contents
+            lock maxActive (fun () -> maxActive.Value <- max maxActive.Value now)
+
+            if now >= limit then
+                limitReached.TrySetResult()
+                |> ignore
+
+            let! cancellationToken = Async.CancellationToken
+
+            do!
+                limitReached.Task.WaitAsync(cancellationToken)
+                |> Async.AwaitTask
+
+            Interlocked.Decrement &active.contents
+            |> ignore
+
+            Interlocked.Increment &analyzed.contents
+            |> ignore
+
+            return
+                {
+                    TypeCheckFailure = None
+                    Results = []
+                }
+        }
+
+    use deadline = new CancellationTokenSource(TimeSpan.FromMinutes 1.0)
+
+    let analyses =
+        Async.RunSynchronously(
+            runScripts (Utils.createFCS None) limit analyze scripts,
+            cancellationToken = deadline.Token
+        )
+
+    Assert.That(analyses, Has.Length.EqualTo scripts.Length)
+    Assert.That(analyzed.Value, Is.EqualTo scripts.Length)
+    Assert.That(maxActive.Value, Is.EqualTo limit)

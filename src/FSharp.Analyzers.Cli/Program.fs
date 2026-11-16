@@ -381,9 +381,11 @@ let main argv =
                         let! loadedProjects = loadedProjects
                         let! scriptOptions = scriptOptions
 
-                        let runScript (options: FSharpProjectOptions, loadErrors) =
-                            async {
-                                let! analysis =
+                        let scriptAnalyses =
+                            runScripts
+                                checker
+                                maxConcurrentScripts
+                                (fun (options, loadErrors) ->
                                     runProject
                                         logger
                                         checker
@@ -392,17 +394,8 @@ let main argv =
                                         loadErrors
                                         exclInclFiles
                                         severityMapping
-
-                                checker.ClearCache [ options ]
-                                GC.Collect(2, GCCollectionMode.Forced, false)
-                                return analysis
-                            }
-
-                        let scriptAnalyses =
-                            Async.Parallel(
-                                Array.map runScript scriptOptions,
-                                maxDegreeOfParallelism = maxConcurrentScripts
-                            )
+                                )
+                                scriptOptions
 
                         let projectAnalyses =
                             loadedProjects

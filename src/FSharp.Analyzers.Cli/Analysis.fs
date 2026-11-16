@@ -213,6 +213,30 @@ let runProject
             }
     }
 
+/// <summary>
+/// Analyzes the scripts, at most <c>maxConcurrentScripts</c> at the same time, and removes the state of each script
+/// from the checker after its analysis.
+/// </summary>
+/// <remarks>
+/// The checker keeps the incremental builder of each project until it is removed, and no project references a script.
+/// </remarks>
+let runScripts
+    (checker: FSharpChecker)
+    (maxConcurrentScripts: int)
+    (analyze: FSharpProjectOptions * FSharpDiagnostic list -> Async<ProjectAnalysis>)
+    (scripts: (FSharpProjectOptions * FSharpDiagnostic list) array)
+    : Async<ProjectAnalysis array>
+    =
+    let runScript (options: FSharpProjectOptions, loadErrors) =
+        async {
+            let! analysis = analyze (options, loadErrors)
+            checker.ClearCache [ options ]
+            GC.Collect(2, GCCollectionMode.Forced, false)
+            return analysis
+        }
+
+    Async.Parallel(Array.map runScript scripts, maxDegreeOfParallelism = maxConcurrentScripts)
+
 let runFscArgs
     (logger: ILogger)
     (checker: FSharpChecker)
