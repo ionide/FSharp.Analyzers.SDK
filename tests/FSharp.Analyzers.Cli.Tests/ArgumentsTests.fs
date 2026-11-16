@@ -153,6 +153,7 @@ let ``conditional compilation symbols are accepted as defines`` () =
                 "--define"
                 "FOO"
                 "_Bar1"
+                "Baz'"
             |]
 
     Assert.That(
@@ -162,6 +163,7 @@ let ``conditional compilation symbols are accepted as defines`` () =
                 [
                     "FOO"
                     "_Bar1"
+                    "Baz'"
                 ]
             : Result<string list, string list>
         )

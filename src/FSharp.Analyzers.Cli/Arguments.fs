@@ -1,6 +1,7 @@
 namespace FSharp.Analyzers.Cli
 
 open System
+open System.Globalization
 open Argu
 
 module ArgumentDefaults =
@@ -105,16 +106,32 @@ module Arguments =
 
     /// The `--define` values. The error lists each value that is not one conditional compilation symbol.
     let defines (results: ParseResults<Arguments>) : Result<string list, string list> =
+        // The identifier rules of the F# preprocessor lexer, pplex.fsl in dotnet/fsharp.
+        let isLetter (c: char) =
+            match Char.GetUnicodeCategory c with
+            | UnicodeCategory.UppercaseLetter
+            | UnicodeCategory.LowercaseLetter
+            | UnicodeCategory.TitlecaseLetter
+            | UnicodeCategory.ModifierLetter
+            | UnicodeCategory.OtherLetter
+            | UnicodeCategory.LetterNumber -> true
+            | _ -> false
+
+        let isSymbolChar (c: char) =
+            match Char.GetUnicodeCategory c with
+            | _ when isLetter c || c = '\'' -> true
+            | UnicodeCategory.ConnectorPunctuation
+            | UnicodeCategory.NonSpacingMark
+            | UnicodeCategory.SpacingCombiningMark
+            | UnicodeCategory.Format
+            | UnicodeCategory.DecimalDigitNumber -> true
+            | _ -> false
+
         let isSymbol (value: string) =
             value.Length > 0
-            && (Char.IsLetter value[0]
+            && (isLetter value[0]
                 || value[0] = '_')
-            && Seq.forall
-                (fun c ->
-                    Char.IsLetterOrDigit c
-                    || c = '_'
-                )
-                value
+            && Seq.forall isSymbolChar value
 
         let defines = getAll results <@ Define @>
 
