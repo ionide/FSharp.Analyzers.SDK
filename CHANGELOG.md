@@ -9,11 +9,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- [Update FSharp.Compiler.Service to 43.13.404, FSharp.Core to 10.1.404, and Ionide.ProjInfo.ProjectSystem to 0.76.0](https://github.com/ionide/FSharp.Analyzers.SDK/pull/PRNUM). FCS 43.13 adds record type and expression spreads (`{ ...a; B = 1 }`) to the syntax tree. `SynExpr.Record` now holds `SynExprRecordFieldOrSpread` values, and `SynTypeDefnSimpleRepr.Record` holds `SynFieldOrSpread` values. Analyzers that match on these nodes must be rebuilt against 0.43.0.
+- [Update FSharp.Compiler.Service to 43.13.404, FSharp.Core to 10.1.404, and Ionide.ProjInfo.ProjectSystem to 0.76.0](https://github.com/ionide/FSharp.Analyzers.SDK/pull/365). FCS 43.13 adds record type and expression spreads (`{ ...a; B = 1 }`) to the syntax tree. `SynExpr.Record` now holds `SynExprRecordFieldOrSpread` values, and `SynTypeDefnSimpleRepr.Record` holds `SynFieldOrSpread` values. Analyzers that match on these nodes must be rebuilt against 0.43.0.
 
 ### Added
 
-- [`ASTCollecting.walkAst` visits the expression of a record expression spread and the type of a record type spread](https://github.com/ionide/FSharp.Analyzers.SDK/pull/PRNUM).
+- [`ASTCollecting.walkAst` visits the expression of a record expression spread and the type of a record type spread](https://github.com/ionide/FSharp.Analyzers.SDK/pull/365).
 
 ## [0.42.0] - 2026-11-16
 
