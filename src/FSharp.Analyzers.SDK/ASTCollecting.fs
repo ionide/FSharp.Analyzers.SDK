@@ -374,9 +374,13 @@ module ASTCollecting =
                     ]
             | SynExpr.Record(recordFields = fields) ->
                 fields
-                |> List.iter (fun (SynExprRecordField(expr = e)) ->
-                    e
-                    |> Option.iter (walkExpr nextPath)
+                |> List.iter (
+                    function
+                    | SynExprRecordFieldOrSpread.Field(SynExprRecordField(expr = e), _) ->
+                        e
+                        |> Option.iter (walkExpr nextPath)
+                    | SynExprRecordFieldOrSpread.Spread(SynExprSpread(expr = e), _) ->
+                        walkExpr nextPath e
                 )
             | SynExpr.ObjExpr(
                 objType = ty; argOptions = argOpt; bindings = bindings; extraImpls = ifaces) ->
@@ -668,7 +672,13 @@ module ASTCollecting =
             match s with
             | SynTypeDefnSimpleRepr.Enum(cases, _) -> List.iter (walkEnumCase path) cases
             | SynTypeDefnSimpleRepr.Union(_, cases, _) -> List.iter (walkUnionCase path) cases
-            | SynTypeDefnSimpleRepr.Record(_, fields, _) -> List.iter (walkField path) fields
+            | SynTypeDefnSimpleRepr.Record(_, fields, _) ->
+                fields
+                |> List.iter (
+                    function
+                    | SynFieldOrSpread.Field field -> walkField path field
+                    | SynFieldOrSpread.Spread(SynTypeSpread(ty = t)) -> walkType path t
+                )
             | SynTypeDefnSimpleRepr.TypeAbbrev(_, t, _) -> walkType path t
             | SynTypeDefnSimpleRepr.General _ -> ()
             | SynTypeDefnSimpleRepr.LibraryOnlyILAssembly _ -> ()
